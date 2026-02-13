@@ -52,12 +52,13 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    label: "COMERCIAL",
+    label: "VENDAS",
     items: [
+      { title: "Oportunidades", url: "/oportunidades", icon: Target },
       {
         title: "CRM",
         url: "/crm",
-        icon: Target,
+        icon: BarChart3,
         submenu: [
           { title: "Gestão 1", url: "/crm/gestao-1" },
           { title: "Gestão 2", url: "/crm/gestao-2" },
@@ -65,10 +66,7 @@ const menuSections: MenuSection[] = [
         ],
       },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
-      {
-        title: "Clientes",
-        url: "/clientes",
-        icon: Users,
+      { title: "Clientes", url: "/clientes", icon: Users,
         submenu: [
           { title: "Todos", url: "/clientes" },
           { title: "Hotelaria", url: "/clientes/hotelaria" },

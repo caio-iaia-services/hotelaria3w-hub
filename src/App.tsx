@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Planejamento from "./pages/Planejamento";
+import Oportunidades from "./pages/Oportunidades";
 import CrmGestao from "./pages/CrmGestao";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,10 @@ const App = () => (
             <Route
               path="/clientes"
               element={<AppLayout><Clientes /></AppLayout>}
+            />
+            <Route
+              path="/oportunidades"
+              element={<AppLayout><Oportunidades /></AppLayout>}
             />
             <Route
               path="/planejamento"
