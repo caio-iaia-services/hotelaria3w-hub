@@ -80,7 +80,7 @@ export default function Clientes() {
   const metrics = [
     { label: "Total de Clientes", value: totalClientes.toLocaleString("pt-BR"), icon: Users, color: "text-blue-600" },
     { label: "Clientes Ativos", value: clientesAtivos.toLocaleString("pt-BR"), icon: UserCheck, color: "text-emerald-600" },
-    { label: "Faturamento (Ano)", value: currency(faturamentoAno), icon: DollarSign, color: "text-amber-600" },
+    { label: "Novos Clientes", value: "12", icon: DollarSign, color: "text-amber-600" },
     { label: "Taxa de Retenção", value: `${taxaRetencao}%`, icon: TrendingUp, color: "text-purple-600" },
   ];
 
