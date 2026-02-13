@@ -30,9 +30,9 @@ export default function Login() {
         style={{ backgroundColor: "#1E4A7C" }}
       >
         <img
-          src="/logo_3Whotelaria.jpeg"
+          src="/logo_3Whotelaria_transp.png"
           alt="3W Hotelaria"
-          className="w-[120px] lg:w-[200px] rounded-lg shadow-lg"
+          className="w-[240px] lg:w-[380px]"
         />
         <div className="text-center">
           <p className="text-white text-lg lg:text-xl font-heading font-semibold">
