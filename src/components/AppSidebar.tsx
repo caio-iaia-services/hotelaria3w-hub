@@ -59,9 +59,9 @@ const menuSections: MenuSection[] = [
         url: "/crm",
         icon: Target,
         submenu: [
-          { title: "Gestão 1", url: "/crm/gestao1" },
-          { title: "Gestão 2", url: "/crm/gestao2" },
-          { title: "Gestão 3", url: "/crm/gestao3" },
+          { title: "Gestão 1", url: "/crm/gestao-1" },
+          { title: "Gestão 2", url: "/crm/gestao-2" },
+          { title: "Gestão 3", url: "/crm/gestao-3" },
         ],
       },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },

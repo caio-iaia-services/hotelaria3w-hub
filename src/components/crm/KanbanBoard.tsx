@@ -1,0 +1,50 @@
+import { useState } from "react";
+import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
+import { KanbanColumn } from "./KanbanColumn";
+import { OpportunityModal } from "./OpportunityModal";
+import type { KanbanColumn as KanbanColumnType, Opportunity } from "@/data/mockCrmData";
+
+interface KanbanBoardProps {
+  initialColumns: KanbanColumnType[];
+}
+
+export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
+  const [columns, setColumns] = useState<KanbanColumnType[]>(initialColumns);
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    const newColumns = columns.map((col) => ({ ...col, opportunities: [...col.opportunities] }));
+    const sourceCol = newColumns.find((c) => c.id === source.droppableId)!;
+    const destCol = newColumns.find((c) => c.id === destination.droppableId)!;
+
+    const [moved] = sourceCol.opportunities.splice(source.index, 1);
+    moved.stage = destCol.id;
+    moved.daysInStage = 0;
+    destCol.opportunities.splice(destination.index, 0, moved);
+
+    setColumns(newColumns);
+  };
+
+  const handleCardClick = (opp: Opportunity) => {
+    setSelectedOpp(opp);
+    setModalOpen(true);
+  };
+
+  return (
+    <>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {columns.map((col) => (
+            <KanbanColumn key={col.id} column={col} onCardClick={handleCardClick} />
+          ))}
+        </div>
+      </DragDropContext>
+      <OpportunityModal opportunity={selectedOpp} open={modalOpen} onOpenChange={setModalOpen} />
+    </>
+  );
+}
