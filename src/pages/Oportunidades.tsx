@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { Plus, Search, Target, DollarSign, TrendingUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +59,7 @@ const mockOportunidades: Oportunidade[] = [
 
 export default function Oportunidades() {
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Oportunidade | null>(null);
 
   const filtered = mockOportunidades.filter(
     (o) =>
@@ -129,7 +136,7 @@ export default function Oportunidades() {
             </TableHeader>
             <TableBody>
               {filtered.map((opp) => (
-                <TableRow key={opp.id} className="hover:bg-muted/50">
+                <TableRow key={opp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(opp)}>
                   <TableCell className="font-mono text-xs font-medium text-primary">
                     {opp.id}
                   </TableCell>
@@ -154,6 +161,52 @@ export default function Oportunidades() {
           </Table>
         </CardContent>
       </Card>
+      {/* Detail Modal */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="font-mono text-primary text-sm">{selected?.id}</span>
+              <span className="text-base">{selected?.cliente}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                  <span className="text-sm text-muted-foreground">Operação</span>
+                  <Badge variant="secondary" className="text-[11px]">{selected.operacao}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                  <span className="text-sm text-muted-foreground">Gestão</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">G{selected.gestao}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                  <span className="text-sm text-muted-foreground">Data</span>
+                  <span className="text-sm font-medium">{new Date(selected.data).toLocaleDateString("pt-BR")}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
+                <span className="text-xs text-muted-foreground">Status:</span>
+                <Badge className={`text-[10px] px-2 py-0.5 border-0 ${statusConfig[selected.status].className}`}>
+                  {statusConfig[selected.status].label}
+                </Badge>
+              </div>
+
+              {selected.status === "processado" && (
+                <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Card gerado no CRM:</p>
+                  <div className="text-xs text-foreground/80 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Gestão {selected.gestao} / {selected.operacao} / Lead: "{selected.cliente}"
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
