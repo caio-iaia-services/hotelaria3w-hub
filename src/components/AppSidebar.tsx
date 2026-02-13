@@ -66,17 +66,7 @@ const menuSections: MenuSection[] = [
         ],
       },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
-      { title: "Clientes", url: "/clientes", icon: Users,
-        submenu: [
-          { title: "Todos", url: "/clientes" },
-          { title: "Hotelaria", url: "/clientes/hotelaria" },
-          { title: "Gastronomia", url: "/clientes/gastronomia" },
-          { title: "Hospitalar", url: "/clientes/hospitalar" },
-          { title: "Condominial", url: "/clientes/condominial" },
-          { title: "Exportação", url: "/clientes/exportacao" },
-          { title: "Outros", url: "/clientes/outros" },
-        ],
-      },
+      { title: "Clientes", url: "/clientes", icon: Users },
     ],
   },
   {
