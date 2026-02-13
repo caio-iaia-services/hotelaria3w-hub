@@ -45,17 +45,17 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 const mockOportunidades: Oportunidade[] = [
-  { id: "OPP-001", cliente: "Hotel Paradise Resort", oportunidade: "Colchão Box", operacao: "CASTOR", gestao: 1, status: "processado", data: "2026-02-10" },
-  { id: "OPP-002", cliente: "Hotel Paradise Resort", oportunidade: "Ar condicionado 12k BTU", operacao: "MIDEA", gestao: 2, status: "processado", data: "2026-02-10" },
-  { id: "OPP-003", cliente: "Pousada Sol Nascente", oportunidade: "Jogo de cama queen", operacao: "TEKA", gestao: 3, status: "em_andamento", data: "2026-02-12" },
-  { id: "OPP-004", cliente: "Pousada Sol Nascente", oportunidade: "Fechadura digital", operacao: "D-LOCK", gestao: 2, status: "em_andamento", data: "2026-02-12" },
-  { id: "OPP-005", cliente: "Grand Hotel Copacabana", oportunidade: "Poltrona decorativa", operacao: "SOLEMAR", gestao: 1, status: "processado", data: "2026-02-08" },
-  { id: "OPP-006", cliente: "Grand Hotel Copacabana", oportunidade: "Kit amenities premium", operacao: "IM IN", gestao: 2, status: "em_andamento", data: "2026-02-08" },
-  { id: "OPP-007", cliente: "Grand Hotel Copacabana", oportunidade: "Lixeira inox", operacao: "RUBBERMAID", gestao: 1, status: "processado", data: "2026-02-08" },
-  { id: "OPP-008", cliente: "Hospital São Lucas", oportunidade: "Enxoval hospitalar", operacao: "CIÇA ENXOVAIS", gestao: 2, status: "em_andamento", data: "2026-02-13" },
-  { id: "OPP-009", cliente: "Hospital São Lucas", oportunidade: "Ar condicionado 24k BTU", operacao: "MIDEA", gestao: 2, status: "em_andamento", data: "2026-02-13" },
-  { id: "OPP-010", cliente: "Restaurante Sabor & Arte", oportunidade: "Panela industrial 50L", operacao: "KENBY", gestao: 3, status: "cancelado", data: "2026-02-05" },
-  { id: "OPP-011", cliente: "Restaurante Sabor & Arte", oportunidade: "Conjunto de talheres", operacao: "SKARA", gestao: 3, status: "cancelado", data: "2026-02-05" },
+  { id: "OPP-001", cliente: "Hotel Paradise Resort", oportunidade: "Colchão Box", operacao: "CASTOR", gestao: 1, status: "processado", data: "2026-02-10T09:30:00" },
+  { id: "OPP-002", cliente: "Hotel Paradise Resort", oportunidade: "Ar condicionado 12k BTU", operacao: "MIDEA", gestao: 2, status: "processado", data: "2026-02-10T10:15:00" },
+  { id: "OPP-003", cliente: "Pousada Sol Nascente", oportunidade: "Jogo de cama queen", operacao: "TEKA", gestao: 3, status: "em_andamento", data: "2026-02-12T14:00:00" },
+  { id: "OPP-004", cliente: "Pousada Sol Nascente", oportunidade: "Fechadura digital", operacao: "D-LOCK", gestao: 2, status: "em_andamento", data: "2026-02-12T14:45:00" },
+  { id: "OPP-005", cliente: "Grand Hotel Copacabana", oportunidade: "Poltrona decorativa", operacao: "SOLEMAR", gestao: 1, status: "processado", data: "2026-02-08T11:00:00" },
+  { id: "OPP-006", cliente: "Grand Hotel Copacabana", oportunidade: "Kit amenities premium", operacao: "IM IN", gestao: 2, status: "em_andamento", data: "2026-02-08T11:30:00" },
+  { id: "OPP-007", cliente: "Grand Hotel Copacabana", oportunidade: "Lixeira inox", operacao: "RUBBERMAID", gestao: 1, status: "processado", data: "2026-02-08T12:00:00" },
+  { id: "OPP-008", cliente: "Hospital São Lucas", oportunidade: "Enxoval hospitalar", operacao: "CIÇA ENXOVAIS", gestao: 2, status: "em_andamento", data: "2026-02-13T08:00:00" },
+  { id: "OPP-009", cliente: "Hospital São Lucas", oportunidade: "Ar condicionado 24k BTU", operacao: "MIDEA", gestao: 2, status: "em_andamento", data: "2026-02-13T08:45:00" },
+  { id: "OPP-010", cliente: "Restaurante Sabor & Arte", oportunidade: "Panela industrial 50L", operacao: "KENBY", gestao: 3, status: "cancelado", data: "2026-02-05T16:20:00" },
+  { id: "OPP-011", cliente: "Restaurante Sabor & Arte", oportunidade: "Conjunto de talheres", operacao: "SKARA", gestao: 3, status: "cancelado", data: "2026-02-05T16:50:00" },
 ];
 
 export default function Oportunidades() {
@@ -154,7 +154,7 @@ export default function Oportunidades() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">
-                    {new Date(opp.data).toLocaleDateString("pt-BR")}
+                    {new Date(opp.data).toLocaleDateString("pt-BR")} {new Date(opp.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                   </TableCell>
                 </TableRow>
               ))}
