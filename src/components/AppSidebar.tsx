@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
+  Home,
   Headphones,
   Target,
   FileText,
@@ -45,9 +46,14 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    label: "VENDAS",
+    label: "",
     items: [
-      { title: "Atendimento", url: "/atendimento", icon: Headphones },
+      { title: "Home", url: "/dashboard", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "COMERCIAL",
+    items: [
       {
         title: "CRM",
         url: "/crm",
@@ -61,20 +67,6 @@ const menuSections: MenuSection[] = [
         ],
       },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
-    ],
-  },
-  {
-    label: "GESTÃO",
-    items: [
-      { title: "Marketing", url: "/marketing", icon: Mail },
-      { title: "Financeiro", url: "/financeiro", icon: DollarSign },
-      { title: "Planejamento", url: "/planejamento", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "CADASTROS",
-    items: [
-      { title: "Buscar Clientes", url: "/buscar", icon: Search },
       {
         title: "Clientes",
         url: "/clientes",
@@ -86,7 +78,27 @@ const menuSections: MenuSection[] = [
           { title: "Hospitalar", url: "/clientes/hospitalar" },
         ],
       },
+    ],
+  },
+  {
+    label: "OPERAÇÕES",
+    items: [
+      { title: "Atendimento", url: "/atendimento", icon: Headphones },
       { title: "Fornecedores", url: "/fornecedores", icon: Building2 },
+    ],
+  },
+  {
+    label: "GESTÃO",
+    items: [
+      { title: "Marketing", url: "/marketing", icon: Mail },
+      { title: "Financeiro", url: "/financeiro", icon: DollarSign },
+      { title: "Planejamento", url: "/planejamento", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "FERRAMENTAS",
+    items: [
+      { title: "Buscar Clientes", url: "/buscar", icon: Search },
     ],
   },
 ];
@@ -218,9 +230,11 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         <nav className="flex-1 py-3 px-3">
           {menuSections.map((section, idx) => (
             <div key={section.label} className={cn(idx > 0 && "mt-4")}>
-              <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {section.label}
-              </p>
+              {section.label && (
+                <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                  {section.label}
+                </p>
+              )}
               <div className="space-y-0.5">
                 {section.items.map(renderItem)}
               </div>
