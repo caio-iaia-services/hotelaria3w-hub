@@ -51,14 +51,14 @@ const gestao1Operations: OperationData[] = [
       {
         id: "lead", title: "LEAD", color: "bg-muted",
         opportunities: [
-          { id: "c1", clientName: "Hotel Paradise Resort", value: 25000, daysInStage: 5, product: "Móveis", initials: "HP", stage: "lead", contact: "João Silva", email: "joao@paradise.com", notes: "Interesse em renovação completa do lobby" },
-          { id: "c2", clientName: "Grand Palazzo Hotel", value: 38000, daysInStage: 3, product: "Outdoor", initials: "GP", stage: "lead", contact: "Maria Santos", email: "maria@palazzo.com" },
-          { id: "c3", clientName: "Resort Atlântica", value: 22000, daysInStage: 7, product: "Móveis", initials: "RA", stage: "lead" },
-          { id: "c4", clientName: "Hotel Bella Vista", value: 15000, daysInStage: 2, product: "Utensílios", initials: "HB", stage: "lead" },
-          { id: "c5", clientName: "Pátio Maldivas Hotel", value: 31000, daysInStage: 4, product: "Outdoor", initials: "PM", stage: "lead" },
-          { id: "c6", clientName: "Hotel Costa Dourada", value: 19000, daysInStage: 6, product: "Móveis", initials: "HC", stage: "lead" },
-          { id: "c7", clientName: "Resort Blue Lagoon", value: 42000, daysInStage: 1, product: "Outdoor", initials: "RB", stage: "lead" },
-          { id: "c8", clientName: "Hotel Majestic", value: 28000, daysInStage: 8, product: "Utensílios", initials: "HM", stage: "lead" },
+          { id: "opp1", clientName: "Hotel Paradise Resort", value: 25000, daysInStage: 3, product: "Colchão Box", initials: "HP", stage: "lead", contact: "João Silva", email: "joao@paradise.com", notes: "Origem: Módulo Oportunidades (OPP-001)" },
+          { id: "c1", clientName: "Grand Palazzo Hotel", value: 38000, daysInStage: 3, product: "Móveis", initials: "GP", stage: "lead", contact: "Maria Santos", email: "maria@palazzo.com" },
+          { id: "c2", clientName: "Resort Atlântica", value: 22000, daysInStage: 7, product: "Móveis", initials: "RA", stage: "lead" },
+          { id: "c3", clientName: "Hotel Bella Vista", value: 15000, daysInStage: 2, product: "Utensílios", initials: "HB", stage: "lead" },
+          { id: "c4", clientName: "Pátio Maldivas Hotel", value: 31000, daysInStage: 4, product: "Outdoor", initials: "PM", stage: "lead" },
+          { id: "c5", clientName: "Hotel Costa Dourada", value: 19000, daysInStage: 6, product: "Móveis", initials: "HC", stage: "lead" },
+          { id: "c6", clientName: "Resort Blue Lagoon", value: 42000, daysInStage: 1, product: "Outdoor", initials: "RB", stage: "lead" },
+          { id: "c7", clientName: "Hotel Majestic", value: 28000, daysInStage: 8, product: "Utensílios", initials: "HM", stage: "lead" },
         ],
       },
       {
@@ -108,6 +108,7 @@ const gestao1Operations: OperationData[] = [
       {
         id: "lead", title: "LEAD", color: "bg-muted",
         opportunities: [
+          { id: "opp7", clientName: "Grand Hotel Copacabana", value: 18000, daysInStage: 5, product: "Lixeira inox", initials: "GH", stage: "lead", notes: "Origem: Módulo Oportunidades (OPP-007)" },
           { id: "r1", clientName: "Hotel Ibiza Premium", value: 18000, daysInStage: 3, product: "Utensílios", initials: "HI", stage: "lead" },
           { id: "r2", clientName: "Resort Mar Azul", value: 32000, daysInStage: 5, product: "Outdoor", initials: "RM", stage: "lead" },
           { id: "r3", clientName: "Hotel Panorama", value: 22000, daysInStage: 2, product: "Utensílios", initials: "HP", stage: "lead" },
@@ -159,6 +160,7 @@ const gestao1Operations: OperationData[] = [
       {
         id: "lead", title: "LEAD", color: "bg-muted",
         opportunities: [
+          { id: "opp5", clientName: "Grand Hotel Copacabana", value: 20000, daysInStage: 5, product: "Poltrona decorativa", initials: "GH", stage: "lead", notes: "Origem: Módulo Oportunidades (OPP-005)" },
           { id: "s1", clientName: "Hotel Beira Mar", value: 20000, daysInStage: 4, product: "Outdoor", initials: "HB", stage: "lead" },
           { id: "s2", clientName: "Resort Oceano", value: 35000, daysInStage: 2, product: "Móveis", initials: "RO", stage: "lead" },
           { id: "s3", clientName: "Hotel Farol", value: 18000, daysInStage: 5, product: "Outdoor", initials: "HF", stage: "lead" },
@@ -256,6 +258,7 @@ const gestao2Operations: OperationData[] = [
       {
         id: "lead", title: "LEAD", color: "bg-muted",
         opportunities: [
+          { id: "opp2", clientName: "Hotel Paradise Resort", value: 22000, daysInStage: 3, product: "Ar condicionado 12k BTU", initials: "HP", stage: "lead", notes: "Origem: Módulo Oportunidades (OPP-002)" },
           { id: "m1", clientName: "Hotel Vitória Palace", value: 22000, daysInStage: 4, product: "Amenidades", initials: "HV", stage: "lead" },
           { id: "m2", clientName: "Clínica Santa Clara", value: 18000, daysInStage: 3, product: "Enxovais", initials: "CS", stage: "lead" },
           { id: "m3", clientName: "Hotel Recanto Verde", value: 25000, daysInStage: 5, product: "Amenidades", initials: "HR", stage: "lead" },
