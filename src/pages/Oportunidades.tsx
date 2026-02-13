@@ -22,6 +22,7 @@ import {
 interface Oportunidade {
   id: string;
   cliente: string;
+  oportunidade: string;
   operacao: string;
   gestao: number;
   status: "em_andamento" | "processado" | "cancelado";
@@ -44,17 +45,17 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 const mockOportunidades: Oportunidade[] = [
-  { id: "OPP-001", cliente: "Hotel Paradise Resort", operacao: "CASTOR", gestao: 1, status: "processado", data: "2026-02-10" },
-  { id: "OPP-002", cliente: "Hotel Paradise Resort", operacao: "MIDEA", gestao: 2, status: "processado", data: "2026-02-10" },
-  { id: "OPP-003", cliente: "Pousada Sol Nascente", operacao: "TEKA", gestao: 3, status: "em_andamento", data: "2026-02-12" },
-  { id: "OPP-004", cliente: "Pousada Sol Nascente", operacao: "D-LOCK", gestao: 2, status: "em_andamento", data: "2026-02-12" },
-  { id: "OPP-005", cliente: "Grand Hotel Copacabana", operacao: "SOLEMAR", gestao: 1, status: "processado", data: "2026-02-08" },
-  { id: "OPP-006", cliente: "Grand Hotel Copacabana", operacao: "IM IN", gestao: 2, status: "em_andamento", data: "2026-02-08" },
-  { id: "OPP-007", cliente: "Grand Hotel Copacabana", operacao: "RUBBERMAID", gestao: 1, status: "processado", data: "2026-02-08" },
-  { id: "OPP-008", cliente: "Hospital São Lucas", operacao: "CIÇA ENXOVAIS", gestao: 2, status: "em_andamento", data: "2026-02-13" },
-  { id: "OPP-009", cliente: "Hospital São Lucas", operacao: "MIDEA", gestao: 2, status: "em_andamento", data: "2026-02-13" },
-  { id: "OPP-010", cliente: "Restaurante Sabor & Arte", operacao: "KENBY", gestao: 3, status: "cancelado", data: "2026-02-05" },
-  { id: "OPP-011", cliente: "Restaurante Sabor & Arte", operacao: "SKARA", gestao: 3, status: "cancelado", data: "2026-02-05" },
+  { id: "OPP-001", cliente: "Hotel Paradise Resort", oportunidade: "Colchão Box", operacao: "CASTOR", gestao: 1, status: "processado", data: "2026-02-10" },
+  { id: "OPP-002", cliente: "Hotel Paradise Resort", oportunidade: "Ar condicionado 12k BTU", operacao: "MIDEA", gestao: 2, status: "processado", data: "2026-02-10" },
+  { id: "OPP-003", cliente: "Pousada Sol Nascente", oportunidade: "Jogo de cama queen", operacao: "TEKA", gestao: 3, status: "em_andamento", data: "2026-02-12" },
+  { id: "OPP-004", cliente: "Pousada Sol Nascente", oportunidade: "Fechadura digital", operacao: "D-LOCK", gestao: 2, status: "em_andamento", data: "2026-02-12" },
+  { id: "OPP-005", cliente: "Grand Hotel Copacabana", oportunidade: "Poltrona decorativa", operacao: "SOLEMAR", gestao: 1, status: "processado", data: "2026-02-08" },
+  { id: "OPP-006", cliente: "Grand Hotel Copacabana", oportunidade: "Kit amenities premium", operacao: "IM IN", gestao: 2, status: "em_andamento", data: "2026-02-08" },
+  { id: "OPP-007", cliente: "Grand Hotel Copacabana", oportunidade: "Lixeira inox", operacao: "RUBBERMAID", gestao: 1, status: "processado", data: "2026-02-08" },
+  { id: "OPP-008", cliente: "Hospital São Lucas", oportunidade: "Enxoval hospitalar", operacao: "CIÇA ENXOVAIS", gestao: 2, status: "em_andamento", data: "2026-02-13" },
+  { id: "OPP-009", cliente: "Hospital São Lucas", oportunidade: "Ar condicionado 24k BTU", operacao: "MIDEA", gestao: 2, status: "em_andamento", data: "2026-02-13" },
+  { id: "OPP-010", cliente: "Restaurante Sabor & Arte", oportunidade: "Panela industrial 50L", operacao: "KENBY", gestao: 3, status: "cancelado", data: "2026-02-05" },
+  { id: "OPP-011", cliente: "Restaurante Sabor & Arte", oportunidade: "Conjunto de talheres", operacao: "SKARA", gestao: 3, status: "cancelado", data: "2026-02-05" },
 ];
 
 export default function Oportunidades() {
@@ -128,6 +129,7 @@ export default function Oportunidades() {
               <TableRow>
                 <TableHead className="w-[120px]">ID</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Oportunidade</TableHead>
                 <TableHead>Operação</TableHead>
                 <TableHead className="text-center">Gestão</TableHead>
                 <TableHead className="text-center">Status</TableHead>
@@ -141,8 +143,8 @@ export default function Oportunidades() {
                     {opp.id}
                   </TableCell>
                   <TableCell className="text-sm font-medium">{opp.cliente}</TableCell>
+                  <TableCell className="text-sm">{opp.oportunidade}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="text-[11px]">{opp.operacao}</Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">G{opp.gestao}</Badge>
@@ -174,6 +176,10 @@ export default function Oportunidades() {
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                  <span className="text-sm text-muted-foreground">Oportunidade</span>
+                  <span className="text-sm font-medium">{selected.oportunidade}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
                   <span className="text-sm text-muted-foreground">Operação</span>
                   <Badge variant="secondary" className="text-[11px]">{selected.operacao}</Badge>
                 </div>
@@ -199,7 +205,7 @@ export default function Oportunidades() {
                   <p className="text-xs font-medium text-muted-foreground mb-2">Card gerado no CRM:</p>
                   <div className="text-xs text-foreground/80 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    Gestão {selected.gestao} / {selected.operacao} / Lead: "{selected.cliente}"
+                    Gestão {selected.gestao} / {selected.operacao} / Lead: "{selected.cliente} - {selected.oportunidade}"
                   </div>
                 </div>
               )}
