@@ -19,9 +19,11 @@ import { mockOportunidades, type OportunidadeData } from "@/data/mockOportunidad
 
 const gestaoColors: Record<number, string> = {
   1: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  2: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  2: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   3: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
 };
+
+const gestaoLabels: Record<number, string> = { 1: "G1", 2: "G2", 3: "G3" };
 
 const operationColors: Record<string, string> = {
   CASTOR: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300",
@@ -114,23 +116,27 @@ export default function Oportunidades() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Gestão</TableHead>
                 <TableHead>Operação</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Data Cadastro</TableHead>
                 <TableHead className="text-center w-[120px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Nenhuma oportunidade encontrada.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Nenhuma oportunidade encontrada.</TableCell></TableRow>
               ) : (
                 filtered.map((opp) => (
                   <TableRow key={opp.id}>
                     <TableCell className="font-mono text-xs font-medium text-primary">{opp.id}</TableCell>
                     <TableCell className="text-sm font-medium">{opp.nomeFantasia}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[opp.gestao] || ""}`}>Gestão {opp.gestao}</Badge>
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[opp.gestao] || ""}`}>{gestaoLabels[opp.gestao] || `G${opp.gestao}`}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 border-0 ${operationColors[opp.operacao] || ""}`}>{opp.operacao}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-0 text-[10px] px-1.5 py-0">Em Andamento</Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(opp.dataCadastro).toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
