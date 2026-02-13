@@ -108,11 +108,11 @@ interface AppSidebarProps {
 
 export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
   const location = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["Clientes", "CRM"]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleSubmenu = (title: string) => {
     setExpandedMenus((prev) =>
-      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+      prev.includes(title) ? [] : [title]
     );
   };
 
@@ -225,7 +225,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         <div className="mx-4 h-px bg-sidebar-foreground/10" />
 
         {/* Menu - no scroll */}
-        <nav className="flex-1 py-2 px-3 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 py-2 px-3">
           {menuSections.map((section, idx) => (
             <div key={section.label} className={cn(idx > 0 && "mt-2")}>
               {section.label && (
