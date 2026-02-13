@@ -31,7 +31,7 @@ const statusColors: Record<string, string> = {
 const tabs = [
   { value: "todos", label: "Todos" },
   { value: "Hotelaria", label: "Hotelaria" },
-  { value: "Gastronomia", label: "Restaurantes" },
+  { value: "Gastronomia", label: "Gastronomia" },
   { value: "Hospitalar", label: "Hospitalar" },
   { value: "Condominial", label: "Condominial" },
   { value: "Exportação", label: "Exportação" },
