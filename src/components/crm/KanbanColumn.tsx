@@ -6,6 +6,8 @@ import type { KanbanColumn as KanbanColumnType, Opportunity } from "@/data/mockC
 interface KanbanColumnProps {
   column: KanbanColumnType;
   onCardClick: (opp: Opportunity) => void;
+  operationColors?: Record<string, string>;
+  showOperationBadge?: boolean;
 }
 
 const columnColorMap: Record<string, string> = {
@@ -16,7 +18,7 @@ const columnColorMap: Record<string, string> = {
   "FECHADO": "border-t-green-500",
 };
 
-export function KanbanColumn({ column, onCardClick }: KanbanColumnProps) {
+export function KanbanColumn({ column, onCardClick, operationColors, showOperationBadge }: KanbanColumnProps) {
   const totalValue = column.opportunities.reduce((sum, o) => sum + o.value, 0);
   const formatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(totalValue);
 
@@ -42,7 +44,14 @@ export function KanbanColumn({ column, onCardClick }: KanbanColumnProps) {
             )}
           >
             {column.opportunities.map((opp, idx) => (
-              <OpportunityCard key={opp.id} opportunity={opp} index={idx} onClick={onCardClick} />
+              <OpportunityCard
+                key={opp.id}
+                opportunity={opp}
+                index={idx}
+                onClick={onCardClick}
+                operationColors={operationColors}
+                showOperationBadge={showOperationBadge}
+              />
             ))}
             {provided.placeholder}
           </div>

@@ -9,6 +9,7 @@ export interface Opportunity {
   contact?: string;
   email?: string;
   notes?: string;
+  operation?: string;
 }
 
 export interface KanbanColumn {
