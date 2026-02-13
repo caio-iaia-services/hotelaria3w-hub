@@ -5,7 +5,7 @@ export interface Cliente {
   cnpj: string;
   cidade: string;
   estado: string;
-  segmento: "Hotelaria" | "Gastronomia" | "Hospitalar";
+  segmento: "Hotelaria" | "Gastronomia" | "Hospitalar" | "Condominial" | "Exportação" | "Outros";
   tipo: "VIP" | "Regular";
   email: string;
   telefone: string;
@@ -79,7 +79,7 @@ const cidades = [
   ["Florianópolis", "SC"], ["Brasília", "DF"], ["Recife", "PE"], ["Fortaleza", "CE"],
 ];
 
-const segmentos: Cliente["segmento"][] = ["Hotelaria", "Gastronomia", "Hospitalar"];
+const segmentos: Cliente["segmento"][] = ["Hotelaria", "Gastronomia", "Hospitalar", "Condominial", "Exportação", "Outros"];
 
 function fakeCnpj(i: number): string {
   const base = (10000000 + i * 137) % 99999999;

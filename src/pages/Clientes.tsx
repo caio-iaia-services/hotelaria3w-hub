@@ -26,7 +26,7 @@ const amostraClientes = [
 const features = [
   { icon: Shield, text: "CNPJs únicos verificados" },
   { icon: Phone, text: "Telefones e e-mails validados" },
-  { icon: Users, text: "Segmentação por tipo (Hotelaria, Gastronomia, Hospitalar)" },
+  { icon: Users, text: "Segmentação por tipo (Hotelaria, Gastronomia, Hospitalar, Condominial, Exportação, Outros)" },
   { icon: MapPin, text: "Endereços completos" },
   { icon: Clock, text: "Histórico de atividades" },
 ];
@@ -35,6 +35,9 @@ const segmentColors: Record<string, string> = {
   Hotelaria: "bg-blue-100 text-blue-700",
   Gastronomia: "bg-orange-100 text-orange-700",
   Hospitalar: "bg-emerald-100 text-emerald-700",
+  Condominial: "bg-purple-100 text-purple-700",
+  Exportação: "bg-amber-100 text-amber-700",
+  Outros: "bg-gray-100 text-gray-700",
 };
 
 export default function Clientes() {
