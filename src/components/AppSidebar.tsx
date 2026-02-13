@@ -225,7 +225,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         <div className="mx-4 h-px bg-sidebar-foreground/10" />
 
         {/* Menu - no scroll */}
-        <nav className="flex-1 py-2 px-3">
+        <nav className="flex-1 py-2 px-3 overflow-y-auto scrollbar-thin">
           {menuSections.map((section, idx) => (
             <div key={section.label} className={cn(idx > 0 && "mt-2")}>
               {section.label && (
