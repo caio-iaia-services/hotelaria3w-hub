@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import {
-  Users, UserCheck, DollarSign, TrendingUp, Search, Building2,
+  Users, UserCheck, DollarSign, TrendingUp, Search, Plus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -87,9 +88,15 @@ export default function Clientes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
-        <p className="text-muted-foreground text-sm">Gestão completa da base de clientes 3W Hotelaria</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
+          <p className="text-muted-foreground text-sm">Gestão completa da base de clientes 3W Hotelaria</p>
+        </div>
+        <Button className="gap-2">
+          <Plus size={16} />
+          Novo Cliente
+        </Button>
       </div>
 
       {/* Metrics */}
