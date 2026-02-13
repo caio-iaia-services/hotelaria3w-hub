@@ -39,15 +39,12 @@ function maskTelefone(value: string): string {
   return digits.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-// Build flat list of all operations with their gestão
-const allOperations = Object.entries(gestaoOperacoes).flatMap(([gestao, ops]) =>
-  ops.map((op) => ({ name: op, gestao: Number(gestao) }))
-);
-
 // Reverse map: operation -> gestão number
 const operacaoGestaoMap: Record<string, number> = {};
-for (const item of allOperations) {
-  operacaoGestaoMap[item.name] = item.gestao;
+for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
+  for (const op of ops) {
+    operacaoGestaoMap[op] = Number(gestao);
+  }
 }
 
 export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportunidadeModalProps) {
