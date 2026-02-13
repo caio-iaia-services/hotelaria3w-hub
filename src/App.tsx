@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Planejamento from "./pages/Planejamento";
+import CrmGestao from "./pages/CrmGestao";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -35,14 +36,13 @@ const App = () => (
               path="/planejamento"
               element={<AppLayout><Planejamento /></AppLayout>}
             />
+            <Route
+              path="/crm/:gestaoId"
+              element={<AppLayout><CrmGestao /></AppLayout>}
+            />
             {[
               "/atendimento",
               "/crm",
-              "/crm/enxovais",
-              "/crm/amenidades",
-              "/crm/restaurante",
-              "/crm/moveis",
-              "/crm/outras",
               "/orcamentos",
               "/clientes/hotelaria",
               "/clientes/gastronomia",
