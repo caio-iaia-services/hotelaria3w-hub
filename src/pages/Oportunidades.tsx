@@ -129,7 +129,6 @@ export default function Oportunidades() {
               <TableRow>
                 <TableHead className="w-[120px]">ID</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Oportunidade</TableHead>
                 <TableHead>Operação</TableHead>
                 <TableHead className="text-center">Gestão</TableHead>
                 <TableHead className="text-center">Status</TableHead>
@@ -143,8 +142,8 @@ export default function Oportunidades() {
                     {opp.id}
                   </TableCell>
                   <TableCell className="text-sm font-medium">{opp.cliente}</TableCell>
-                  <TableCell className="text-sm">{opp.oportunidade}</TableCell>
                   <TableCell>
+                    <Badge variant="secondary" className="text-[11px]">{opp.operacao}</Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">G{opp.gestao}</Badge>
