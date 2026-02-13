@@ -27,7 +27,7 @@ export default function Login() {
       {/* Left / Top panel */}
       <div
         className="h-[30vh] lg:h-auto lg:w-1/2 flex flex-col items-center justify-center gap-4 px-6"
-        style={{ backgroundColor: "#1E4A7C" }}
+        style={{ backgroundColor: "#1a4168" }}
       >
         <img
           src="/logo_3Whotelaria_transp.png"
@@ -108,7 +108,7 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full h-11 text-base font-semibold text-white hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: "#1E4A7C" }}
+              style={{ backgroundColor: "#1a4168" }}
               disabled={loading}
             >
               {loading ? (
