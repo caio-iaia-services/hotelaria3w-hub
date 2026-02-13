@@ -211,7 +211,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         {/* Header with Logo */}
         <div className="p-4 pb-3 flex items-center justify-between">
           <img
-            src="/logo_3Whotelaria.jpeg"
+            src="/logo_3Whotelaria_transp.png"
             alt="3W Hotelaria"
             className="h-[60px] w-auto"
           />
