@@ -8,9 +8,11 @@ interface OpportunityCardProps {
   opportunity: Opportunity;
   index: number;
   onClick: (opp: Opportunity) => void;
+  operationColors?: Record<string, string>;
+  showOperationBadge?: boolean;
 }
 
-export function OpportunityCard({ opportunity, index, onClick }: OpportunityCardProps) {
+export function OpportunityCard({ opportunity, index, onClick, operationColors, showOperationBadge }: OpportunityCardProps) {
   return (
     <Draggable draggableId={opportunity.id} index={index}>
       {(provided, snapshot) => (
@@ -38,10 +40,15 @@ export function OpportunityCard({ opportunity, index, onClick }: OpportunityCard
               <p className="text-[11px] text-muted-foreground mt-1">{opportunity.daysInStage} dias neste estágio</p>
             </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
               {opportunity.product}
             </Badge>
+            {showOperationBadge && opportunity.operation && (
+              <Badge className={cn("text-[10px] px-1.5 py-0 border-0", operationColors?.[opportunity.operation] || "bg-muted text-muted-foreground")}>
+                {opportunity.operation}
+              </Badge>
+            )}
           </div>
         </div>
       )}

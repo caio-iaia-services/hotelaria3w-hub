@@ -6,12 +6,21 @@ import type { KanbanColumn as KanbanColumnType, Opportunity } from "@/data/mockC
 
 interface KanbanBoardProps {
   initialColumns: KanbanColumnType[];
+  operationColors?: Record<string, string>;
+  showOperationBadge?: boolean;
 }
 
-export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
+export function KanbanBoard({ initialColumns, operationColors, showOperationBadge }: KanbanBoardProps) {
   const [columns, setColumns] = useState<KanbanColumnType[]>(initialColumns);
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Sync columns when initialColumns change (e.g. filter change)
+  const [prevInit, setPrevInit] = useState(initialColumns);
+  if (prevInit !== initialColumns) {
+    setPrevInit(initialColumns);
+    setColumns(initialColumns);
+  }
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -40,7 +49,13 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {columns.map((col) => (
-            <KanbanColumn key={col.id} column={col} onCardClick={handleCardClick} />
+            <KanbanColumn
+              key={col.id}
+              column={col}
+              onCardClick={handleCardClick}
+              operationColors={operationColors}
+              showOperationBadge={showOperationBadge}
+            />
           ))}
         </div>
       </DragDropContext>
