@@ -1,83 +1,82 @@
 import { useState } from "react";
-import { Plus, Search, Target, DollarSign, TrendingUp } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Plus, Search, Target, TrendingUp, Eye, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { NovaOportunidadeModal } from "@/components/oportunidades/NovaOportunidadeModal";
+import { DetalhesOportunidadeModal } from "@/components/oportunidades/DetalhesOportunidadeModal";
+import { mockOportunidades, type OportunidadeData } from "@/data/mockOportunidades";
 
-interface Oportunidade {
-  id: string;
-  cliente: string;
-  oportunidade: string;
-  operacao: string;
-  gestao: number;
-  status: "em_andamento" | "processado" | "cancelado";
-  data: string;
-}
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  em_andamento: {
-    label: "Em Andamento",
-    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-  },
-  processado: {
-    label: "Processado",
-    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-  },
-  cancelado: {
-    label: "Cancelado",
-    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-  },
+const gestaoColors: Record<number, string> = {
+  1: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  2: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  3: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
 };
 
-const mockOportunidades: Oportunidade[] = [
-  { id: "OPP-001", cliente: "Hotel Paradise Resort", oportunidade: "Colchão Box", operacao: "CASTOR", gestao: 1, status: "processado", data: "2026-02-10T09:30:00" },
-  { id: "OPP-002", cliente: "Hotel Paradise Resort", oportunidade: "Ar condicionado 12k BTU", operacao: "MIDEA", gestao: 2, status: "processado", data: "2026-02-10T10:15:00" },
-  { id: "OPP-003", cliente: "Pousada Sol Nascente", oportunidade: "Jogo de cama queen", operacao: "TEKA", gestao: 3, status: "em_andamento", data: "2026-02-12T14:00:00" },
-  { id: "OPP-004", cliente: "Pousada Sol Nascente", oportunidade: "Fechadura digital", operacao: "D-LOCK", gestao: 2, status: "em_andamento", data: "2026-02-12T14:45:00" },
-  { id: "OPP-005", cliente: "Grand Hotel Copacabana", oportunidade: "Poltrona decorativa", operacao: "SOLEMAR", gestao: 1, status: "processado", data: "2026-02-08T11:00:00" },
-  { id: "OPP-006", cliente: "Grand Hotel Copacabana", oportunidade: "Kit amenities premium", operacao: "IM IN", gestao: 2, status: "em_andamento", data: "2026-02-08T11:30:00" },
-  { id: "OPP-007", cliente: "Grand Hotel Copacabana", oportunidade: "Lixeira inox", operacao: "RUBBERMAID", gestao: 1, status: "processado", data: "2026-02-08T12:00:00" },
-  { id: "OPP-008", cliente: "Hospital São Lucas", oportunidade: "Enxoval hospitalar", operacao: "CIÇA ENXOVAIS", gestao: 2, status: "em_andamento", data: "2026-02-13T08:00:00" },
-  { id: "OPP-009", cliente: "Hospital São Lucas", oportunidade: "Ar condicionado 24k BTU", operacao: "MIDEA", gestao: 2, status: "em_andamento", data: "2026-02-13T08:45:00" },
-  { id: "OPP-010", cliente: "Restaurante Sabor & Arte", oportunidade: "Panela industrial 50L", operacao: "KENBY", gestao: 3, status: "cancelado", data: "2026-02-05T16:20:00" },
-  { id: "OPP-011", cliente: "Restaurante Sabor & Arte", oportunidade: "Conjunto de talheres", operacao: "SKARA", gestao: 3, status: "cancelado", data: "2026-02-05T16:50:00" },
-];
+const operationColors: Record<string, string> = {
+  CASTOR: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300",
+  RUBBERMAID: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300",
+  SOLEMAR: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300",
+  UNIBLU: "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-300",
+  MIDEA: "bg-cyan-50 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-300",
+  "D-LOCK": "bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-300",
+  "CIÇA ENXOVAIS": "bg-pink-50 text-pink-600 dark:bg-pink-950 dark:text-pink-300",
+  "IM IN": "bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-300",
+  TEKA: "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300",
+  KENBY: "bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-300",
+  "REDES DE DORMIR": "bg-lime-50 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
+  SKARA: "bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-950 dark:text-fuchsia-300",
+};
 
 export default function Oportunidades() {
+  const { toast } = useToast();
+  const [oportunidades, setOportunidades] = useState<OportunidadeData[]>(mockOportunidades);
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Oportunidade | null>(null);
+  const [selectedView, setSelectedView] = useState<OportunidadeData | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<OportunidadeData | null>(null);
 
-  const filtered = mockOportunidades.filter(
-    (o) =>
-      o.id.toLowerCase().includes(search.toLowerCase()) ||
-      o.cliente.toLowerCase().includes(search.toLowerCase()) ||
-      o.operacao.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = oportunidades.filter((o) => {
+    const q = search.toLowerCase();
+    return (
+      o.id.toLowerCase().includes(q) ||
+      o.nomeFantasia.toLowerCase().includes(q) ||
+      o.operacoes.some((op) => op.operacao.toLowerCase().includes(q))
+    );
+  });
 
   const total = filtered.length;
-  const emAndamento = filtered.filter((o) => o.status === "em_andamento").length;
-  const processados = filtered.filter((o) => o.status === "processado").length;
+  const totalOps = filtered.reduce((s, o) => s + o.operacoes.length, 0);
 
   const metrics = [
-    { label: "Total", value: String(total), icon: Target },
-    { label: "Em Andamento", value: String(emAndamento), icon: TrendingUp },
-    { label: "Processados", value: String(processados), icon: DollarSign },
+    { label: "Oportunidades", value: String(total), icon: Target },
+    { label: "Operações Vinculadas", value: String(totalOps), icon: TrendingUp },
   ];
+
+  const handleAdd = (opp: OportunidadeData) => {
+    setOportunidades((prev) => [opp, ...prev]);
+    toast({ title: "Oportunidade criada", description: `${opp.id} — ${opp.nomeFantasia}` });
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setOportunidades((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+    toast({ title: "Oportunidade removida", description: deleteTarget.id });
+    setDeleteTarget(null);
+  };
+
+  const uniqueGestoes = (o: OportunidadeData) => [...new Set(o.operacoes.map((op) => op.gestao))].sort();
 
   return (
     <div className="space-y-6">
@@ -88,13 +87,13 @@ export default function Oportunidades() {
             Cadastro e distribuição de oportunidades por operação e gestão
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" />
           Nova Oportunidade
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {metrics.map((m) => (
           <Card key={m.label}>
             <CardContent className="p-4 flex items-center gap-3">
@@ -120,6 +119,9 @@ export default function Oportunidades() {
             className="pl-9"
           />
         </div>
+        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-0 text-[11px]">
+          Em Andamento
+        </Badge>
       </div>
 
       <Card>
@@ -127,91 +129,122 @@ export default function Oportunidades() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">ID</TableHead>
+                <TableHead className="w-[140px]">ID</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Operação</TableHead>
-                <TableHead className="text-center">Gestão</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Data</TableHead>
+                <TableHead>Operações</TableHead>
+                <TableHead>Gestões</TableHead>
+                <TableHead>Data Cadastro</TableHead>
+                <TableHead className="text-center w-[120px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((opp) => (
-                <TableRow key={opp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(opp)}>
-                  <TableCell className="font-mono text-xs font-medium text-primary">
-                    {opp.id}
-                  </TableCell>
-                  <TableCell className="text-sm font-medium">{opp.cliente}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-[11px]">{opp.operacao}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">G{opp.gestao}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge className={`text-[10px] px-2 py-0.5 border-0 ${statusConfig[opp.status].className}`}>
-                      {statusConfig[opp.status].label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
-                    {new Date(opp.data).toLocaleDateString("pt-BR")} {new Date(opp.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    Nenhuma oportunidade encontrada.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filtered.map((opp) => (
+                  <TableRow key={opp.id}>
+                    <TableCell className="font-mono text-xs font-medium text-primary">
+                      {opp.id}
+                    </TableCell>
+                    <TableCell className="text-sm font-medium">{opp.nomeFantasia}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {opp.operacoes.map((op) => (
+                          <Badge
+                            key={`${op.gestao}-${op.operacao}`}
+                            variant="secondary"
+                            className={`text-[10px] px-1.5 py-0 border-0 ${operationColors[op.operacao] || ""}`}
+                          >
+                            {op.operacao}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {uniqueGestoes(opp).map((g) => (
+                          <Badge
+                            key={g}
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 ${gestaoColors[g] || ""}`}
+                          >
+                            G{g}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(opp.dataCadastro).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => { setSelectedView(opp); setViewOpen(true); }}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ver detalhes</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(opp)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Excluir</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-      {/* Detail Modal */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="font-mono text-primary text-sm">{selected?.id}</span>
-              <span className="text-base">{selected?.cliente}</span>
-            </DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-                  <span className="text-sm text-muted-foreground">Oportunidade</span>
-                  <span className="text-sm font-medium">{selected.oportunidade}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-                  <span className="text-sm text-muted-foreground">Operação</span>
-                  <Badge variant="secondary" className="text-[11px]">{selected.operacao}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-                  <span className="text-sm text-muted-foreground">Gestão</span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">G{selected.gestao}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-                  <span className="text-sm text-muted-foreground">Data</span>
-                  <span className="text-sm font-medium">{new Date(selected.data).toLocaleDateString("pt-BR")}</span>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground">Status:</span>
-                <Badge className={`text-[10px] px-2 py-0.5 border-0 ${statusConfig[selected.status].className}`}>
-                  {statusConfig[selected.status].label}
-                </Badge>
-              </div>
+      <NovaOportunidadeModal open={novaOpen} onOpenChange={setNovaOpen} onSave={handleAdd} />
+      <DetalhesOportunidadeModal oportunidade={selectedView} open={viewOpen} onOpenChange={setViewOpen} />
 
-              {selected.status === "processado" && (
-                <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Card gerado no CRM:</p>
-                  <div className="text-xs text-foreground/80 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    Gestão {selected.gestao} / {selected.operacao} / Lead: "{selected.cliente} - {selected.oportunidade}"
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A oportunidade {deleteTarget?.id} — {deleteTarget?.nomeFantasia} será removida permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
