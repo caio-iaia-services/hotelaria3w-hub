@@ -21,9 +21,11 @@ const segmentColors: Record<string, string> = {
 
 const gestaoColors: Record<number, string> = {
   1: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  2: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  2: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   3: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
 };
+
+const gestaoLabels: Record<number, string> = { 1: "G1", 2: "G2", 3: "G3" };
 
 export function DetalhesOportunidadeModal({ oportunidade, open, onOpenChange, onEdit }: DetalhesOportunidadeModalProps) {
   if (!oportunidade) return null;
@@ -57,10 +59,10 @@ export function DetalhesOportunidadeModal({ oportunidade, open, onOpenChange, on
 
           <Card>
             <CardContent className="p-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Gestão e Operação</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Operação</h4>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className={gestaoColors[oportunidade.gestao] || ""}>
-                  Gestão {oportunidade.gestao}
+                  {gestaoLabels[oportunidade.gestao] || `G${oportunidade.gestao}`}
                 </Badge>
                 <Badge variant="secondary">{oportunidade.operacao}</Badge>
               </div>
