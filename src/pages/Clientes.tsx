@@ -88,15 +88,9 @@ export default function Clientes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground text-sm">Gestão completa da base de clientes 3W Hotelaria</p>
-        </div>
-        <Button className="gap-2">
-          <Plus size={16} />
-          Novo Cliente
-        </Button>
+      <div>
+        <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
+        <p className="text-muted-foreground text-sm">Gestão completa da base de clientes 3W Hotelaria</p>
       </div>
 
       {/* Metrics */}
