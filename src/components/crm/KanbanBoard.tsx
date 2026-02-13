@@ -2,8 +2,8 @@ import { useState } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./KanbanColumn";
 import { OpportunityModal } from "./OpportunityModal";
+import { useToast } from "@/hooks/use-toast";
 import type { KanbanColumn as KanbanColumnType, Opportunity } from "@/data/mockCrmData";
-
 interface KanbanBoardProps {
   initialColumns: KanbanColumnType[];
   operationColors?: Record<string, string>;
@@ -11,6 +11,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ initialColumns, operationColors, showOperationBadge }: KanbanBoardProps) {
+  const { toast } = useToast();
   const [columns, setColumns] = useState<KanbanColumnType[]>(initialColumns);
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -32,6 +33,15 @@ export function KanbanBoard({ initialColumns, operationColors, showOperationBadg
     const destCol = newColumns.find((c) => c.id === destination.droppableId)!;
 
     const [moved] = sourceCol.opportunities.splice(source.index, 1);
+
+    // When moving from LEAD to CONTATO, show toast about opportunity removal
+    if (source.droppableId === "lead" && destination.droppableId === "contato") {
+      toast({
+        title: "Oportunidade removida",
+        description: `Card "${moved.clientName}" movido para Contato — removido da lista de Oportunidades`,
+      });
+    }
+
     moved.stage = destCol.id;
     moved.daysInStage = 0;
     destCol.opportunities.splice(destination.index, 0, moved);
