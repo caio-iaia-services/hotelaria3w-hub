@@ -18,27 +18,12 @@ import { DetalhesOportunidadeModal } from "@/components/oportunidades/DetalhesOp
 import { mockOportunidades, type OportunidadeData } from "@/data/mockOportunidades";
 
 const gestaoColors: Record<number, string> = {
-  1: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  2: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  3: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  1: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+  2: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  3: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
 };
 
 const gestaoLabels: Record<number, string> = { 1: "G1", 2: "G2", 3: "G3" };
-
-const operationColors: Record<string, string> = {
-  CASTOR: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300",
-  RUBBERMAID: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300",
-  SOLEMAR: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300",
-  UNIBLU: "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-300",
-  MIDEA: "bg-cyan-50 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-300",
-  "D-LOCK": "bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-300",
-  "CIÇA ENXOVAIS": "bg-pink-50 text-pink-600 dark:bg-pink-950 dark:text-pink-300",
-  "IM IN": "bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-300",
-  TEKA: "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300",
-  KENBY: "bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-300",
-  "REDES DE DORMIR": "bg-lime-50 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
-  SKARA: "bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-950 dark:text-fuchsia-300",
-};
 
 export default function Oportunidades() {
   const { toast } = useToast();
@@ -104,7 +89,6 @@ export default function Oportunidades() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por ID, cliente ou operação..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-0 text-[11px]">Em Andamento</Badge>
       </div>
 
       <Card>
@@ -130,10 +114,12 @@ export default function Oportunidades() {
                     <TableCell className="font-mono text-xs font-medium text-primary">{opp.id}</TableCell>
                     <TableCell className="text-sm font-medium">{opp.nomeFantasia}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[opp.gestao] || ""}`}>{gestaoLabels[opp.gestao] || `G${opp.gestao}`}</Badge>
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[opp.gestao] || ""}`}>
+                        {gestaoLabels[opp.gestao] || `G${opp.gestao}`}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 border-0 ${operationColors[opp.operacao] || ""}`}>{opp.operacao}</Badge>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{opp.operacao}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-0 text-[10px] px-1.5 py-0">Em Andamento</Badge>
