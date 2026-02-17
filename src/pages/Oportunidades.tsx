@@ -44,9 +44,9 @@ export default function Oportunidades() {
     { label: "Em Andamento", value: String(filtered.length), icon: TrendingUp },
   ];
 
-  const handleAdd = (opp: OportunidadeData) => {
-    setOportunidades((prev) => [opp, ...prev]);
-    toast({ title: "Oportunidade criada", description: `${opp.id} — ${opp.nomeFantasia} / ${opp.operacao}` });
+  const handleAdd = () => {
+    // Refresh data after save - TODO: integrate with Supabase fetch
+    toast({ title: "Oportunidade criada", description: "Registro salvo com sucesso" });
   };
 
   const handleDelete = () => {
