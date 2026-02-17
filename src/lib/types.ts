@@ -10,4 +10,10 @@ export interface Cliente {
   segmento_id: string | null
   status: string
   tipo: string
+  created_at?: string
+  endereco?: string | null
+  bairro?: string | null
+  cep?: string | null
+  observacoes?: string | null
+  pais?: string | null
 }
