@@ -12,12 +12,13 @@ import {
 import { Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { type Cliente } from "@/lib/types";
-import { gestaoOperacoes, generateOppId, type OportunidadeData } from "@/data/mockOportunidades";
+import { toast } from "sonner";
+import { gestaoOperacoes } from "@/data/mockOportunidades";
 
 interface NovaOportunidadeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (opp: OportunidadeData) => void;
+  onSave?: () => void;
 }
 
 const estados = [
@@ -120,77 +121,102 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
   const step2Valid = !!operacao;
 
   const handleSave = async () => {
-    let clienteNome = "";
-    let clienteRazao = "";
-    let clienteCnpj = "";
-    let clienteSegmento = "Hotelaria";
-    let clienteCidade = "";
-    let clienteEstado = "";
-    let clienteEmail = "";
-    let clienteTelefone = "";
+    try {
+      let clienteId = "";
+      let clienteNome = "";
+      let clienteCnpj = "";
+      let clienteCidade = "";
+      let clienteEstado = "";
 
-    if (cadastrandoNovo) {
-      // Insert new client into Supabase
-      const { data: novo, error } = await supabase
-        .from("clientes")
-        .insert({
-          nome_fantasia: novoCliente.nomeFantasia,
-          razao_social: novoCliente.razaoSocial,
-          cnpj: novoCliente.cnpj.replace(/\D/g, ""),
-          cidade: novoCliente.cidade,
-          estado: novoCliente.estado,
-          email: novoCliente.email,
-          telefone: novoCliente.telefone,
-          status: "ativo",
-          tipo: "regular",
-          pais: "Brasil",
-        })
-        .select()
-        .maybeSingle();
+      if (cadastrandoNovo) {
+        const { data: novo, error } = await supabase
+          .from("clientes")
+          .insert({
+            nome_fantasia: novoCliente.nomeFantasia,
+            razao_social: novoCliente.razaoSocial,
+            cnpj: novoCliente.cnpj.replace(/\D/g, ""),
+            cidade: novoCliente.cidade,
+            estado: novoCliente.estado,
+            email: novoCliente.email,
+            telefone: novoCliente.telefone,
+            status: "ativo",
+            tipo: "regular",
+            pais: "Brasil",
+          })
+          .select()
+          .maybeSingle();
 
-      if (error) {
-        console.error("Erro ao cadastrar cliente:", error);
-        return;
+        if (error) throw error;
+        clienteId = novo?.id || "";
+        clienteNome = novoCliente.nomeFantasia;
+        clienteCnpj = novoCliente.cnpj.replace(/\D/g, "");
+        clienteCidade = novoCliente.cidade;
+        clienteEstado = novoCliente.estado;
+      } else if (clienteSelecionado) {
+        clienteId = clienteSelecionado.id;
+        clienteNome = clienteSelecionado.nome_fantasia;
+        clienteCnpj = clienteSelecionado.cnpj;
+        clienteCidade = clienteSelecionado.cidade || "";
+        clienteEstado = clienteSelecionado.estado || "";
       }
 
-      clienteNome = novoCliente.nomeFantasia;
-      clienteRazao = novoCliente.razaoSocial;
-      clienteCnpj = novoCliente.cnpj.replace(/\D/g, "");
-      clienteSegmento = novoCliente.segmento as OportunidadeData["segmento"];
-      clienteCidade = novoCliente.cidade;
-      clienteEstado = novoCliente.estado;
-      clienteEmail = novoCliente.email;
-      clienteTelefone = novoCliente.telefone;
-    } else if (clienteSelecionado) {
-      clienteNome = clienteSelecionado.nome_fantasia;
-      clienteRazao = clienteSelecionado.razao_social;
-      clienteCnpj = clienteSelecionado.cnpj;
-      clienteSegmento = "Hotelaria";
-      clienteCidade = clienteSelecionado.cidade || "";
-      clienteEstado = clienteSelecionado.estado || "";
-      clienteEmail = clienteSelecionado.email || "";
-      clienteTelefone = clienteSelecionado.telefone || "";
+      // Map operacao -> gestao label
+      const operacaoGestaoLabel: Record<string, string> = {};
+      for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
+        for (const op of ops) {
+          operacaoGestaoLabel[op] = `G${gestao}`;
+        }
+      }
+      const gestao = operacaoGestaoLabel[operacao] || "G1";
+
+      // Generate numero
+      const { count } = await supabase
+        .from("oportunidades")
+        .select("*", { count: "exact", head: true });
+
+      const numero = `OPP-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, "0")}`;
+
+      // 1. Insert oportunidade
+      const { data: opp, error: erroOpp } = await supabase
+        .from("oportunidades")
+        .insert({
+          numero,
+          cliente_id: clienteId,
+          operacao,
+          gestao,
+          observacoes,
+          status: "em_andamento",
+        })
+        .select()
+        .single();
+
+      if (erroOpp) throw erroOpp;
+
+      // 2. Insert CRM card
+      const { error: erroCard } = await supabase
+        .from("crm_cards")
+        .insert({
+          oportunidade_id: opp.id,
+          cliente_id: clienteId,
+          operacao,
+          gestao,
+          estagio: "lead",
+          cliente_nome: clienteNome,
+          cliente_cnpj: clienteCnpj,
+          cliente_cidade: clienteCidade,
+          cliente_estado: clienteEstado,
+          observacoes,
+        });
+
+      if (erroCard) throw erroCard;
+
+      toast.success("Oportunidade criada!");
+      onSave?.();
+      handleClose(false);
+    } catch (error) {
+      console.error("Erro ao criar oportunidade:", error);
+      toast.error("Erro ao criar oportunidade");
     }
-
-    const gestao = operacaoGestaoMap[operacao];
-    const opp: OportunidadeData = {
-      id: generateOppId(),
-      nomeFantasia: clienteNome,
-      razaoSocial: clienteRazao,
-      cnpj: clienteCnpj,
-      segmento: clienteSegmento as OportunidadeData["segmento"],
-      cidade: clienteCidade,
-      estado: clienteEstado,
-      email: clienteEmail,
-      telefone: clienteTelefone,
-      gestao,
-      operacao,
-      observacoes,
-      dataCadastro: new Date().toISOString(),
-    };
-
-    onSave(opp);
-    handleClose(false);
   };
 
   return (
