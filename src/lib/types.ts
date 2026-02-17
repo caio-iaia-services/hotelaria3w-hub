@@ -17,3 +17,33 @@ export interface Cliente {
   observacoes?: string | null
   pais?: string | null
 }
+
+export interface Oportunidade {
+  id: string
+  numero: string
+  cliente_id: string
+  operacao: string
+  gestao: string
+  observacoes: string | null
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CRMCard {
+  id: string
+  oportunidade_id: string
+  cliente_id: string
+  operacao: string
+  gestao: string
+  estagio: 'lead' | 'contato' | 'proposta' | 'negociacao' | 'fechado'
+  cliente_nome: string
+  cliente_cnpj: string
+  cliente_cidade: string
+  cliente_estado: string
+  cliente_segmento: string | null
+  observacoes: string | null
+  ordem: number
+  created_at: string
+  updated_at: string
+}
