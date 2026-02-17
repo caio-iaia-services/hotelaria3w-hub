@@ -1,56 +1,57 @@
 import { useState } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
-import { KanbanColumn } from "./KanbanColumn";
+import { KanbanColumn, type KanbanColumnData } from "./KanbanColumn";
 import { OpportunityModal } from "./OpportunityModal";
-import { useToast } from "@/hooks/use-toast";
-import type { KanbanColumn as KanbanColumnType, Opportunity } from "@/data/mockCrmData";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import type { CRMCard } from "@/lib/types";
+
 interface KanbanBoardProps {
-  initialColumns: KanbanColumnType[];
+  columns: KanbanColumnData[];
+  onRefresh: () => void;
   operationColors?: Record<string, string>;
   showOperationBadge?: boolean;
 }
 
-export function KanbanBoard({ initialColumns, operationColors, showOperationBadge }: KanbanBoardProps) {
-  const { toast } = useToast();
-  const [columns, setColumns] = useState<KanbanColumnType[]>(initialColumns);
-  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+export function KanbanBoard({ columns, onRefresh, operationColors, showOperationBadge }: KanbanBoardProps) {
+  const [selectedCard, setSelectedCard] = useState<CRMCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Sync columns when initialColumns change (e.g. filter change)
-  const [prevInit, setPrevInit] = useState(initialColumns);
-  if (prevInit !== initialColumns) {
-    setPrevInit(initialColumns);
-    setColumns(initialColumns);
-  }
-
-  const handleDragEnd = (result: DropResult) => {
-    const { source, destination } = result;
+  const handleDragEnd = async (result: DropResult) => {
+    const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const newColumns = columns.map((col) => ({ ...col, opportunities: [...col.opportunities] }));
-    const sourceCol = newColumns.find((c) => c.id === source.droppableId)!;
-    const destCol = newColumns.find((c) => c.id === destination.droppableId)!;
+    const estagioAtual = source.droppableId;
+    const novoEstagio = destination.droppableId;
 
-    const [moved] = sourceCol.opportunities.splice(source.index, 1);
+    // Update in Supabase
+    const { error } = await supabase
+      .from("crm_cards")
+      .update({ estagio: novoEstagio, updated_at: new Date().toISOString() })
+      .eq("id", draggableId);
 
-    // When moving from LEAD to CONTATO, show toast about opportunity removal
-    if (source.droppableId === "lead" && destination.droppableId === "contato") {
-      toast({
-        title: "Oportunidade removida",
-        description: `Card "${moved.clientName}" movido para Contato — removido da lista de Oportunidades`,
-      });
+    if (error) {
+      toast.error("Erro ao mover card");
+      return;
     }
 
-    moved.stage = destCol.id;
-    moved.daysInStage = 0;
-    destCol.opportunities.splice(destination.index, 0, moved);
+    // If moved from LEAD → CONTATO, delete the oportunidade
+    if (estagioAtual === "lead" && novoEstagio === "contato") {
+      const sourceCol = columns.find((c) => c.id === "lead");
+      const card = sourceCol?.cards.find((c) => c.id === draggableId);
 
-    setColumns(newColumns);
+      if (card?.oportunidade_id) {
+        await supabase.from("oportunidades").delete().eq("id", card.oportunidade_id);
+        toast.success("Card movido — Oportunidade removida da lista");
+      }
+    }
+
+    onRefresh();
   };
 
-  const handleCardClick = (opp: Opportunity) => {
-    setSelectedOpp(opp);
+  const handleCardClick = (card: CRMCard) => {
+    setSelectedCard(card);
     setModalOpen(true);
   };
 
@@ -69,7 +70,7 @@ export function KanbanBoard({ initialColumns, operationColors, showOperationBadg
           ))}
         </div>
       </DragDropContext>
-      <OpportunityModal opportunity={selectedOpp} open={modalOpen} onOpenChange={setModalOpen} />
+      <OpportunityModal card={selectedCard} open={modalOpen} onOpenChange={setModalOpen} />
     </>
   );
 }
