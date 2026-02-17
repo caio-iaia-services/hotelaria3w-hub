@@ -83,8 +83,9 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
       const { data } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, status, tipo")
-        .or(`nome_fantasia.ilike.%${busca}%,cnpj.ilike.%${busca}%`)
-        .limit(10);
+        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${busca}%,cidade.ilike.%${busca}%`)
+        .order("nome_fantasia", { ascending: true })
+        .limit(50);
 
       setClientes(data || []);
       setLoading(false);
@@ -223,7 +224,12 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
                 {loading && <p className="text-sm text-muted-foreground">Buscando...</p>}
 
                 {clientes.length > 0 && (
-                  <div className="border rounded-md divide-y max-h-64 overflow-y-auto">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      {clientes.length} cliente(s) encontrado(s)
+                      {clientes.length === 50 && " (mostrando primeiros 50)"}
+                    </p>
+                  <div className="border rounded-md divide-y max-h-96 overflow-y-auto">
                     {clientes.map((cliente) => (
                       <button
                         key={cliente.id}
@@ -238,6 +244,12 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
                         <p className="text-xs text-muted-foreground/70">{cliente.cidade}/{cliente.estado}</p>
                       </button>
                     ))}
+                  </div>
+                  {clientes.length === 50 && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                      ℹ️ Refine sua busca para ver resultados mais específicos
+                    </p>
+                  )}
                   </div>
                 )}
 
