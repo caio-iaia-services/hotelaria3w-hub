@@ -30,6 +30,19 @@ export interface Oportunidade {
   updated_at: string
 }
 
+export interface OportunidadeComCliente extends Oportunidade {
+  cliente: {
+    id: string
+    nome_fantasia: string
+    cnpj: string
+    razao_social?: string
+    cidade?: string | null
+    estado?: string | null
+    email?: string | null
+    telefone?: string | null
+  } | null
+}
+
 export interface CRMCard {
   id: string
   oportunidade_id: string
