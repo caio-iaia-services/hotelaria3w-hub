@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -16,8 +17,49 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { mockFornecedores, type Fornecedor } from "@/data/mockFornecedores";
+import { supabase } from "@/lib/supabase";
 
+// ─── Tipos ───────────────────────────────────────────────────────────────────
+interface Fornecedor {
+  id: string;
+  nome_fantasia: string;
+  razao_social: string;
+  cnpj: string;
+  cidade: string | null;
+  estado: string | null;
+  segmento: string | null;
+  tipo: string;
+  email: string | null;
+  telefone: string | null;
+  status: string;
+  logradouro?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cep?: string | null;
+  complemento?: string | null;
+  observacoes?: string | null;
+  created_at?: string;
+}
+
+type FornecedorForm = {
+  nome_fantasia: string;
+  razao_social: string;
+  cnpj: string;
+  segmento: string;
+  email: string;
+  telefone: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  bairro: string;
+  complemento: string;
+  tipo: string;
+  status: string;
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatCNPJ(cnpj: string | null) {
   if (!cnpj) return "-";
   const d = cnpj.replace(/\D/g, "");
@@ -37,8 +79,8 @@ function applyMaskCNPJ(value: string) {
 function applyMaskTelefone(value: string) {
   const d = value.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 10)
-    return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").trim();
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").trim();
+    return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
 }
 
 function applyMaskCEP(value: string) {
@@ -73,24 +115,6 @@ const FILTROS_INICIAIS = {
   regiao: "todos",
 };
 
-type FornecedorForm = {
-  nome_fantasia: string;
-  razao_social: string;
-  cnpj: string;
-  segmento_id: string;
-  email: string;
-  telefone: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  endereco: string;
-  numero: string;
-  bairro: string;
-  complemento: string;
-  tipo: string;
-  status: string;
-};
-
 function Info({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
@@ -100,11 +124,17 @@ function Info({ label, value }: { label: string; value: string | null | undefine
   );
 }
 
+// ─── Componente Principal ────────────────────────────────────────────────────
 export default function Fornecedores() {
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>(mockFornecedores);
-  const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [totalAtivos, setTotalAtivos] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(50);
+  const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
+  const [debouncedBusca, setDebouncedBusca] = useState("");
+  const [cidades, setCidades] = useState<string[]>([]);
 
   // Modais
   const [modalVer, setModalVer] = useState<Fornecedor | null>(null);
@@ -112,64 +142,108 @@ export default function Fornecedores() {
   const [modalNovo, setModalNovo] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  // Form novo
+  // Forms
   const { register: regNovo, handleSubmit: subNovo, reset: resetNovo, setValue: setNovo, watch: watchNovo } = useForm<FornecedorForm>({
     defaultValues: { tipo: "regular", status: "ativo" },
   });
-
-  // Form editar
   const { register: regEdit, handleSubmit: subEdit, reset: resetEdit, setValue: setEdit, watch: watchEdit } = useForm<FornecedorForm>();
 
   const tipoNovoValue = watchNovo("tipo");
   const statusNovoValue = watchNovo("status");
-  const segmentoNovoValue = watchNovo("segmento_id");
-
+  const segmentoNovoValue = watchNovo("segmento");
   const tipoEditValue = watchEdit("tipo");
   const statusEditValue = watchEdit("status");
-  const segmentoEditValue = watchEdit("segmento_id");
+  const segmentoEditValue = watchEdit("segmento");
 
-  // Cidades únicas dos dados mockados
-  const cidades = useMemo(() => {
-    const all = fornecedores.map((f) => f.cidade).filter(Boolean);
-    return [...new Set(all)].sort();
-  }, [fornecedores]);
+  // Debounce busca
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleBuscaChange = (valor: string) => {
+    setFiltros((prev) => ({ ...prev, busca: valor }));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedBusca(valor);
+      setPage(1);
+    }, 400);
+  };
 
-  // Filtrar dados mockados
-  const fornecedoresFiltrados = useMemo(() => {
-    return fornecedores.filter((f) => {
-      const busca = filtros.busca.toLowerCase();
-      if (
-        busca &&
-        !f.nome_fantasia.toLowerCase().includes(busca) &&
-        !f.cnpj.replace(/\D/g, "").includes(busca.replace(/\D/g, "")) &&
-        !f.cidade.toLowerCase().includes(busca)
-      ) return false;
-      if (filtros.status !== "todos" && f.status !== filtros.status) return false;
-      if (filtros.tipo !== "todos" && f.tipo !== filtros.tipo) return false;
-      if (filtros.segmento !== "todos" && f.segmento_id !== filtros.segmento) return false;
-      if (filtros.cidade !== "todos" && f.cidade !== filtros.cidade) return false;
-      if (filtros.regiao !== "todos") {
-        const estados = ESTADOS_POR_REGIAO[filtros.regiao] || [];
-        if (!estados.includes(f.estado)) return false;
+  // Buscar cidades únicas
+  useEffect(() => {
+    async function buscarCidades() {
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("cidade")
+        .not("cidade", "is", null)
+        .order("cidade");
+      if (data) {
+        const unicas = [...new Set(data.map((c) => c.cidade).filter(Boolean))] as string[];
+        setCidades(unicas);
       }
-      return true;
-    });
-  }, [fornecedores, filtros]);
+    }
+    buscarCidades();
+  }, []);
 
-  const total = fornecedoresFiltrados.length;
+  // Buscar fornecedores
+  const fetchFornecedores = useCallback(async () => {
+    setLoading(true);
+    let query = supabase.from("fornecedores").select("*", { count: "exact" });
+
+    if (debouncedBusca) {
+      query = query.or(
+        `nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%,cidade.ilike.%${debouncedBusca}%`
+      );
+    }
+    if (filtros.status !== "todos") query = query.eq("status", filtros.status);
+    if (filtros.tipo !== "todos") query = query.eq("tipo", filtros.tipo);
+    if (filtros.segmento !== "todos") query = query.ilike("segmento", filtros.segmento);
+    if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
+    if (filtros.regiao !== "todos") {
+      const estados = ESTADOS_POR_REGIAO[filtros.regiao];
+      if (estados) query = query.in("estado", estados);
+    }
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count, error } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      toast({ title: "Erro ao buscar fornecedores", description: error.message, variant: "destructive" });
+    } else {
+      setFornecedores(data || []);
+      setTotal(count || 0);
+    }
+    setLoading(false);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+
+  // Buscar métricas (ativos)
+  const fetchMetrics = useCallback(async () => {
+    const { count } = await supabase
+      .from("fornecedores")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "ativo");
+    setTotalAtivos(count || 0);
+  }, []);
+
+  useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
+  useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
+
+  // Reset page quando filtros mudam
+  useEffect(() => {
+    setPage(1);
+  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const paginados = fornecedoresFiltrados.slice((page - 1) * pageSize, page * pageSize);
-
-  const totalAtivos = fornecedores.filter((f) => f.status === "ativo").length;
-  const taxaAtivacao = fornecedores.length > 0 ? Math.round((totalAtivos / fornecedores.length) * 100) : 0;
+  const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
 
   const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) => {
     setFiltros((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
   };
 
   const limparFiltros = () => {
     setFiltros(FILTROS_INICIAIS);
+    setDebouncedBusca("");
     setPage(1);
   };
 
@@ -181,34 +255,39 @@ export default function Fornecedores() {
     filtros.cidade !== "todos" ||
     filtros.regiao !== "todos";
 
-  // Salvar novo fornecedor (mock)
+  // Salvar novo fornecedor
   const salvarNovo = async (dados: FornecedorForm) => {
     setSalvando(true);
-    await new Promise((r) => setTimeout(r, 400));
-    const novo: Fornecedor = {
-      id: String(Date.now()),
-      nome_fantasia: dados.nome_fantasia,
-      razao_social: dados.razao_social,
-      cnpj: dados.cnpj,
-      segmento_id: dados.segmento_id || "",
-      email: dados.email || null,
-      telefone: dados.telefone || null,
-      cidade: dados.cidade,
-      estado: dados.estado?.toUpperCase() || "",
-      cep: dados.cep || null,
-      endereco: dados.endereco || null,
-      numero: dados.numero || null,
-      bairro: dados.bairro || null,
-      complemento: dados.complemento || null,
-      tipo: dados.tipo || "regular",
-      status: dados.status || "ativo",
-      created_at: new Date().toISOString(),
-    };
-    setFornecedores((prev) => [novo, ...prev]);
-    toast({ title: "Fornecedor cadastrado com sucesso!" });
-    setModalNovo(false);
-    resetNovo();
-    setSalvando(false);
+    try {
+      const { error } = await supabase.from("fornecedores").insert({
+        nome_fantasia: dados.nome_fantasia,
+        razao_social: dados.razao_social,
+        cnpj: dados.cnpj,
+        segmento: dados.segmento || null,
+        email: dados.email || null,
+        telefone: dados.telefone || null,
+        cidade: dados.cidade,
+        estado: dados.estado?.toUpperCase() || null,
+        cep: dados.cep || null,
+        logradouro: dados.logradouro || null,
+        numero: dados.numero || null,
+        bairro: dados.bairro || null,
+        complemento: dados.complemento || null,
+        tipo: dados.tipo || "regular",
+        status: dados.status || "ativo",
+        pais: "Brasil",
+      });
+      if (error) throw error;
+      toast({ title: "Fornecedor cadastrado com sucesso!" });
+      setModalNovo(false);
+      resetNovo();
+      fetchFornecedores();
+      fetchMetrics();
+    } catch (err: any) {
+      toast({ title: "Erro ao cadastrar", description: err.message, variant: "destructive" });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // Abrir editar
@@ -218,13 +297,13 @@ export default function Fornecedores() {
       nome_fantasia: f.nome_fantasia,
       razao_social: f.razao_social,
       cnpj: formatCNPJ(f.cnpj),
-      segmento_id: f.segmento_id || "",
+      segmento: f.segmento || "",
       email: f.email || "",
       telefone: f.telefone || "",
-      cidade: f.cidade,
-      estado: f.estado,
+      cidade: f.cidade || "",
+      estado: f.estado || "",
       cep: f.cep || "",
-      endereco: f.endereco || "",
+      logradouro: f.logradouro || "",
       numero: f.numero || "",
       bairro: f.bairro || "",
       complemento: f.complemento || "",
@@ -234,50 +313,60 @@ export default function Fornecedores() {
     setModalEditar(f);
   };
 
-  // Salvar edição (mock)
+  // Salvar edição
   const salvarEdicao = async (dados: FornecedorForm) => {
     if (!modalEditar) return;
     setSalvando(true);
-    await new Promise((r) => setTimeout(r, 400));
-    setFornecedores((prev) =>
-      prev.map((f) =>
-        f.id === modalEditar.id
-          ? {
-              ...f,
-              nome_fantasia: dados.nome_fantasia,
-              razao_social: dados.razao_social,
-              cnpj: dados.cnpj,
-              segmento_id: dados.segmento_id || "",
-              email: dados.email || null,
-              telefone: dados.telefone || null,
-              cidade: dados.cidade,
-              estado: dados.estado?.toUpperCase() || "",
-              cep: dados.cep || null,
-              endereco: dados.endereco || null,
-              numero: dados.numero || null,
-              bairro: dados.bairro || null,
-              complemento: dados.complemento || null,
-              tipo: dados.tipo || "regular",
-              status: dados.status || "ativo",
-            }
-          : f
-      )
-    );
-    toast({ title: "Fornecedor atualizado com sucesso!" });
-    setModalEditar(null);
-    setSalvando(false);
+    try {
+      const { error } = await supabase
+        .from("fornecedores")
+        .update({
+          nome_fantasia: dados.nome_fantasia,
+          razao_social: dados.razao_social,
+          cnpj: dados.cnpj,
+          segmento: dados.segmento || null,
+          email: dados.email || null,
+          telefone: dados.telefone || null,
+          cidade: dados.cidade,
+          estado: dados.estado?.toUpperCase() || null,
+          cep: dados.cep || null,
+          logradouro: dados.logradouro || null,
+          numero: dados.numero || null,
+          bairro: dados.bairro || null,
+          complemento: dados.complemento || null,
+          tipo: dados.tipo || "regular",
+          status: dados.status || "ativo",
+        })
+        .eq("id", modalEditar.id);
+      if (error) throw error;
+      toast({ title: "Fornecedor atualizado com sucesso!" });
+      setModalEditar(null);
+      fetchFornecedores();
+      fetchMetrics();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  // Deletar (mock)
-  const deletar = (id: string) => {
+  // Deletar
+  const deletar = async (id: string) => {
     if (!confirm("Tem certeza que deseja deletar este fornecedor?")) return;
-    setFornecedores((prev) => prev.filter((f) => f.id !== id));
-    setModalVer(null);
-    toast({ title: "Fornecedor deletado!" });
+    const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Fornecedor deletado!" });
+      setModalVer(null);
+      setModalEditar(null);
+      fetchFornecedores();
+      fetchMetrics();
+    }
   };
 
   const metrics = [
-    { label: "Total de Fornecedores", value: fornecedores.length.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
+    { label: "Total de Fornecedores", value: total.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
     { label: "Fornecedores Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck, color: "text-emerald-600" },
     { label: "Taxa de Ativação", value: `${taxaAtivacao}%`, icon: TrendingUp, color: "text-accent" },
   ];
@@ -292,10 +381,13 @@ export default function Fornecedores() {
             Gestão completa da base de fornecedores 3W Hotelaria
           </p>
         </div>
-        <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0">
-          <Plus size={16} />
-          Novo Fornecedor
-        </Button>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline">{total.toLocaleString("pt-BR")} fornecedores</Badge>
+          <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0">
+            <Plus size={16} />
+            Novo Fornecedor
+          </Button>
+        </div>
       </div>
 
       {/* Metrics */}
@@ -323,7 +415,7 @@ export default function Fornecedores() {
             <Input
               placeholder="Buscar por nome, CNPJ ou cidade..."
               value={filtros.busca}
-              onChange={(e) => setFiltro("busca", e.target.value)}
+              onChange={(e) => handleBuscaChange(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -406,14 +498,22 @@ export default function Fornecedores() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginados.length === 0 ? (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : fornecedores.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginados.map((f) => (
+                fornecedores.map((f) => (
                   <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell onClick={() => setModalVer(f)}>
                       <div className="flex items-center gap-2">
@@ -430,10 +530,10 @@ export default function Fornecedores() {
                       {formatCNPJ(f.cnpj)}
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setModalVer(f)}>
-                      {f.cidade}/{f.estado}
+                      {f.cidade || "-"}/{f.estado || "-"}
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setModalVer(f)}>
-                      {f.segmento_id || "-"}
+                      {f.segmento || "-"}
                     </TableCell>
                     <TableCell className="text-center" onClick={() => setModalVer(f)}>
                       <Badge variant="outline" className={statusColors[f.status] || ""}>{f.status}</Badge>
@@ -460,7 +560,7 @@ export default function Fornecedores() {
       </Card>
 
       {/* Pagination */}
-      {total > 0 && (
+      {!loading && total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} de {total} fornecedores
@@ -506,7 +606,7 @@ export default function Fornecedores() {
                   <Info label="Nome Fantasia" value={modalVer.nome_fantasia} />
                   <Info label="Razão Social" value={modalVer.razao_social} />
                   <Info label="CNPJ" value={formatCNPJ(modalVer.cnpj)} />
-                  <Info label="Segmento" value={modalVer.segmento_id} />
+                  <Info label="Segmento" value={modalVer.segmento} />
                 </div>
               </div>
               <div>
@@ -519,11 +619,11 @@ export default function Fornecedores() {
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Endereço</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Info label="Logradouro" value={modalVer.endereco} />
+                  <Info label="Logradouro" value={modalVer.logradouro} />
                   <Info label="Número" value={modalVer.numero} />
                   <Info label="Bairro" value={modalVer.bairro} />
                   <Info label="CEP" value={modalVer.cep} />
-                  <Info label="Cidade/UF" value={`${modalVer.cidade}/${modalVer.estado}`} />
+                  <Info label="Cidade/UF" value={`${modalVer.cidade || "-"}/${modalVer.estado || "-"}`} />
                   <Info label="Complemento" value={modalVer.complemento} />
                 </div>
               </div>
@@ -570,7 +670,7 @@ export default function Fornecedores() {
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento *</Label>
-                <Select value={segmentoNovoValue} onValueChange={(v) => setNovo("segmento_id", v)}>
+                <Select value={segmentoNovoValue} onValueChange={(v) => setNovo("segmento", v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="bg-card z-50">
                     <SelectItem value="Hotelaria">Hotelaria</SelectItem>
@@ -621,7 +721,7 @@ export default function Fornecedores() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5 col-span-2">
                 <Label>Logradouro</Label>
-                <Input {...regNovo("endereco")} placeholder="Rua das Flores" />
+                <Input {...regNovo("logradouro")} placeholder="Rua das Flores" />
               </div>
               <div className="space-y-1.5">
                 <Label>Número</Label>
@@ -702,7 +802,7 @@ export default function Fornecedores() {
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento *</Label>
-                <Select value={segmentoEditValue} onValueChange={(v) => setEdit("segmento_id", v)}>
+                <Select value={segmentoEditValue} onValueChange={(v) => setEdit("segmento", v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="bg-card z-50">
                     <SelectItem value="Hotelaria">Hotelaria</SelectItem>
@@ -751,7 +851,7 @@ export default function Fornecedores() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5 col-span-2">
                 <Label>Logradouro</Label>
-                <Input {...regEdit("endereco")} />
+                <Input {...regEdit("logradouro")} />
               </div>
               <div className="space-y-1.5">
                 <Label>Número</Label>
