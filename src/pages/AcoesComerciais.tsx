@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {
@@ -413,9 +414,172 @@ export default function AcoesComerciais() {
     })
   }
 
-  function executarAcao(acao: string, cardId: string) {
-    console.log('Ação:', acao, 'Card:', cardId)
-    // Futura implementação: abrir modal de criação de documento
+  async function executarAcao(acao: string, cardId: string) {
+    if (!cardSelecionado) return
+
+    switch (acao) {
+      case 'solicitar_cotacao': await solicitarCotacao(); break
+      case 'preparar_orcamento': await prepararOrcamento(); break
+      case 'gerar_contrato': await gerarContrato(); break
+      case 'enviar_orcamento': await enviarOrcamento(); break
+      case 'enviar_contrato': await enviarContrato(); break
+      case 'gerar_cobranca': await gerarCobranca(); break
+    }
+  }
+
+  async function solicitarCotacao() {
+    try {
+      const numero = `COT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
+
+      const { data, error } = await supabase
+        .from('documentos_comerciais')
+        .insert({
+          card_id: cardSelecionado!.id,
+          cliente_id: cardSelecionado!.cliente_id,
+          tipo: 'cotacao',
+          numero,
+          titulo: `Cotação ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+          status: 'rascunho',
+          conteudo: {
+            operacao: cardSelecionado!.operacao,
+            observacoes: cardSelecionado!.observacoes,
+          },
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id,
+        documento_id: data.id,
+        acao: 'cotacao_solicitada',
+        descricao: `Cotação ${numero} solicitada`,
+      })
+
+      toast.success('Cotação criada com sucesso!')
+      buscarDocumentos(cardSelecionado!.id)
+      buscarMetricas()
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao criar cotação')
+    }
+  }
+
+  async function prepararOrcamento() {
+    try {
+      const { data: cotacao } = await supabase
+        .from('documentos_comerciais')
+        .select('*')
+        .eq('card_id', cardSelecionado!.id)
+        .eq('tipo', 'cotacao')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const numero = `ORC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
+
+      const { data, error } = await supabase
+        .from('documentos_comerciais')
+        .insert({
+          card_id: cardSelecionado!.id,
+          cliente_id: cardSelecionado!.cliente_id,
+          tipo: 'orcamento',
+          numero,
+          titulo: `Orçamento ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+          status: 'rascunho',
+          conteudo: {
+            operacao: cardSelecionado!.operacao,
+            baseado_cotacao: cotacao?.numero ?? null,
+            itens: [],
+          },
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id,
+        documento_id: data.id,
+        acao: 'orcamento_preparado',
+        descricao: `Orçamento ${numero} preparado`,
+      })
+
+      toast.success('Orçamento criado! Preencha os detalhes.')
+      buscarDocumentos(cardSelecionado!.id)
+      buscarMetricas()
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao criar orçamento')
+    }
+  }
+
+  async function gerarContrato() {
+    try {
+      const { data: orcamento } = await supabase
+        .from('documentos_comerciais')
+        .select('*')
+        .eq('card_id', cardSelecionado!.id)
+        .eq('tipo', 'orcamento')
+        .eq('status', 'aprovado')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!orcamento) {
+        toast.error('É necessário ter um orçamento aprovado')
+        return
+      }
+
+      const numero = `CTR-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
+
+      const { data, error } = await supabase
+        .from('documentos_comerciais')
+        .insert({
+          card_id: cardSelecionado!.id,
+          cliente_id: cardSelecionado!.cliente_id,
+          tipo: 'contrato',
+          numero,
+          titulo: `Contrato ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+          status: 'rascunho',
+          valor_total: orcamento.valor_total,
+          conteudo: {
+            baseado_orcamento: orcamento.numero,
+            valor_total: orcamento.valor_total,
+          },
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id,
+        documento_id: data.id,
+        acao: 'contrato_gerado',
+        descricao: `Contrato ${numero} gerado`,
+      })
+
+      toast.success('Contrato gerado com sucesso!')
+      buscarDocumentos(cardSelecionado!.id)
+      buscarMetricas()
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao gerar contrato')
+    }
+  }
+
+  async function enviarOrcamento() {
+    toast.info('Funcionalidade de envio em desenvolvimento')
+  }
+
+  async function enviarContrato() {
+    toast.info('Funcionalidade de envio em desenvolvimento')
+  }
+
+  async function gerarCobranca() {
+    toast.info('Funcionalidade de cobrança em desenvolvimento')
   }
 
   return (
