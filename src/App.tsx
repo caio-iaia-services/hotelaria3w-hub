@@ -13,6 +13,7 @@ import Oportunidades from "./pages/Oportunidades";
 import CrmGestao from "./pages/CrmGestao";
 import AcoesComerciais from "./pages/AcoesComerciais";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Fornecedores from "./pages/Fornecedores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,10 @@ const App = () => (
               path="/acoes-comerciais"
               element={<AppLayout><AcoesComerciais /></AppLayout>}
             />
+            <Route
+              path="/fornecedores"
+              element={<AppLayout><Fornecedores /></AppLayout>}
+            />
             {[
               "/atendimento",
               "/crm",
@@ -57,7 +62,6 @@ const App = () => (
               "/clientes/hotelaria",
               "/clientes/gastronomia",
               "/clientes/hospitalar",
-              "/fornecedores",
               "/buscar",
               "/marketing",
               "/financeiro",
