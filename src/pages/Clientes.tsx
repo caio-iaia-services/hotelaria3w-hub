@@ -1,17 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, UserCheck, TrendingUp, Search, X } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
 import ClienteModal from "@/components/clientes/ClienteModal";
@@ -50,6 +55,22 @@ const FILTROS_INICIAIS = {
   regiao: "todos",
 };
 
+type NovoClienteForm = {
+  nome_fantasia: string;
+  razao_social: string;
+  cnpj: string;
+  segmento_id: string;
+  email: string;
+  telefone: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+  endereco: string;
+  bairro: string;
+  tipo: string;
+  status: string;
+};
+
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +85,13 @@ export default function Clientes() {
 
   const [modalCliente, setModalCliente] = useState<Cliente | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Novo Cliente
+  const [modalNovoCliente, setModalNovoCliente] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const { register, handleSubmit, reset, setValue, watch } = useForm<NovoClienteForm>({
+    defaultValues: { tipo: "regular", status: "ativo" },
+  });
 
   // Debounce busca
   useEffect(() => {
@@ -170,6 +198,41 @@ export default function Clientes() {
     }
   };
 
+  const salvarNovoCliente = async (dados: NovoClienteForm) => {
+    setSalvando(true);
+    try {
+      const { error } = await supabase.from("clientes").insert({
+        nome_fantasia: dados.nome_fantasia,
+        razao_social: dados.razao_social,
+        cnpj: dados.cnpj,
+        segmento_id: dados.segmento_id || null,
+        email: dados.email || null,
+        telefone: dados.telefone || null,
+        cidade: dados.cidade,
+        estado: dados.estado?.toUpperCase() || null,
+        cep: dados.cep || null,
+        endereco: dados.endereco || null,
+        bairro: dados.bairro || null,
+        tipo: dados.tipo || "regular",
+        status: dados.status || "ativo",
+        pais: "Brasil",
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Cliente cadastrado com sucesso!" });
+      setModalNovoCliente(false);
+      reset();
+      fetchClientes();
+      fetchMetrics();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Erro ao cadastrar cliente", description: err.message, variant: "destructive" });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) => {
     setFiltros((prev) => ({ ...prev, [key]: value }));
   };
@@ -193,13 +256,25 @@ export default function Clientes() {
     { label: "Taxa de Retenção", value: `${taxaRetencao}%`, icon: TrendingUp, color: "text-accent" },
   ];
 
+  // Watch values for controlled selects
+  const tipoValue = watch("tipo");
+  const statusValue = watch("status");
+  const segmentoValue = watch("segmento_id");
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
-        <p className="text-muted-foreground text-sm">
-          Gestão completa da base de clientes 3W Hotelaria
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
+          <p className="text-muted-foreground text-sm">
+            Gestão completa da base de clientes 3W Hotelaria
+          </p>
+        </div>
+        <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0">
+          <Plus size={16} />
+          Novo Cliente
+        </Button>
       </div>
 
       {/* Metrics */}
@@ -221,7 +296,6 @@ export default function Clientes() {
 
       {/* Filters */}
       <div className="space-y-3">
-        {/* Linha 1: busca + botão limpar */}
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -240,7 +314,6 @@ export default function Clientes() {
           )}
         </div>
 
-        {/* Linha 2: selects */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <Select value={filtros.status} onValueChange={(v) => setFiltro("status", v)}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
@@ -389,7 +462,7 @@ export default function Clientes() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal Editar Cliente */}
       <ClienteModal
         cliente={modalCliente}
         open={modalOpen}
@@ -397,6 +470,128 @@ export default function Clientes() {
         onSave={handleSave}
         onDelete={handleDelete}
       />
+
+      {/* Modal Novo Cliente */}
+      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) reset(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>Cadastre um novo cliente no sistema</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(salvarNovoCliente)} className="space-y-4 pt-2">
+            {/* Dados Básicos */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Nome Fantasia *</Label>
+                <Input {...register("nome_fantasia")} placeholder="Hotel Paradise" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Razão Social *</Label>
+                <Input {...register("razao_social")} placeholder="Paradise Hotéis Ltda" required />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>CNPJ *</Label>
+                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Segmento</Label>
+                <Select value={segmentoValue} onValueChange={(v) => setValue("segmento_id", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="bg-card z-50">
+                    <SelectItem value="Hotelaria">Hotelaria</SelectItem>
+                    <SelectItem value="Gastronomia">Gastronomia</SelectItem>
+                    <SelectItem value="Hospitalar">Hospitalar</SelectItem>
+                    <SelectItem value="Condominial">Condominial</SelectItem>
+                    <SelectItem value="Exportação">Exportação</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Contato */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>E-mail</Label>
+                <Input {...register("email")} type="email" placeholder="contato@hotel.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input {...register("telefone")} placeholder="(11) 99999-9999" maxLength={15} />
+              </div>
+            </div>
+
+            {/* Endereço */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label>Cidade *</Label>
+                <Input {...register("cidade")} placeholder="São Paulo" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado *</Label>
+                <Input {...register("estado")} placeholder="SP" maxLength={2} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>CEP</Label>
+                <Input {...register("cep")} placeholder="00000-000" maxLength={9} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Logradouro</Label>
+                <Input {...register("endereco")} placeholder="Rua das Flores, 123" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bairro</Label>
+                <Input {...register("bairro")} placeholder="Centro" />
+              </div>
+            </div>
+
+            {/* Configurações */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={tipoValue} onValueChange={(v) => setValue("tipo", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-card z-50">
+                    <SelectItem value="regular">Regular</SelectItem>
+                    <SelectItem value="vip">VIP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={statusValue} onValueChange={(v) => setValue("status", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-card z-50">
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setModalNovoCliente(false); reset(); }}
+                disabled={salvando}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={salvando}>
+                {salvando ? "Salvando..." : "Salvar Cliente"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
