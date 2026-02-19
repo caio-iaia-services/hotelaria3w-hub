@@ -132,42 +132,33 @@ interface AreaProps {
   onAcao: (acao: string, cardId: string) => void
 }
 
-function hasOrcamento(docs: DocumentoComercial[]) {
-  return docs.some((d) => d.tipo === 'orcamento')
-}
-function hasContrato(docs: DocumentoComercial[]) {
-  return docs.some((d) => d.tipo === 'contrato')
-}
-function hasContratoAprovado(docs: DocumentoComercial[]) {
-  return docs.some((d) => d.tipo === 'contrato' && d.status === 'aprovado')
-}
-
-function getDocumentoIcon(tipo: string) {
-  const map: Record<string, React.ReactNode> = {
-    cotacao: <FileText className="w-4 h-4 text-primary" />,
-    orcamento: <DollarSign className="w-4 h-4 text-primary" />,
-    contrato: <FileSignature className="w-4 h-4 text-primary" />,
-    cobranca: <CreditCard className="w-4 h-4 text-primary" />,
-  }
-  return map[tipo] ?? <FileText className="w-4 h-4 text-muted-foreground" />
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
-
-const statusBadge: Record<string, string> = {
-  rascunho: 'bg-muted text-muted-foreground',
-  enviado: 'bg-secondary text-secondary-foreground',
-  aprovado: 'bg-primary/10 text-primary',
-  rejeitado: 'bg-destructive/10 text-destructive',
-}
-const statusLabel: Record<string, string> = {
-  rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', rejeitado: 'Rejeitado',
-}
-
 function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
-  const docsFiltrados = documentos.filter((d) => d.card_id === card.id)
+  const hasOrcamento = (docs: DocumentoComercial[]) =>
+    docs.some((d) => d.tipo === 'orcamento' && d.status !== 'rejeitado')
+
+  const hasContrato = (docs: DocumentoComercial[]) =>
+    docs.some((d) => d.tipo === 'contrato' && d.status !== 'rejeitado')
+
+  const hasContratoAprovado = (docs: DocumentoComercial[]) =>
+    docs.some((d) => d.tipo === 'contrato' && d.status === 'aprovado')
+
+  const getDocumentoIcon = (tipo: string) => {
+    const icones: Record<string, React.ReactNode> = {
+      cotacao: <FileText className="w-5 h-5 text-primary" />,
+      orcamento: <DollarSign className="w-5 h-5 text-primary" />,
+      contrato: <FileSignature className="w-5 h-5 text-primary" />,
+      cobranca: <CreditCard className="w-5 h-5 text-primary" />,
+    }
+    return icones[tipo] ?? <FileText className="w-5 h-5 text-muted-foreground" />
+  }
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const abrirGoogleDrive = () => {
+    window.open('https://drive.google.com', '_blank')
+    toast.info('Integração com Google Drive em desenvolvimento')
+  }
 
   return (
     <div className="space-y-6">
@@ -176,16 +167,17 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold">{card.cliente_nome}</h2>
-            <p className="text-sm text-muted-foreground">CNPJ: {card.cliente_cnpj}</p>
+            <p className="text-muted-foreground text-sm">CNPJ: {card.cliente_cnpj}</p>
             <div className="flex gap-2 mt-2 flex-wrap">
               <Badge>{card.operacao}</Badge>
               <Badge variant="outline">{card.cliente_cidade}/{card.cliente_estado}</Badge>
             </div>
           </div>
-          <span className={cn('text-xs font-semibold px-2 py-1 rounded shrink-0', getEstagioColor(card.estagio))}>
+          <Badge variant="default" className="text-sm px-3 py-1 shrink-0">
             {estagioLabelMap[card.estagio] ?? card.estagio}
-          </span>
+          </Badge>
         </div>
+
         {card.observacoes && (
           <div className="mt-4 p-3 bg-muted/50 rounded">
             <p className="text-sm text-muted-foreground">{card.observacoes}</p>
@@ -199,37 +191,43 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           <Zap className="w-5 h-5 text-primary" />
           Ações Disponíveis
         </h3>
+
         <div className="grid grid-cols-3 gap-3">
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('solicitar_cotacao', card.id)}>
             <FileText className="w-6 h-6" />
             <span className="text-sm">Solicitar Cotação</span>
           </Button>
+
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('preparar_orcamento', card.id)}>
             <DollarSign className="w-6 h-6" />
             <span className="text-sm">Preparar Orçamento</span>
           </Button>
+
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('gerar_contrato', card.id)}>
             <FileSignature className="w-6 h-6" />
             <span className="text-sm">Gerar Contrato</span>
           </Button>
+
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('enviar_orcamento', card.id)}
-            disabled={!hasOrcamento(docsFiltrados)}>
+            disabled={!hasOrcamento(documentos)}
+            onClick={() => onAcao('enviar_orcamento', card.id)}>
             <Send className="w-6 h-6" />
             <span className="text-sm">Enviar Orçamento</span>
           </Button>
+
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('enviar_contrato', card.id)}
-            disabled={!hasContrato(docsFiltrados)}>
+            disabled={!hasContrato(documentos)}
+            onClick={() => onAcao('enviar_contrato', card.id)}>
             <Send className="w-6 h-6" />
             <span className="text-sm">Enviar Contrato</span>
           </Button>
+
           <Button variant="outline" className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('gerar_cobranca', card.id)}
-            disabled={!hasContratoAprovado(docsFiltrados)}>
+            disabled={!hasContratoAprovado(documentos)}
+            onClick={() => onAcao('gerar_cobranca', card.id)}>
             <CreditCard className="w-6 h-6" />
             <span className="text-sm">Gerar Cobrança</span>
           </Button>
@@ -241,16 +239,15 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2">
             <FolderOpen className="w-5 h-5 text-muted-foreground" />
-            Documentos Gerados ({docsFiltrados.length})
+            Documentos Gerados ({documentos.length})
           </h3>
-          <Button variant="ghost" size="sm"
-            onClick={() => window.open(`https://drive.google.com/drive/search?q=${card.cliente_nome}`, '_blank')}>
+          <Button variant="ghost" size="sm" onClick={abrirGoogleDrive}>
             <FolderOpen className="w-4 h-4 mr-2" />
-            Ver no Drive
+            Ver todos no Drive
           </Button>
         </div>
 
-        {docsFiltrados.length === 0 ? (
+        {documentos.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
             <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
             <p>Nenhum documento gerado ainda</p>
@@ -258,7 +255,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {docsFiltrados.map((doc) => (
+            {documentos.map((doc) => (
               <div key={doc.id}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/30 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
@@ -266,19 +263,16 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{doc.titulo}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(doc.created_at)} · {doc.tipo.charAt(0).toUpperCase() + doc.tipo.slice(1)}
+                      {formatDate(doc.created_at)} · {doc.status}
                       {doc.valor_total != null && ` · R$ ${doc.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', statusBadge[doc.status])}>
-                    {statusLabel[doc.status]}
-                  </span>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                <div className="flex gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <Eye className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <Download className="w-4 h-4" />
                   </Button>
                 </div>
