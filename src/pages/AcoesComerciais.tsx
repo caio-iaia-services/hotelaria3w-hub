@@ -100,10 +100,20 @@ function FunilVertical({ cards, cardSelecionado, onSelecionar }: FunilProps) {
                 <p className="font-medium text-sm truncate">{card.cliente_nome}</p>
                 <p className="text-xs text-muted-foreground truncate">{card.operacao}</p>
               </div>
-              <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0', getEstagioColor(card.estagio))}>
+              <Badge
+                variant={
+                  card.estagio === 'lead' ? 'secondary' :
+                  card.estagio === 'contato' ? 'default' :
+                  card.estagio === 'proposta' ? 'outline' :
+                  card.estagio === 'negociacao' ? 'destructive' :
+                  'default'
+                }
+                className="shrink-0 text-[10px]"
+              >
                 {estagioLabelMap[card.estagio] ?? card.estagio}
-              </span>
+              </Badge>
             </div>
+
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3 shrink-0" />
               {card.cliente_cidade}/{card.cliente_estado}
