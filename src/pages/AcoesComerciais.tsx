@@ -11,8 +11,7 @@ import {
   Plus,
   TrendingUp,
   Clock,
-  ChevronRight,
-  Badge as BadgeIcon,
+  MapPin,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -47,19 +46,6 @@ function MetricCard({ icon, titulo, valor, cor }: MetricCardProps) {
   )
 }
 
-// ─── Estágios ─────────────────────────────────────────────────────────────────
-const estagios = [
-  { id: 'lead', label: 'Lead', color: 'bg-blue-100 text-blue-800' },
-  { id: 'contato', label: 'Contato', color: 'bg-sky-100 text-sky-800' },
-  { id: 'proposta', label: 'Proposta', color: 'bg-yellow-100 text-yellow-800' },
-  { id: 'negociacao', label: 'Negociação', color: 'bg-orange-100 text-orange-800' },
-  { id: 'fechado', label: 'Fechado', color: 'bg-green-100 text-green-800' },
-  { id: 'consolidacao', label: 'Consolidação', color: 'bg-teal-100 text-teal-800' },
-  { id: 'pos_venda', label: 'Pós-Venda', color: 'bg-purple-100 text-purple-800' },
-  { id: 'realizado', label: 'Realizado', color: 'bg-emerald-100 text-emerald-800' },
-  { id: 'perdido', label: 'Perdido', color: 'bg-red-100 text-red-800' },
-]
-
 // ─── FunilVertical ────────────────────────────────────────────────────────────
 interface FunilProps {
   cards: CRMCard[]
@@ -67,62 +53,76 @@ interface FunilProps {
   onSelecionar: (c: CRMCard) => void
 }
 
+const estagioColorMap: Record<string, string> = {
+  lead: 'bg-blue-100 text-blue-800',
+  contato: 'bg-sky-100 text-sky-800',
+  proposta: 'bg-yellow-100 text-yellow-800',
+  negociacao: 'bg-orange-100 text-orange-800',
+  fechado: 'bg-green-100 text-green-800',
+  consolidacao: 'bg-teal-100 text-teal-800',
+  pos_venda: 'bg-purple-100 text-purple-800',
+  realizado: 'bg-emerald-100 text-emerald-800',
+  perdido: 'bg-red-100 text-red-800',
+}
+
+const estagioLabelMap: Record<string, string> = {
+  lead: 'Lead',
+  contato: 'Contato',
+  proposta: 'Proposta',
+  negociacao: 'Negociação',
+  fechado: 'Fechado',
+  consolidacao: 'Consolidação',
+  pos_venda: 'Pós-Venda',
+  realizado: 'Realizado',
+  perdido: 'Perdido',
+}
+
+function getEstagioColor(estagio: string) {
+  return estagioColorMap[estagio] ?? 'bg-gray-100 text-gray-700'
+}
+
 function FunilVertical({ cards, cardSelecionado, onSelecionar }: FunilProps) {
-  const [estagioAberto, setEstagioAberto] = useState<string | null>(null)
-
   return (
-    <div className="p-3 space-y-1">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-2">
-        Funil de Oportunidades
-      </p>
-      {estagios.map((est) => {
-        const grupo = cards.filter((c) => c.estagio === est.id)
-        const aberto = estagioAberto === est.id
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+          Leads Ativos ({cards.length})
+        </h3>
+      </div>
 
-        return (
-          <div key={est.id}>
-            <button
-              onClick={() => setEstagioAberto(aberto ? null : est.id)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/50 transition-colors text-left"
-            >
-              <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', est.color)}>
-                {est.label}
-              </span>
-              <span className="flex-1" />
-              <span className="text-xs text-muted-foreground">{grupo.length}</span>
-              <ChevronRight
-                className={cn('w-3 h-3 text-muted-foreground transition-transform', aberto && 'rotate-90')}
-              />
-            </button>
-
-            {aberto && grupo.length > 0 && (
-              <div className="ml-3 mt-0.5 space-y-0.5">
-                {grupo.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() => onSelecionar(card)}
-                    className={cn(
-                      'w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors',
-                      cardSelecionado?.id === card.id
-                        ? 'bg-primary/10 text-primary font-semibold'
-                        : 'hover:bg-accent/40 text-foreground'
-                    )}
-                  >
-                    <p className="font-medium truncate">{card.cliente_nome}</p>
-                    <p className="text-muted-foreground truncate">{card.operacao}</p>
-                  </button>
-                ))}
+      {cards.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          Nenhum lead ativo
+        </div>
+      ) : (
+        cards.map((card) => (
+          <button
+            key={card.id}
+            onClick={() => onSelecionar(card)}
+            className={cn(
+              'w-full p-3 rounded-lg border-2 text-left transition-all hover:shadow-md',
+              cardSelecionado?.id === card.id
+                ? 'border-primary bg-primary/5'
+                : 'border-border bg-background hover:border-primary/40'
+            )}
+          >
+            <div className="flex items-start justify-between mb-2 gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{card.cliente_nome}</p>
+                <p className="text-xs text-muted-foreground truncate">{card.operacao}</p>
               </div>
-            )}
+              <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0', getEstagioColor(card.estagio))}>
+                {estagioLabelMap[card.estagio] ?? card.estagio}
+              </span>
+            </div>
 
-            {aberto && grupo.length === 0 && (
-              <p className="ml-3 mt-0.5 text-xs text-muted-foreground px-2 py-1">
-                Nenhum card neste estágio
-              </p>
-            )}
-          </div>
-        )
-      })}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="w-3 h-3 shrink-0" />
+              {card.cliente_cidade}/{card.cliente_estado}
+            </div>
+          </button>
+        ))
+      )}
     </div>
   )
 }
@@ -156,7 +156,7 @@ const statusLabel: Record<string, string> = {
 }
 
 function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
-  const estagioInfo = estagios.find((e) => e.id === card.estagio)
+  const estagioInfo = { color: getEstagioColor(card.estagio), label: estagioLabelMap[card.estagio] ?? card.estagio }
   const docsFiltrados = documentos.filter((d) => d.card_id === card.id)
 
   return (
@@ -168,8 +168,8 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           <p className="text-sm text-muted-foreground">{card.operacao} · {card.cliente_cidade}/{card.cliente_estado}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{card.cliente_cnpj}</p>
         </div>
-        <span className={cn('text-xs font-semibold px-2 py-1 rounded', estagioInfo?.color)}>
-          {estagioInfo?.label}
+        <span className={cn('text-xs font-semibold px-2 py-1 rounded', estagioInfo.color)}>
+          {estagioInfo.label}
         </span>
       </div>
 
