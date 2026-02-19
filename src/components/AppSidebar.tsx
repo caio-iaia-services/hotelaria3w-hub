@@ -17,6 +17,7 @@ import {
   User,
   X,
   BarChart3,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -65,8 +66,8 @@ const menuSections: MenuSection[] = [
           { title: "Gestão 3", url: "/crm/gestao-3" },
         ],
       },
-      { title: "Ações Comerciais", url: "/acoes-comerciais", icon: FileText },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
+      { title: "Ações Comerciais", url: "/acoes-comerciais", icon: Zap },
       { title: "Clientes", url: "/clientes", icon: Users },
     ],
   },
