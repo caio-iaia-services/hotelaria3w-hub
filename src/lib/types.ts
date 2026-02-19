@@ -49,7 +49,7 @@ export interface CRMCard {
   cliente_id: string
   operacao: string
   gestao: string
-  estagio: 'lead' | 'contato' | 'proposta' | 'negociacao' | 'fechado'
+  estagio: 'lead' | 'contato' | 'proposta' | 'negociacao' | 'fechado' | 'consolidacao' | 'pos_venda' | 'realizado' | 'perdido'
   cliente_nome: string
   cliente_cnpj: string
   cliente_cidade: string
