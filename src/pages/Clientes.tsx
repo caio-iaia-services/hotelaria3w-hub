@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  Users, UserCheck, TrendingUp, Search, Plus, Eye, Pencil, Trash2, Loader2,
-} from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,6 +33,23 @@ const tipoColors: Record<string, string> = {
   regular: "bg-muted text-muted-foreground",
 };
 
+const ESTADOS_POR_REGIAO: Record<string, string[]> = {
+  Sul: ["RS", "SC", "PR"],
+  Sudeste: ["SP", "RJ", "MG", "ES"],
+  "Centro-Oeste": ["GO", "MT", "MS", "DF"],
+  Norte: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
+  Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
+};
+
+const FILTROS_INICIAIS = {
+  busca: "",
+  status: "todos",
+  tipo: "todos",
+  segmento: "todos",
+  cidade: "todos",
+  regiao: "todos",
+};
+
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,37 +58,57 @@ export default function Clientes() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
-  const [busca, setBusca] = useState("");
+  const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [debouncedBusca, setDebouncedBusca] = useState("");
-  const [filterStatus, setFilterStatus] = useState("todos");
-  const [filterTipo, setFilterTipo] = useState("todos");
+  const [cidades, setCidades] = useState<string[]>([]);
 
   const [modalCliente, setModalCliente] = useState<Cliente | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Debounce search
+  // Debounce busca
   useEffect(() => {
     const t = setTimeout(() => {
-      setDebouncedBusca(busca);
+      setDebouncedBusca(filtros.busca);
       setPage(1);
     }, 400);
     return () => clearTimeout(t);
-  }, [busca]);
+  }, [filtros.busca]);
+
+  // Buscar cidades únicas do banco
+  useEffect(() => {
+    async function buscarCidades() {
+      const { data } = await supabase
+        .from("clientes")
+        .select("cidade")
+        .not("cidade", "is", null)
+        .order("cidade");
+
+      if (data) {
+        const unicas = [...new Set(data.map((c) => c.cidade).filter(Boolean))] as string[];
+        setCidades(unicas);
+      }
+    }
+    buscarCidades();
+  }, []);
 
   const fetchClientes = useCallback(async () => {
     setLoading(true);
 
-    let query = supabase
-      .from("clientes")
-      .select("*", { count: "exact" });
+    let query = supabase.from("clientes").select("*", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
         `nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%,cidade.ilike.%${debouncedBusca}%`
       );
     }
-    if (filterStatus !== "todos") query = query.eq("status", filterStatus);
-    if (filterTipo !== "todos") query = query.eq("tipo", filterTipo);
+    if (filtros.status !== "todos") query = query.eq("status", filtros.status);
+    if (filtros.tipo !== "todos") query = query.eq("tipo", filtros.tipo);
+    if (filtros.segmento !== "todos") query = query.ilike("segmento_id", filtros.segmento);
+    if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
+    if (filtros.regiao !== "todos") {
+      const estados = ESTADOS_POR_REGIAO[filtros.regiao];
+      if (estados) query = query.in("estado", estados);
+    }
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -89,9 +124,8 @@ export default function Clientes() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filterStatus, filterTipo]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
 
-  // Fetch totals for metrics
   const fetchMetrics = useCallback(async () => {
     const { count: ativos } = await supabase
       .from("clientes")
@@ -100,13 +134,13 @@ export default function Clientes() {
     setTotalAtivos(ativos || 0);
   }, []);
 
-  useEffect(() => {
-    fetchClientes();
-  }, [fetchClientes]);
+  useEffect(() => { fetchClientes(); }, [fetchClientes]);
+  useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
+  // Reset page quando filtros mudam
   useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+    setPage(1);
+  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
 
   const totalPages = Math.ceil(total / pageSize);
   const taxaRetencao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
@@ -135,6 +169,23 @@ export default function Clientes() {
       fetchMetrics();
     }
   };
+
+  const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) => {
+    setFiltros((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const limparFiltros = () => {
+    setFiltros(FILTROS_INICIAIS);
+    setPage(1);
+  };
+
+  const temFiltrosAtivos =
+    filtros.busca !== "" ||
+    filtros.status !== "todos" ||
+    filtros.tipo !== "todos" ||
+    filtros.segmento !== "todos" ||
+    filtros.cidade !== "todos" ||
+    filtros.regiao !== "todos";
 
   const metrics = [
     { label: "Total de Clientes", value: total.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
@@ -169,32 +220,81 @@ export default function Clientes() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, CNPJ ou cidade..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="pl-9"
-          />
+      <div className="space-y-3">
+        {/* Linha 1: busca + botão limpar */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, CNPJ ou cidade..."
+              value={filtros.busca}
+              onChange={(e) => setFiltro("busca", e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {temFiltrosAtivos && (
+            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0">
+              <X size={14} />
+              Limpar Filtros
+            </Button>
+          )}
         </div>
-        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent className="bg-card z-50">
-            <SelectItem value="todos">Todos Status</SelectItem>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="inativo">Inativo</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterTipo} onValueChange={(v) => { setFilterTipo(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
-          <SelectContent className="bg-card z-50">
-            <SelectItem value="todos">Todos Tipos</SelectItem>
-            <SelectItem value="regular">Regular</SelectItem>
-            <SelectItem value="vip">VIP</SelectItem>
-          </SelectContent>
-        </Select>
+
+        {/* Linha 2: selects */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <Select value={filtros.status} onValueChange={(v) => setFiltro("status", v)}>
+            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todos">Todos Status</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtros.tipo} onValueChange={(v) => setFiltro("tipo", v)}>
+            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todos">Todos Tipos</SelectItem>
+              <SelectItem value="regular">Regular</SelectItem>
+              <SelectItem value="vip">VIP</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtros.segmento} onValueChange={(v) => setFiltro("segmento", v)}>
+            <SelectTrigger><SelectValue placeholder="Segmento" /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todos">Todos Segmentos</SelectItem>
+              <SelectItem value="Hotelaria">Hotelaria</SelectItem>
+              <SelectItem value="Gastronomia">Gastronomia</SelectItem>
+              <SelectItem value="Hospitalar">Hospitalar</SelectItem>
+              <SelectItem value="Condominial">Condominial</SelectItem>
+              <SelectItem value="Exportação">Exportação</SelectItem>
+              <SelectItem value="Outros">Outros</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtros.regiao} onValueChange={(v) => setFiltro("regiao", v)}>
+            <SelectTrigger><SelectValue placeholder="Região" /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todos">Todas Regiões</SelectItem>
+              <SelectItem value="Sul">Sul</SelectItem>
+              <SelectItem value="Sudeste">Sudeste</SelectItem>
+              <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+              <SelectItem value="Norte">Norte</SelectItem>
+              <SelectItem value="Nordeste">Nordeste</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtros.cidade} onValueChange={(v) => setFiltro("cidade", v)}>
+            <SelectTrigger><SelectValue placeholder="Cidade" /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todos">Todas Cidades</SelectItem>
+              {cidades.map((cidade) => (
+                <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Table */}
@@ -250,7 +350,7 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell className="text-center">
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setModalCliente(c); setModalOpen(true); }}>
-                        <Eye size={16} />
+                        <Search size={16} />
                       </Button>
                     </TableCell>
                   </TableRow>
