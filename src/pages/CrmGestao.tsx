@@ -46,16 +46,28 @@ const operationColors: Record<string, string> = {
   SKARA: "bg-fuchsia-500 text-white",
 };
 
-const stageIds = ["lead", "contato", "proposta", "negociacao", "fechado"] as const;
+const stageIds = ["lead", "contato", "proposta", "negociacao", "fechado", "consolidacao", "pos_venda", "realizado", "perdido"] as const;
 const stageTitles: Record<string, string> = {
-  lead: "LEAD", contato: "CONTATO", proposta: "PROPOSTA",
-  negociacao: "NEGOCIAÇÃO", fechado: "FECHADO",
+  lead: "LEAD",
+  contato: "CONTATO",
+  proposta: "PROPOSTA",
+  negociacao: "NEGOCIAÇÃO",
+  fechado: "FECHADO",
+  consolidacao: "CONSOLIDAÇÃO",
+  pos_venda: "PÓS-VENDA",
+  realizado: "REALIZADO",
+  perdido: "PERDIDO",
 };
 const stageColors: Record<string, string> = {
-  lead: "bg-muted", contato: "bg-blue-100 dark:bg-blue-900/30",
+  lead: "bg-muted",
+  contato: "bg-blue-100 dark:bg-blue-900/30",
   proposta: "bg-yellow-100 dark:bg-yellow-900/30",
   negociacao: "bg-orange-100 dark:bg-orange-900/30",
   fechado: "bg-green-100 dark:bg-green-900/30",
+  consolidacao: "bg-teal-100 dark:bg-teal-900/30",
+  pos_venda: "bg-cyan-100 dark:bg-cyan-900/30",
+  realizado: "bg-emerald-100 dark:bg-emerald-900/30",
+  perdido: "bg-red-100 dark:bg-red-900/30",
 };
 
 export default function CrmGestao() {

@@ -23,6 +23,10 @@ const columnColorMap: Record<string, string> = {
   "PROPOSTA": "border-t-yellow-500",
   "NEGOCIAÇÃO": "border-t-orange-500",
   "FECHADO": "border-t-green-500",
+  "CONSOLIDAÇÃO": "border-t-teal-500",
+  "PÓS-VENDA": "border-t-cyan-500",
+  "REALIZADO": "border-t-emerald-500",
+  "PERDIDO": "border-t-red-500",
 };
 
 export function KanbanColumn({ column, onCardClick, operationColors, showOperationBadge }: KanbanColumnProps) {
