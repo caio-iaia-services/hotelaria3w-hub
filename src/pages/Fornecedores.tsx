@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -25,38 +26,39 @@ interface Fornecedor {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
-  cidade: string | null;
-  estado: string | null;
-  segmento: string | null;
-  tipo: string;
+  categorias?: string | null;
   email: string | null;
   telefone: string | null;
+  site?: string | null;
+  cidade: string | null;
+  estado: string | null;
+  avaliacao_media?: number | null;
+  total_avaliacoes?: number | null;
+  prazo_medio_entrega?: number | null;
+  taxa_entrega_pontual?: number | null;
+  total_comprado?: number | null;
   status: string;
-  logradouro?: string | null;
-  numero?: string | null;
-  bairro?: string | null;
-  cep?: string | null;
-  complemento?: string | null;
+  tipo: string;
+  condicoes_pagamento?: string | null;
+  prazo_pagamento?: number | null;
+  desconto_volume?: number | null;
   observacoes?: string | null;
   created_at?: string;
+  updated_at?: string;
 }
 
 type FornecedorForm = {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
-  segmento: string;
   email: string;
   telefone: string;
+  site: string;
   cidade: string;
   estado: string;
-  cep: string;
-  logradouro: string;
-  numero: string;
-  bairro: string;
-  complemento: string;
   tipo: string;
   status: string;
+  observacoes: string;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -83,11 +85,6 @@ function applyMaskTelefone(value: string) {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
 }
 
-function applyMaskCEP(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 8);
-  return d.replace(/(\d{5})(\d{0,3})/, "$1-$2").replace(/-$/, "");
-}
-
 const statusColors: Record<string, string> = {
   ativo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
@@ -110,7 +107,6 @@ const FILTROS_INICIAIS = {
   busca: "",
   status: "todos",
   tipo: "todos",
-  segmento: "todos",
   cidade: "todos",
   regiao: "todos",
 };
@@ -143,17 +139,20 @@ export default function Fornecedores() {
   const [salvando, setSalvando] = useState(false);
 
   // Forms
-  const { register: regNovo, handleSubmit: subNovo, reset: resetNovo, setValue: setNovo, watch: watchNovo } = useForm<FornecedorForm>({
-    defaultValues: { tipo: "regular", status: "ativo" },
-  });
-  const { register: regEdit, handleSubmit: subEdit, reset: resetEdit, setValue: setEdit, watch: watchEdit } = useForm<FornecedorForm>();
+  const {
+    register: regNovo, handleSubmit: subNovo, reset: resetNovo,
+    setValue: setNovo, watch: watchNovo,
+  } = useForm<FornecedorForm>({ defaultValues: { tipo: "regular", status: "ativo" } });
+
+  const {
+    register: regEdit, handleSubmit: subEdit, reset: resetEdit,
+    setValue: setEdit, watch: watchEdit,
+  } = useForm<FornecedorForm>();
 
   const tipoNovoValue = watchNovo("tipo");
   const statusNovoValue = watchNovo("status");
-  const segmentoNovoValue = watchNovo("segmento");
   const tipoEditValue = watchEdit("tipo");
   const statusEditValue = watchEdit("status");
-  const segmentoEditValue = watchEdit("segmento");
 
   // Debounce busca
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -189,12 +188,11 @@ export default function Fornecedores() {
 
     if (debouncedBusca) {
       query = query.or(
-        `nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%,cidade.ilike.%${debouncedBusca}%`
+        `nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%`
       );
     }
     if (filtros.status !== "todos") query = query.eq("status", filtros.status);
     if (filtros.tipo !== "todos") query = query.eq("tipo", filtros.tipo);
-    if (filtros.segmento !== "todos") query = query.ilike("segmento", filtros.segmento);
     if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
     if (filtros.regiao !== "todos") {
       const estados = ESTADOS_POR_REGIAO[filtros.regiao];
@@ -215,9 +213,9 @@ export default function Fornecedores() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.cidade, filtros.regiao]);
 
-  // Buscar métricas (ativos)
+  // Buscar métricas
   const fetchMetrics = useCallback(async () => {
     const { count } = await supabase
       .from("fornecedores")
@@ -229,17 +227,13 @@ export default function Fornecedores() {
   useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
-  // Reset page quando filtros mudam
-  useEffect(() => {
-    setPage(1);
-  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+  useEffect(() => { setPage(1); }, [filtros.status, filtros.tipo, filtros.cidade, filtros.regiao]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
 
-  const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) => {
+  const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) =>
     setFiltros((prev) => ({ ...prev, [key]: value }));
-  };
 
   const limparFiltros = () => {
     setFiltros(FILTROS_INICIAIS);
@@ -251,11 +245,10 @@ export default function Fornecedores() {
     filtros.busca !== "" ||
     filtros.status !== "todos" ||
     filtros.tipo !== "todos" ||
-    filtros.segmento !== "todos" ||
     filtros.cidade !== "todos" ||
     filtros.regiao !== "todos";
 
-  // Salvar novo fornecedor
+  // Salvar novo
   const salvarNovo = async (dados: FornecedorForm) => {
     setSalvando(true);
     try {
@@ -263,19 +256,14 @@ export default function Fornecedores() {
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
         cnpj: dados.cnpj,
-        segmento: dados.segmento || null,
         email: dados.email || null,
         telefone: dados.telefone || null,
+        site: dados.site || null,
         cidade: dados.cidade,
         estado: dados.estado?.toUpperCase() || null,
-        cep: dados.cep || null,
-        logradouro: dados.logradouro || null,
-        numero: dados.numero || null,
-        bairro: dados.bairro || null,
-        complemento: dados.complemento || null,
         tipo: dados.tipo || "regular",
         status: dados.status || "ativo",
-        pais: "Brasil",
+        observacoes: dados.observacoes || null,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -297,18 +285,14 @@ export default function Fornecedores() {
       nome_fantasia: f.nome_fantasia,
       razao_social: f.razao_social,
       cnpj: formatCNPJ(f.cnpj),
-      segmento: f.segmento || "",
       email: f.email || "",
       telefone: f.telefone || "",
+      site: f.site || "",
       cidade: f.cidade || "",
       estado: f.estado || "",
-      cep: f.cep || "",
-      logradouro: f.logradouro || "",
-      numero: f.numero || "",
-      bairro: f.bairro || "",
-      complemento: f.complemento || "",
       tipo: f.tipo || "regular",
       status: f.status || "ativo",
+      observacoes: f.observacoes || "",
     });
     setModalEditar(f);
   };
@@ -324,18 +308,14 @@ export default function Fornecedores() {
           nome_fantasia: dados.nome_fantasia,
           razao_social: dados.razao_social,
           cnpj: dados.cnpj,
-          segmento: dados.segmento || null,
           email: dados.email || null,
           telefone: dados.telefone || null,
+          site: dados.site || null,
           cidade: dados.cidade,
           estado: dados.estado?.toUpperCase() || null,
-          cep: dados.cep || null,
-          logradouro: dados.logradouro || null,
-          numero: dados.numero || null,
-          bairro: dados.bairro || null,
-          complemento: dados.complemento || null,
           tipo: dados.tipo || "regular",
           status: dados.status || "ativo",
+          observacoes: dados.observacoes || null,
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
@@ -370,6 +350,104 @@ export default function Fornecedores() {
     { label: "Fornecedores Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck, color: "text-emerald-600" },
     { label: "Taxa de Ativação", value: `${taxaAtivacao}%`, icon: TrendingUp, color: "text-accent" },
   ];
+
+  // Form compartilhado (novo/editar)
+  const renderFormFields = (
+    reg: typeof regNovo,
+    set: typeof setNovo,
+    tipoVal: string,
+    statusVal: string,
+  ) => (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Nome Fantasia *</Label>
+          <Input {...reg("nome_fantasia")} placeholder="Castor Colchões" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Razão Social *</Label>
+          <Input {...reg("razao_social")} placeholder="Castor Colchões Ltda" required />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>CNPJ *</Label>
+        <Input
+          {...reg("cnpj")}
+          placeholder="00.000.000/0000-00"
+          maxLength={18}
+          required
+          onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>E-mail</Label>
+          <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Telefone</Label>
+          <Input
+            {...reg("telefone")}
+            placeholder="(11) 99999-9999"
+            maxLength={15}
+            onChange={(e) => set("telefone", applyMaskTelefone(e.target.value))}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Site</Label>
+        <Input {...reg("site")} placeholder="https://www.fornecedor.com.br" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Cidade *</Label>
+          <Input {...reg("cidade")} placeholder="São Paulo" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Estado *</Label>
+          <Input
+            {...reg("estado")}
+            placeholder="SP"
+            maxLength={2}
+            required
+            onChange={(e) => set("estado", e.target.value.toUpperCase())}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Tipo</Label>
+          <Select value={tipoVal} onValueChange={(v) => set("tipo", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="regular">Regular</SelectItem>
+              <SelectItem value="vip">VIP</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select value={statusVal} onValueChange={(v) => set("status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Observações</Label>
+        <Textarea {...reg("observacoes")} placeholder="Notas sobre o fornecedor..." rows={3} />
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -413,7 +491,7 @@ export default function Fornecedores() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, CNPJ ou cidade..."
+              placeholder="Buscar por nome, razão social ou CNPJ..."
               value={filtros.busca}
               onChange={(e) => handleBuscaChange(e.target.value)}
               className="pl-9"
@@ -427,7 +505,7 @@ export default function Fornecedores() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Select value={filtros.status} onValueChange={(v) => setFiltro("status", v)}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent className="bg-card z-50">
@@ -443,19 +521,6 @@ export default function Fornecedores() {
               <SelectItem value="todos">Todos Tipos</SelectItem>
               <SelectItem value="regular">Regular</SelectItem>
               <SelectItem value="vip">VIP</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filtros.segmento} onValueChange={(v) => setFiltro("segmento", v)}>
-            <SelectTrigger><SelectValue placeholder="Segmento" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Segmentos</SelectItem>
-              <SelectItem value="Hotelaria">Hotelaria</SelectItem>
-              <SelectItem value="Gastronomia">Gastronomia</SelectItem>
-              <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-              <SelectItem value="Condominial">Condominial</SelectItem>
-              <SelectItem value="Exportação">Exportação</SelectItem>
-              <SelectItem value="Outros">Outros</SelectItem>
             </SelectContent>
           </Select>
 
@@ -490,9 +555,9 @@ export default function Fornecedores() {
             <TableHeader>
               <TableRow>
                 <TableHead>Fornecedor</TableHead>
+                <TableHead>Razão Social</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Cidade/UF</TableHead>
-                <TableHead>Segmento</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
@@ -517,23 +582,20 @@ export default function Fornecedores() {
                   <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell onClick={() => setModalVer(f)}>
                       <div className="flex items-center gap-2">
-                        <div>
-                          <p className="font-medium text-foreground">{f.nome_fantasia}</p>
-                          <p className="text-xs text-muted-foreground">{f.razao_social}</p>
-                        </div>
+                        <p className="font-medium text-foreground">{f.nome_fantasia}</p>
                         {f.tipo === "vip" && (
                           <Badge variant="outline" className={tipoColors.vip}>VIP</Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground" onClick={() => setModalVer(f)}>
+                      {f.razao_social}
                     </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground" onClick={() => setModalVer(f)}>
                       {formatCNPJ(f.cnpj)}
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setModalVer(f)}>
                       {f.cidade || "-"}/{f.estado || "-"}
-                    </TableCell>
-                    <TableCell className="text-sm" onClick={() => setModalVer(f)}>
-                      {f.segmento || "-"}
                     </TableCell>
                     <TableCell className="text-center" onClick={() => setModalVer(f)}>
                       <Badge variant="outline" className={statusColors[f.status] || ""}>{f.status}</Badge>
@@ -600,37 +662,55 @@ export default function Fornecedores() {
           </DialogHeader>
           {modalVer && (
             <div className="space-y-5 pt-1">
+              {/* Dados Gerais */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dados Gerais</p>
                 <div className="grid grid-cols-2 gap-3">
                   <Info label="Nome Fantasia" value={modalVer.nome_fantasia} />
                   <Info label="Razão Social" value={modalVer.razao_social} />
                   <Info label="CNPJ" value={formatCNPJ(modalVer.cnpj)} />
-                  <Info label="Segmento" value={modalVer.segmento} />
+                  <div className="flex gap-2 items-start flex-col">
+                    <p className="text-xs text-muted-foreground">Tipo</p>
+                    <Badge variant="outline" className={tipoColors[modalVer.tipo] || tipoColors.regular}>
+                      {modalVer.tipo?.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 items-start flex-col">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <Badge variant="outline" className={statusColors[modalVer.status] || ""}>
+                      {modalVer.status}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+
+              {/* Contato */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contato</p>
                 <div className="grid grid-cols-2 gap-3">
                   <Info label="E-mail" value={modalVer.email} />
                   <Info label="Telefone" value={modalVer.telefone} />
+                  <Info label="Site" value={modalVer.site} />
                 </div>
               </div>
+
+              {/* Localização */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Endereço</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Localização</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Info label="Logradouro" value={modalVer.logradouro} />
-                  <Info label="Número" value={modalVer.numero} />
-                  <Info label="Bairro" value={modalVer.bairro} />
-                  <Info label="CEP" value={modalVer.cep} />
-                  <Info label="Cidade/UF" value={`${modalVer.cidade || "-"}/${modalVer.estado || "-"}`} />
-                  <Info label="Complemento" value={modalVer.complemento} />
+                  <Info label="Cidade" value={modalVer.cidade} />
+                  <Info label="Estado" value={modalVer.estado} />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Badge variant="outline" className={statusColors[modalVer.status] || ""}>{modalVer.status}</Badge>
-                <Badge variant="outline" className={tipoColors[modalVer.tipo] || tipoColors.regular}>{modalVer.tipo?.toUpperCase()}</Badge>
-              </div>
+
+              {/* Observações */}
+              {modalVer.observacoes && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Observações</p>
+                  <p className="text-sm text-foreground bg-muted/40 rounded-md p-3">{modalVer.observacoes}</p>
+                </div>
+              )}
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setModalVer(null)}>Fechar</Button>
               </DialogFooter>
@@ -647,121 +727,14 @@ export default function Fornecedores() {
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Nome Fantasia *</Label>
-                <Input {...regNovo("nome_fantasia")} placeholder="Castor Colchões" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Razão Social *</Label>
-                <Input {...regNovo("razao_social")} placeholder="Castor Colchões Ltda" required />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>CNPJ *</Label>
-                <Input
-                  {...regNovo("cnpj")}
-                  placeholder="00.000.000/0000-00"
-                  maxLength={18}
-                  required
-                  onChange={(e) => setNovo("cnpj", applyMaskCNPJ(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Segmento *</Label>
-                <Select value={segmentoNovoValue} onValueChange={(v) => setNovo("segmento", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="Hotelaria">Hotelaria</SelectItem>
-                    <SelectItem value="Gastronomia">Gastronomia</SelectItem>
-                    <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-                    <SelectItem value="Condominial">Condominial</SelectItem>
-                    <SelectItem value="Exportação">Exportação</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>E-mail</Label>
-                <Input {...regNovo("email")} type="email" placeholder="contato@fornecedor.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input
-                  {...regNovo("telefone")}
-                  placeholder="(11) 99999-9999"
-                  maxLength={15}
-                  onChange={(e) => setNovo("telefone", applyMaskTelefone(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Cidade *</Label>
-                <Input {...regNovo("cidade")} placeholder="São Paulo" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Estado *</Label>
-                <Input {...regNovo("estado")} placeholder="SP" maxLength={2} required
-                  onChange={(e) => setNovo("estado", e.target.value.toUpperCase())} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>CEP</Label>
-                <Input
-                  {...regNovo("cep")}
-                  placeholder="00000-000"
-                  maxLength={9}
-                  onChange={(e) => setNovo("cep", applyMaskCEP(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Logradouro</Label>
-                <Input {...regNovo("logradouro")} placeholder="Rua das Flores" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Número</Label>
-                <Input {...regNovo("numero")} placeholder="123" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Bairro</Label>
-                <Input {...regNovo("bairro")} placeholder="Centro" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Complemento</Label>
-                <Input {...regNovo("complemento")} placeholder="Sala 101" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Select value={tipoNovoValue} onValueChange={(v) => setNovo("tipo", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={statusNovoValue} onValueChange={(v) => setNovo("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue)}
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => { setModalNovo(false); resetNovo(); }} disabled={salvando}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setModalNovo(false); resetNovo(); }}
+                disabled={salvando}
+              >
                 Cancelar
               </Button>
               <Button type="submit" disabled={salvando}>
@@ -780,116 +753,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Nome Fantasia *</Label>
-                <Input {...regEdit("nome_fantasia")} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Razão Social *</Label>
-                <Input {...regEdit("razao_social")} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>CNPJ *</Label>
-                <Input
-                  {...regEdit("cnpj")}
-                  maxLength={18}
-                  required
-                  onChange={(e) => setEdit("cnpj", applyMaskCNPJ(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Segmento *</Label>
-                <Select value={segmentoEditValue} onValueChange={(v) => setEdit("segmento", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="Hotelaria">Hotelaria</SelectItem>
-                    <SelectItem value="Gastronomia">Gastronomia</SelectItem>
-                    <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-                    <SelectItem value="Condominial">Condominial</SelectItem>
-                    <SelectItem value="Exportação">Exportação</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>E-mail</Label>
-                <Input {...regEdit("email")} type="email" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input
-                  {...regEdit("telefone")}
-                  maxLength={15}
-                  onChange={(e) => setEdit("telefone", applyMaskTelefone(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Cidade *</Label>
-                <Input {...regEdit("cidade")} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Estado *</Label>
-                <Input {...regEdit("estado")} maxLength={2} required
-                  onChange={(e) => setEdit("estado", e.target.value.toUpperCase())} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>CEP</Label>
-                <Input
-                  {...regEdit("cep")}
-                  maxLength={9}
-                  onChange={(e) => setEdit("cep", applyMaskCEP(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Logradouro</Label>
-                <Input {...regEdit("logradouro")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Número</Label>
-                <Input {...regEdit("numero")} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Bairro</Label>
-                <Input {...regEdit("bairro")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Complemento</Label>
-                <Input {...regEdit("complemento")} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Select value={tipoEditValue} onValueChange={(v) => setEdit("tipo", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={statusEditValue} onValueChange={(v) => setEdit("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue)}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button
                 type="button"
