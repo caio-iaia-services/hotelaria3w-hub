@@ -344,41 +344,73 @@ export default function AcoesComerciais() {
   })
 
   useEffect(() => {
-    buscarDados()
+    buscarLeadsAtivos()
+    buscarMetricas()
   }, [])
 
-  async function buscarDados() {
-    setLoading(true)
-    try {
-      const [{ data: cardsData }, { data: docsData }] = await Promise.all([
-        supabase.from('crm_cards').select('*').order('ordem'),
-        supabase.from('documentos_comerciais').select('*').order('created_at', { ascending: false }),
-      ])
-
-      const todosCards = cardsData ?? []
-      const todosDocs = docsData ?? []
-
-      setCards(todosCards)
-      setDocumentos(todosDocs)
-
-      // Métricas
-      const realizados = todosCards.filter((c) => c.estagio === 'realizado').length
-      const total = todosCards.length
-      const taxaConversao = total > 0 ? Math.round((realizados / total) * 100) : 0
-
-      setMetricas({
-        cotacoesPendentes: todosDocs.filter((d) => d.tipo === 'cotacao' && d.status === 'rascunho').length,
-        orcamentosEnviados: todosDocs.filter((d) => d.tipo === 'orcamento' && d.status === 'enviado').length,
-        contratosAnalise: todosDocs.filter((d) => d.tipo === 'contrato' && d.status === 'enviado').length,
-        valorTotal: todosDocs.reduce((acc, d) => acc + (d.valor_total ?? 0), 0),
-        taxaConversao,
-        tempoMedio: 0,
-      })
-    } catch (err) {
-      console.error('Erro ao buscar dados:', err)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (cardSelecionado) {
+      buscarDocumentos(cardSelecionado.id)
     }
+  }, [cardSelecionado])
+
+  async function buscarLeadsAtivos() {
+    setLoading(true)
+
+    const { data, error } = await supabase
+      .from('crm_cards')
+      .select('*')
+      .in('estagio', ['lead', 'contato', 'proposta', 'negociacao', 'fechado'])
+      .order('created_at', { ascending: false })
+
+    if (!error && data) {
+      setCards(data)
+      if (data.length > 0 && !cardSelecionado) {
+        setCardSelecionado(data[0])
+      }
+    }
+
+    setLoading(false)
+  }
+
+  async function buscarDocumentos(cardId: string) {
+    const { data, error } = await supabase
+      .from('documentos_comerciais')
+      .select('*')
+      .eq('card_id', cardId)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) {
+      setDocumentos(data)
+    }
+  }
+
+  async function buscarMetricas() {
+    const [
+      { count: cotacoes },
+      { count: orcamentos },
+      { count: contratos },
+      { data: valores },
+      { count: aprovados },
+    ] = await Promise.all([
+      supabase.from('documentos_comerciais').select('*', { count: 'exact', head: true }).eq('tipo', 'cotacao').eq('status', 'enviado'),
+      supabase.from('documentos_comerciais').select('*', { count: 'exact', head: true }).eq('tipo', 'orcamento').eq('status', 'enviado'),
+      supabase.from('documentos_comerciais').select('*', { count: 'exact', head: true }).eq('tipo', 'contrato').eq('status', 'enviado'),
+      supabase.from('documentos_comerciais').select('valor_total').eq('tipo', 'orcamento').in('status', ['enviado', 'aprovado']),
+      supabase.from('documentos_comerciais').select('*', { count: 'exact', head: true }).eq('tipo', 'orcamento').eq('status', 'aprovado'),
+    ])
+
+    const valorTotal = valores?.reduce((sum, doc) => sum + (doc.valor_total || 0), 0) || 0
+    const taxaConversao = (orcamentos ?? 0) > 0 ? Math.round(((aprovados ?? 0) / (orcamentos ?? 1)) * 100) : 0
+
+    setMetricas({
+      cotacoesPendentes: cotacoes ?? 0,
+      orcamentosEnviados: orcamentos ?? 0,
+      contratosAnalise: contratos ?? 0,
+      valorTotal,
+      taxaConversao,
+      tempoMedio: 5,
+    })
   }
 
   function executarAcao(acao: string, cardId: string) {
