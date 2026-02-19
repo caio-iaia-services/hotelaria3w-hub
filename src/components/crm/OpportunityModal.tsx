@@ -17,6 +17,10 @@ const stageLabels: Record<string, string> = {
   proposta: "Proposta",
   negociacao: "Negociação",
   fechado: "Fechado",
+  consolidacao: "Consolidação",
+  pos_venda: "Pós-Venda",
+  realizado: "Realizado",
+  perdido: "Perdido",
 };
 
 export function OpportunityModal({ card, open, onOpenChange }: OpportunityModalProps) {
