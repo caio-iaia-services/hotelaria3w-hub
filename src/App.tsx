@@ -11,6 +11,7 @@ import Clientes from "./pages/Clientes";
 import Planejamento from "./pages/Planejamento";
 import Oportunidades from "./pages/Oportunidades";
 import CrmGestao from "./pages/CrmGestao";
+import AcoesComerciais from "./pages/AcoesComerciais";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -43,7 +44,11 @@ const App = () => (
             />
             <Route
               path="/crm/:gestaoId"
-              element={<AppLayout><CrmGestao /></AppLayout>}
+            element={<AppLayout><CrmGestao /></AppLayout>}
+            />
+            <Route
+              path="/acoes-comerciais"
+              element={<AppLayout><AcoesComerciais /></AppLayout>}
             />
             {[
               "/atendimento",
