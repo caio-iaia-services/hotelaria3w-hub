@@ -2,24 +2,14 @@ import { supabase } from '@/lib/supabase'
 import { CRMCard, DocumentoComercial } from '@/lib/types'
 import { useState, useEffect } from 'react'
 import {
-  FileText,
-  DollarSign,
-  FileSignature,
-  Send,
-  CreditCard,
-  FolderOpen,
-  Plus,
-  TrendingUp,
-  Clock,
-  MapPin,
-  Zap,
-  Eye,
-  Download,
+  FileText, DollarSign, FileSignature,
+  Send, CreditCard, FolderOpen, Zap,
+  TrendingUp, Clock, MapPin, Eye, Download, ChevronRight,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {
@@ -29,34 +19,28 @@ interface MetricCardProps {
   cor: 'blue' | 'green' | 'orange' | 'purple' | 'teal' | 'gray'
 }
 
-const corMap: Record<string, string> = {
-  blue: 'bg-blue-50 text-blue-700 border-blue-200',
-  green: 'bg-green-50 text-green-700 border-green-200',
-  orange: 'bg-orange-50 text-orange-700 border-orange-200',
-  purple: 'bg-purple-50 text-purple-700 border-purple-200',
-  teal: 'bg-teal-50 text-teal-700 border-teal-200',
-  gray: 'bg-muted text-muted-foreground border-border',
-}
-
 function MetricCard({ icon, titulo, valor, cor }: MetricCardProps) {
+  const cores: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600',
+    green: 'bg-green-50 text-green-600',
+    orange: 'bg-orange-50 text-orange-600',
+    purple: 'bg-purple-50 text-purple-600',
+    teal: 'bg-teal-50 text-teal-600',
+    gray: 'bg-muted text-muted-foreground',
+  }
+
   return (
-    <div className={cn('rounded-lg border p-3 flex flex-col gap-1', corMap[cor])}>
-      <div className="flex items-center gap-2 opacity-80">
-        <span className="w-4 h-4 shrink-0">{icon}</span>
-        <span className="text-[11px] font-medium leading-tight">{titulo}</span>
+    <div className="bg-card border rounded-lg p-4">
+      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center mb-3', cores[cor])}>
+        {icon}
       </div>
-      <span className="text-xl font-bold tracking-tight">{valor}</span>
+      <p className="text-2xl font-bold">{valor}</p>
+      <p className="text-sm text-muted-foreground">{titulo}</p>
     </div>
   )
 }
 
-// ─── FunilVertical ────────────────────────────────────────────────────────────
-interface FunilProps {
-  cards: CRMCard[]
-  cardSelecionado: CRMCard | null
-  onSelecionar: (c: CRMCard) => void
-}
-
+// ─── Estágio helpers ──────────────────────────────────────────────────────────
 const estagioColorMap: Record<string, string> = {
   lead: 'bg-blue-100 text-blue-800',
   contato: 'bg-sky-100 text-sky-800',
@@ -70,19 +54,20 @@ const estagioColorMap: Record<string, string> = {
 }
 
 const estagioLabelMap: Record<string, string> = {
-  lead: 'Lead',
-  contato: 'Contato',
-  proposta: 'Proposta',
-  negociacao: 'Negociação',
-  fechado: 'Fechado',
-  consolidacao: 'Consolidação',
-  pos_venda: 'Pós-Venda',
-  realizado: 'Realizado',
-  perdido: 'Perdido',
+  lead: 'Lead', contato: 'Contato', proposta: 'Proposta',
+  negociacao: 'Negociação', fechado: 'Fechado', consolidacao: 'Consolidação',
+  pos_venda: 'Pós-Venda', realizado: 'Realizado', perdido: 'Perdido',
 }
 
 function getEstagioColor(estagio: string) {
-  return estagioColorMap[estagio] ?? 'bg-gray-100 text-gray-700'
+  return estagioColorMap[estagio] ?? 'bg-muted text-muted-foreground'
+}
+
+// ─── FunilVertical ────────────────────────────────────────────────────────────
+interface FunilProps {
+  cards: CRMCard[]
+  cardSelecionado: CRMCard | null
+  onSelecionar: (c: CRMCard) => void
 }
 
 function FunilVertical({ cards, cardSelecionado, onSelecionar }: FunilProps) {
@@ -119,7 +104,6 @@ function FunilVertical({ cards, cardSelecionado, onSelecionar }: FunilProps) {
                 {estagioLabelMap[card.estagio] ?? card.estagio}
               </span>
             </div>
-
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3 shrink-0" />
               {card.cliente_cidade}/{card.cliente_estado}
@@ -138,7 +122,6 @@ interface AreaProps {
   onAcao: (acao: string, cardId: string) => void
 }
 
-// Helpers de documentos
 function hasOrcamento(docs: DocumentoComercial[]) {
   return docs.some((d) => d.tipo === 'orcamento')
 }
@@ -169,12 +152,8 @@ const statusBadge: Record<string, string> = {
   aprovado: 'bg-primary/10 text-primary',
   rejeitado: 'bg-destructive/10 text-destructive',
 }
-
 const statusLabel: Record<string, string> = {
-  rascunho: 'Rascunho',
-  enviado: 'Enviado',
-  aprovado: 'Aprovado',
-  rejeitado: 'Rejeitado',
+  rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', rejeitado: 'Rejeitado',
 }
 
 function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
@@ -197,7 +176,6 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
             {estagioLabelMap[card.estagio] ?? card.estagio}
           </span>
         </div>
-
         {card.observacoes && (
           <div className="mt-4 p-3 bg-muted/50 rounded">
             <p className="text-sm text-muted-foreground">{card.observacoes}</p>
@@ -211,61 +189,37 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           <Zap className="w-5 h-5 text-primary" />
           Ações Disponíveis
         </h3>
-
         <div className="grid grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('solicitar_cotacao', card.id)}
-          >
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
+            onClick={() => onAcao('solicitar_cotacao', card.id)}>
             <FileText className="w-6 h-6" />
             <span className="text-sm">Solicitar Cotação</span>
           </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('preparar_orcamento', card.id)}
-          >
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
+            onClick={() => onAcao('preparar_orcamento', card.id)}>
             <DollarSign className="w-6 h-6" />
             <span className="text-sm">Preparar Orçamento</span>
           </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao('gerar_contrato', card.id)}
-          >
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
+            onClick={() => onAcao('gerar_contrato', card.id)}>
             <FileSignature className="w-6 h-6" />
             <span className="text-sm">Gerar Contrato</span>
           </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('enviar_orcamento', card.id)}
-            disabled={!hasOrcamento(docsFiltrados)}
-          >
+            disabled={!hasOrcamento(docsFiltrados)}>
             <Send className="w-6 h-6" />
             <span className="text-sm">Enviar Orçamento</span>
           </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('enviar_contrato', card.id)}
-            disabled={!hasContrato(docsFiltrados)}
-          >
+            disabled={!hasContrato(docsFiltrados)}>
             <Send className="w-6 h-6" />
             <span className="text-sm">Enviar Contrato</span>
           </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2"
             onClick={() => onAcao('gerar_cobranca', card.id)}
-            disabled={!hasContratoAprovado(docsFiltrados)}
-          >
+            disabled={!hasContratoAprovado(docsFiltrados)}>
             <CreditCard className="w-6 h-6" />
             <span className="text-sm">Gerar Cobrança</span>
           </Button>
@@ -279,9 +233,10 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
             <FolderOpen className="w-5 h-5 text-muted-foreground" />
             Documentos Gerados ({docsFiltrados.length})
           </h3>
-          <Button variant="ghost" size="sm" onClick={() => window.open(`https://drive.google.com/drive/search?q=${card.cliente_nome}`, '_blank')}>
+          <Button variant="ghost" size="sm"
+            onClick={() => window.open(`https://drive.google.com/drive/search?q=${card.cliente_nome}`, '_blank')}>
             <FolderOpen className="w-4 h-4 mr-2" />
-            Ver todos no Drive
+            Ver no Drive
           </Button>
         </div>
 
@@ -294,10 +249,8 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
         ) : (
           <div className="space-y-2">
             {docsFiltrados.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/30 transition-colors"
-              >
+              <div key={doc.id}
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/30 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   {getDocumentoIcon(doc.tipo)}
                   <div className="min-w-0">
@@ -308,7 +261,6 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', statusBadge[doc.status])}>
                     {statusLabel[doc.status]}
@@ -357,7 +309,6 @@ export default function AcoesComerciais() {
 
   async function buscarLeadsAtivos() {
     setLoading(true)
-
     const { data, error } = await supabase
       .from('crm_cards')
       .select('*')
@@ -370,7 +321,6 @@ export default function AcoesComerciais() {
         setCardSelecionado(data[0])
       }
     }
-
     setLoading(false)
   }
 
@@ -381,9 +331,7 @@ export default function AcoesComerciais() {
       .eq('card_id', cardId)
       .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      setDocumentos(data)
-    }
+    if (!error && data) setDocumentos(data)
   }
 
   async function buscarMetricas() {
@@ -416,170 +364,87 @@ export default function AcoesComerciais() {
 
   async function executarAcao(acao: string, cardId: string) {
     if (!cardSelecionado) return
-
     switch (acao) {
       case 'solicitar_cotacao': await solicitarCotacao(); break
       case 'preparar_orcamento': await prepararOrcamento(); break
       case 'gerar_contrato': await gerarContrato(); break
-      case 'enviar_orcamento': await enviarOrcamento(); break
-      case 'enviar_contrato': await enviarContrato(); break
-      case 'gerar_cobranca': await gerarCobranca(); break
+      case 'enviar_orcamento': toast.info('Funcionalidade de envio em desenvolvimento'); break
+      case 'enviar_contrato': toast.info('Funcionalidade de envio em desenvolvimento'); break
+      case 'gerar_cobranca': toast.info('Funcionalidade de cobrança em desenvolvimento'); break
     }
   }
 
   async function solicitarCotacao() {
     try {
       const numero = `COT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
-
-      const { data, error } = await supabase
-        .from('documentos_comerciais')
-        .insert({
-          card_id: cardSelecionado!.id,
-          cliente_id: cardSelecionado!.cliente_id,
-          tipo: 'cotacao',
-          numero,
-          titulo: `Cotação ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
-          status: 'rascunho',
-          conteudo: {
-            operacao: cardSelecionado!.operacao,
-            observacoes: cardSelecionado!.observacoes,
-          },
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await supabase.from('acoes_comerciais_log').insert({
+      const { data, error } = await supabase.from('documentos_comerciais').insert({
         card_id: cardSelecionado!.id,
-        documento_id: data.id,
-        acao: 'cotacao_solicitada',
-        descricao: `Cotação ${numero} solicitada`,
+        cliente_id: cardSelecionado!.cliente_id,
+        tipo: 'cotacao', numero,
+        titulo: `Cotação ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+        status: 'rascunho',
+        conteudo: { operacao: cardSelecionado!.operacao, observacoes: cardSelecionado!.observacoes },
+      }).select().single()
+      if (error) throw error
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id, documento_id: data.id,
+        acao: 'cotacao_solicitada', descricao: `Cotação ${numero} solicitada`,
       })
-
       toast.success('Cotação criada com sucesso!')
       buscarDocumentos(cardSelecionado!.id)
       buscarMetricas()
-    } catch (err) {
-      console.error(err)
-      toast.error('Erro ao criar cotação')
-    }
+    } catch (err) { console.error(err); toast.error('Erro ao criar cotação') }
   }
 
   async function prepararOrcamento() {
     try {
-      const { data: cotacao } = await supabase
-        .from('documentos_comerciais')
-        .select('*')
-        .eq('card_id', cardSelecionado!.id)
-        .eq('tipo', 'cotacao')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
+      const { data: cotacao } = await supabase.from('documentos_comerciais').select('*')
+        .eq('card_id', cardSelecionado!.id).eq('tipo', 'cotacao')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
       const numero = `ORC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
-
-      const { data, error } = await supabase
-        .from('documentos_comerciais')
-        .insert({
-          card_id: cardSelecionado!.id,
-          cliente_id: cardSelecionado!.cliente_id,
-          tipo: 'orcamento',
-          numero,
-          titulo: `Orçamento ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
-          status: 'rascunho',
-          conteudo: {
-            operacao: cardSelecionado!.operacao,
-            baseado_cotacao: cotacao?.numero ?? null,
-            itens: [],
-          },
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await supabase.from('acoes_comerciais_log').insert({
+      const { data, error } = await supabase.from('documentos_comerciais').insert({
         card_id: cardSelecionado!.id,
-        documento_id: data.id,
-        acao: 'orcamento_preparado',
-        descricao: `Orçamento ${numero} preparado`,
+        cliente_id: cardSelecionado!.cliente_id,
+        tipo: 'orcamento', numero,
+        titulo: `Orçamento ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+        status: 'rascunho',
+        conteudo: { operacao: cardSelecionado!.operacao, baseado_cotacao: cotacao?.numero ?? null, itens: [] },
+      }).select().single()
+      if (error) throw error
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id, documento_id: data.id,
+        acao: 'orcamento_preparado', descricao: `Orçamento ${numero} preparado`,
       })
-
       toast.success('Orçamento criado! Preencha os detalhes.')
       buscarDocumentos(cardSelecionado!.id)
       buscarMetricas()
-    } catch (err) {
-      console.error(err)
-      toast.error('Erro ao criar orçamento')
-    }
+    } catch (err) { console.error(err); toast.error('Erro ao criar orçamento') }
   }
 
   async function gerarContrato() {
     try {
-      const { data: orcamento } = await supabase
-        .from('documentos_comerciais')
-        .select('*')
-        .eq('card_id', cardSelecionado!.id)
-        .eq('tipo', 'orcamento')
-        .eq('status', 'aprovado')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (!orcamento) {
-        toast.error('É necessário ter um orçamento aprovado')
-        return
-      }
-
+      const { data: orcamento } = await supabase.from('documentos_comerciais').select('*')
+        .eq('card_id', cardSelecionado!.id).eq('tipo', 'orcamento').eq('status', 'aprovado')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (!orcamento) { toast.error('É necessário ter um orçamento aprovado'); return }
       const numero = `CTR-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
-
-      const { data, error } = await supabase
-        .from('documentos_comerciais')
-        .insert({
-          card_id: cardSelecionado!.id,
-          cliente_id: cardSelecionado!.cliente_id,
-          tipo: 'contrato',
-          numero,
-          titulo: `Contrato ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
-          status: 'rascunho',
-          valor_total: orcamento.valor_total,
-          conteudo: {
-            baseado_orcamento: orcamento.numero,
-            valor_total: orcamento.valor_total,
-          },
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await supabase.from('acoes_comerciais_log').insert({
+      const { data, error } = await supabase.from('documentos_comerciais').insert({
         card_id: cardSelecionado!.id,
-        documento_id: data.id,
-        acao: 'contrato_gerado',
-        descricao: `Contrato ${numero} gerado`,
+        cliente_id: cardSelecionado!.cliente_id,
+        tipo: 'contrato', numero,
+        titulo: `Contrato ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+        status: 'rascunho', valor_total: orcamento.valor_total,
+        conteudo: { baseado_orcamento: orcamento.numero, valor_total: orcamento.valor_total },
+      }).select().single()
+      if (error) throw error
+      await supabase.from('acoes_comerciais_log').insert({
+        card_id: cardSelecionado!.id, documento_id: data.id,
+        acao: 'contrato_gerado', descricao: `Contrato ${numero} gerado`,
       })
-
       toast.success('Contrato gerado com sucesso!')
       buscarDocumentos(cardSelecionado!.id)
       buscarMetricas()
-    } catch (err) {
-      console.error(err)
-      toast.error('Erro ao gerar contrato')
-    }
-  }
-
-  async function enviarOrcamento() {
-    toast.info('Funcionalidade de envio em desenvolvimento')
-  }
-
-  async function enviarContrato() {
-    toast.info('Funcionalidade de envio em desenvolvimento')
-  }
-
-  async function gerarCobranca() {
-    toast.info('Funcionalidade de cobrança em desenvolvimento')
+    } catch (err) { console.error(err); toast.error('Erro ao gerar contrato') }
   }
 
   return (
@@ -592,17 +457,12 @@ export default function AcoesComerciais() {
 
       {/* MÉTRICAS */}
       <div className="grid grid-cols-6 gap-4 px-6 py-4 border-b bg-muted/30">
-        <MetricCard icon={<FileText className="w-4 h-4" />} titulo="Cotações Pendentes" valor={metricas.cotacoesPendentes} cor="blue" />
-        <MetricCard icon={<DollarSign className="w-4 h-4" />} titulo="Orçamentos Enviados" valor={metricas.orcamentosEnviados} cor="green" />
-        <MetricCard icon={<FileSignature className="w-4 h-4" />} titulo="Contratos em Análise" valor={metricas.contratosAnalise} cor="orange" />
-        <MetricCard
-          icon={<DollarSign className="w-4 h-4" />}
-          titulo="Valor Total"
-          valor={`R$ ${(metricas.valorTotal / 1000).toFixed(0)}k`}
-          cor="purple"
-        />
-        <MetricCard icon={<TrendingUp className="w-4 h-4" />} titulo="Taxa Conversão" valor={`${metricas.taxaConversao}%`} cor="teal" />
-        <MetricCard icon={<Clock className="w-4 h-4" />} titulo="Tempo Médio" valor={`${metricas.tempoMedio} dias`} cor="gray" />
+        <MetricCard icon={<FileText className="w-5 h-5" />} titulo="Cotações Pendentes" valor={metricas.cotacoesPendentes} cor="blue" />
+        <MetricCard icon={<DollarSign className="w-5 h-5" />} titulo="Orçamentos Enviados" valor={metricas.orcamentosEnviados} cor="green" />
+        <MetricCard icon={<FileSignature className="w-5 h-5" />} titulo="Contratos em Análise" valor={metricas.contratosAnalise} cor="orange" />
+        <MetricCard icon={<DollarSign className="w-5 h-5" />} titulo="Valor Total" valor={`R$ ${(metricas.valorTotal / 1000).toFixed(0)}k`} cor="purple" />
+        <MetricCard icon={<TrendingUp className="w-5 h-5" />} titulo="Taxa Conversão" valor={`${metricas.taxaConversao}%`} cor="teal" />
+        <MetricCard icon={<Clock className="w-5 h-5" />} titulo="Tempo Médio" valor={`${metricas.tempoMedio} dias`} cor="gray" />
       </div>
 
       {/* LAYOUT PRINCIPAL */}
@@ -635,7 +495,7 @@ export default function AcoesComerciais() {
               <div className="text-center">
                 <FileText className="w-16 h-16 mx-auto mb-4 opacity-30" />
                 <p className="text-base font-medium">Selecione um lead no funil para começar</p>
-                <p className="text-sm mt-1">Clique em um estágio e depois em um cliente</p>
+                <p className="text-sm mt-1">Clique em um cliente no painel à esquerda</p>
               </div>
             </div>
           )}
