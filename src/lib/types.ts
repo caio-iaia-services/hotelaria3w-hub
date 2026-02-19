@@ -60,3 +60,32 @@ export interface CRMCard {
   created_at: string
   updated_at: string
 }
+
+export interface DocumentoComercial {
+  id: string
+  card_id: string
+  cliente_id: string
+  tipo: 'cotacao' | 'orcamento' | 'contrato' | 'cobranca'
+  numero: string | null
+  titulo: string
+  arquivo_nome: string | null
+  arquivo_url: string | null
+  google_drive_id: string | null
+  conteudo: any
+  valor_total: number | null
+  moeda: string
+  status: 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado'
+  enviado_em: string | null
+  aprovado_em: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AcaoComercialLog {
+  id: string
+  card_id: string
+  documento_id: string | null
+  acao: string
+  descricao: string | null
+  created_at: string
+}
