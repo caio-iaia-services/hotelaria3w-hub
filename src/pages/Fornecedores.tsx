@@ -209,7 +209,7 @@ export default function Fornecedores() {
     setLoading(true);
     let query = supabase
       .from("fornecedores")
-      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, whatsapp, site, site_2, endereco, numero, complemento, bairro, cep, contatos, logotipo_url, catalogos, data_inicio, contrato, condicoes_pagamento, num_orcamentos, volume_orcamentos, orcamento_medio, num_vendas, volume_vendas, venda_media, a_receber, pendentes, linhas_produtos, segmentos_atuacao, observacoes, created_at, updated_at", { count: "exact" });
+      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, linhas_produtos", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
@@ -304,6 +304,20 @@ export default function Fornecedores() {
       toast({ title: "Erro ao cadastrar", description: err.message, variant: "destructive" });
     } finally {
       setSalvando(false);
+    }
+  };
+
+  // Ver detalhes (busca dados completos)
+  const verDetalhes = async (fornecedor: Fornecedor) => {
+    const { data } = await supabase
+      .from("fornecedores")
+      .select("*")
+      .eq("id", fornecedor.id)
+      .single();
+    if (data) {
+      setModalVer(data as Fornecedor);
+    } else {
+      setModalVer(fornecedor);
     }
   };
 
@@ -631,7 +645,7 @@ export default function Fornecedores() {
               ) : (
                 fornecedores.map((f) => (
                   <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell onClick={() => setModalVer(f)}>
+                    <TableCell onClick={() => verDetalhes(f)}>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{f.nome_fantasia}</p>
                         {f.tipo && f.tipo.toLowerCase().includes("vip") && (
@@ -639,16 +653,16 @@ export default function Fornecedores() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground" onClick={() => setModalVer(f)}>
+                    <TableCell className="text-sm text-muted-foreground" onClick={() => verDetalhes(f)}>
                       {f.razao_social || "-"}
                     </TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground" onClick={() => setModalVer(f)}>
+                    <TableCell className="text-xs font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>
                       {formatCNPJ(f.cnpj)}
                     </TableCell>
-                    <TableCell className="text-sm" onClick={() => setModalVer(f)}>
+                    <TableCell className="text-sm" onClick={() => verDetalhes(f)}>
                       {f.cidade || "-"}/{f.estado?.split(" - ")[0] || "-"}
                     </TableCell>
-                    <TableCell onClick={() => setModalVer(f)}>
+                    <TableCell onClick={() => verDetalhes(f)}>
                       {f.linhas_produtos && f.linhas_produtos.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {f.linhas_produtos.slice(0, 2).map((linha, i) => (
@@ -662,12 +676,12 @@ export default function Fornecedores() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center" onClick={() => setModalVer(f)}>
+                    <TableCell className="text-center" onClick={() => verDetalhes(f)}>
                       <Badge variant="outline" className={statusColors[f.status] || ""}>{f.status}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setModalVer(f)}>
+                        <Button variant="ghost" size="icon" onClick={() => verDetalhes(f)}>
                           <Eye size={15} />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => abrirEditar(f)}>
