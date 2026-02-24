@@ -175,6 +175,16 @@ export default function Clientes() {
   const fetchClientes = useCallback(async () => {
     setLoading(true);
 
+    // If filtering by segmento name, first resolve UUIDs
+    let segmentoIds: string[] = [];
+    if (filtros.segmento.length > 0) {
+      const { data: segs } = await supabase
+        .from("segmentos")
+        .select("id")
+        .in("nome", filtros.segmento);
+      segmentoIds = (segs || []).map((s) => s.id);
+    }
+
     let query = supabase.from("clientes").select("*", { count: "exact" });
 
     if (debouncedBusca) {
@@ -184,7 +194,14 @@ export default function Clientes() {
     }
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
-    if (filtros.segmento.length > 0) query = query.in("segmento_id", filtros.segmento);
+    if (filtros.segmento.length > 0) {
+      if (segmentoIds.length > 0) {
+        query = query.in("segmento_id", segmentoIds);
+      } else {
+        // No matching segmentos — force empty result
+        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    }
     if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
     if (filtros.regiao.length > 0) {
       const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
