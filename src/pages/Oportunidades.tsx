@@ -192,12 +192,20 @@ export default function Oportunidades() {
                         {opp.cliente?.nome_fantasia || <span className="text-muted-foreground italic">Cliente não encontrado</span>}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[opp.gestao] || ""}`}>
-                          {opp.gestao}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {opp.gestao.split(", ").map((g, i) => (
+                            <Badge key={i} variant="outline" className={`text-[10px] px-1.5 py-0 ${gestaoColors[g.trim()] || ""}`}>
+                              {g.trim()}
+                            </Badge>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{opp.operacao}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {opp.operacao.split(", ").map((op, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">{op.trim()}</Badge>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-0 text-[10px] px-1.5 py-0">
