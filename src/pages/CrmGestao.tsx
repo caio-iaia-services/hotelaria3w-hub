@@ -86,7 +86,6 @@ export default function CrmGestao() {
       .select("*")
       .eq("gestao", config.gestao)
       .in("operacao", selectedOps)
-      .eq("substituida", false)
       .order("ordem", { ascending: true });
 
     if (!error && data) {

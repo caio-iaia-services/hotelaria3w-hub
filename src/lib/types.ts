@@ -57,6 +57,9 @@ export interface CRMCard {
   cliente_segmento: string | null
   observacoes: string | null
   ordem: number
+  substituida?: boolean
+  operacao_nova?: string | null
+  data_substituicao?: string | null
   created_at: string
   updated_at: string
 }
