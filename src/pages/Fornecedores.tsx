@@ -26,22 +26,37 @@ interface Fornecedor {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
-  categorias?: string | null;
-  email: string | null;
-  telefone: string | null;
-  site?: string | null;
-  cidade: string | null;
-  estado: string | null;
-  avaliacao_media?: number | null;
-  total_avaliacoes?: number | null;
-  prazo_medio_entrega?: number | null;
-  taxa_entrega_pontual?: number | null;
-  total_comprado?: number | null;
+  codigo?: string | null;
   status: string;
   tipo: string;
-  condicoes_pagamento?: string | null;
-  prazo_pagamento?: number | null;
-  desconto_volume?: number | null;
+  email: string | null;
+  telefone: string | null;
+  whatsapp?: string | null;
+  site?: string | null;
+  site_2?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep?: string | null;
+  contatos?: any | null;
+  logotipo_url?: string | null;
+  catalogos?: any | null;
+  data_inicio?: string | null;
+  contrato?: string | null;
+  condicoes_pagamento?: any | null;
+  num_orcamentos?: number | null;
+  volume_orcamentos?: number | null;
+  orcamento_medio?: number | null;
+  num_vendas?: number | null;
+  volume_vendas?: number | null;
+  venda_media?: number | null;
+  a_receber?: number | null;
+  pendentes?: number | null;
+  linhas_produtos?: string[] | null;
+  segmentos_atuacao?: string[] | null;
   observacoes?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -51,8 +66,10 @@ type FornecedorForm = {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
+  codigo: string;
   email: string;
   telefone: string;
+  whatsapp: string;
   site: string;
   cidade: string;
   estado: string;
@@ -85,9 +102,15 @@ function applyMaskTelefone(value: string) {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/-$/, "");
 }
 
+function formatCurrency(value: number | null | undefined) {
+  if (value == null) return "-";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 const statusColors: Record<string, string> = {
   ativo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  "em prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
 };
 
 const tipoColors: Record<string, string> = {
@@ -162,7 +185,7 @@ export default function Fornecedores() {
     debounceRef.current = setTimeout(() => {
       setDebouncedBusca(valor);
       setPage(1);
-    }, 400);
+    }, 500);
   };
 
   // Buscar cidades únicas
@@ -174,7 +197,7 @@ export default function Fornecedores() {
         .not("cidade", "is", null)
         .order("cidade");
       if (data) {
-        const unicas = [...new Set(data.map((c) => c.cidade).filter(Boolean))] as string[];
+        const unicas = [...new Set(data.map((c: any) => c.cidade).filter(Boolean))] as string[];
         setCidades(unicas);
       }
     }
@@ -184,7 +207,9 @@ export default function Fornecedores() {
   // Buscar fornecedores
   const fetchFornecedores = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from("fornecedores").select("*", { count: "exact" });
+    let query = supabase
+      .from("fornecedores")
+      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, whatsapp, site, site_2, endereco, numero, complemento, bairro, cep, contatos, logotipo_url, catalogos, data_inicio, contrato, condicoes_pagamento, num_orcamentos, volume_orcamentos, orcamento_medio, num_vendas, volume_vendas, venda_media, a_receber, pendentes, linhas_produtos, segmentos_atuacao, observacoes, created_at, updated_at", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
@@ -192,11 +217,13 @@ export default function Fornecedores() {
       );
     }
     if (filtros.status !== "todos") query = query.eq("status", filtros.status);
-    if (filtros.tipo !== "todos") query = query.eq("tipo", filtros.tipo);
+    if (filtros.tipo !== "todos") query = query.ilike("tipo", `%${filtros.tipo}%`);
     if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
     if (filtros.regiao !== "todos") {
       const estados = ESTADOS_POR_REGIAO[filtros.regiao];
-      if (estados) query = query.in("estado", estados);
+      if (estados) {
+        query = query.or(estados.map(e => `estado.ilike.%${e}%`).join(','));
+      }
     }
 
     const from = (page - 1) * pageSize;
@@ -256,8 +283,10 @@ export default function Fornecedores() {
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
         cnpj: dados.cnpj,
+        codigo: dados.codigo || null,
         email: dados.email || null,
         telefone: dados.telefone || null,
+        whatsapp: dados.whatsapp || null,
         site: dados.site || null,
         cidade: dados.cidade,
         estado: dados.estado?.toUpperCase() || null,
@@ -285,8 +314,10 @@ export default function Fornecedores() {
       nome_fantasia: f.nome_fantasia,
       razao_social: f.razao_social,
       cnpj: formatCNPJ(f.cnpj),
+      codigo: f.codigo || "",
       email: f.email || "",
       telefone: f.telefone || "",
+      whatsapp: f.whatsapp || "",
       site: f.site || "",
       cidade: f.cidade || "",
       estado: f.estado || "",
@@ -308,8 +339,10 @@ export default function Fornecedores() {
           nome_fantasia: dados.nome_fantasia,
           razao_social: dados.razao_social,
           cnpj: dados.cnpj,
+          codigo: dados.codigo || null,
           email: dados.email || null,
           telefone: dados.telefone || null,
+          whatsapp: dados.whatsapp || null,
           site: dados.site || null,
           cidade: dados.cidade,
           estado: dados.estado?.toUpperCase() || null,
@@ -370,18 +403,24 @@ export default function Fornecedores() {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label>CNPJ *</Label>
-        <Input
-          {...reg("cnpj")}
-          placeholder="00.000.000/0000-00"
-          maxLength={18}
-          required
-          onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))}
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>CNPJ *</Label>
+          <Input
+            {...reg("cnpj")}
+            placeholder="00.000.000/0000-00"
+            maxLength={18}
+            required
+            onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Código</Label>
+          <Input {...reg("codigo")} placeholder="Código interno" />
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>E-mail</Label>
           <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />
@@ -393,6 +432,15 @@ export default function Fornecedores() {
             placeholder="(11) 99999-9999"
             maxLength={15}
             onChange={(e) => set("telefone", applyMaskTelefone(e.target.value))}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>WhatsApp</Label>
+          <Input
+            {...reg("whatsapp")}
+            placeholder="(11) 99999-9999"
+            maxLength={15}
+            onChange={(e) => set("whatsapp", applyMaskTelefone(e.target.value))}
           />
         </div>
       </div>
@@ -437,6 +485,7 @@ export default function Fornecedores() {
             <SelectContent className="bg-card z-50">
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="em prospecção">Em Prospecção</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -512,6 +561,7 @@ export default function Fornecedores() {
               <SelectItem value="todos">Todos Status</SelectItem>
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="em prospecção">Em Prospecção</SelectItem>
             </SelectContent>
           </Select>
 
@@ -558,6 +608,7 @@ export default function Fornecedores() {
                 <TableHead>Razão Social</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Cidade/UF</TableHead>
+                <TableHead>Linhas de Produtos</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
@@ -566,14 +617,14 @@ export default function Fornecedores() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : fornecedores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </TableCell>
                 </TableRow>
@@ -583,19 +634,33 @@ export default function Fornecedores() {
                     <TableCell onClick={() => setModalVer(f)}>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{f.nome_fantasia}</p>
-                        {f.tipo === "vip" && (
+                        {f.tipo && f.tipo.toLowerCase().includes("vip") && (
                           <Badge variant="outline" className={tipoColors.vip}>VIP</Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground" onClick={() => setModalVer(f)}>
-                      {f.razao_social}
+                      {f.razao_social || "-"}
                     </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground" onClick={() => setModalVer(f)}>
                       {formatCNPJ(f.cnpj)}
                     </TableCell>
                     <TableCell className="text-sm" onClick={() => setModalVer(f)}>
-                      {f.cidade || "-"}/{f.estado || "-"}
+                      {f.cidade || "-"}/{f.estado?.split(" - ")[0] || "-"}
+                    </TableCell>
+                    <TableCell onClick={() => setModalVer(f)}>
+                      {f.linhas_produtos && f.linhas_produtos.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {f.linhas_produtos.slice(0, 2).map((linha, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{linha}</Badge>
+                          ))}
+                          {f.linhas_produtos.length > 2 && (
+                            <Badge variant="outline" className="text-xs">+{f.linhas_produtos.length - 2}</Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center" onClick={() => setModalVer(f)}>
                       <Badge variant="outline" className={statusColors[f.status] || ""}>{f.status}</Badge>
@@ -651,7 +716,7 @@ export default function Fornecedores() {
 
       {/* ─── MODAL VISUALIZAR ─── */}
       <Dialog open={!!modalVer} onOpenChange={(o) => { if (!o) setModalVer(null); }}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-6">
               <DialogTitle className="text-lg font-heading">Detalhes do Fornecedor</DialogTitle>
@@ -669,6 +734,7 @@ export default function Fornecedores() {
                   <Info label="Nome Fantasia" value={modalVer.nome_fantasia} />
                   <Info label="Razão Social" value={modalVer.razao_social} />
                   <Info label="CNPJ" value={formatCNPJ(modalVer.cnpj)} />
+                  <Info label="Código" value={modalVer.codigo} />
                   <div className="flex gap-2 items-start flex-col">
                     <p className="text-xs text-muted-foreground">Tipo</p>
                     <Badge variant="outline" className={tipoColors[modalVer.tipo] || tipoColors.regular}>
@@ -690,7 +756,9 @@ export default function Fornecedores() {
                 <div className="grid grid-cols-2 gap-3">
                   <Info label="E-mail" value={modalVer.email} />
                   <Info label="Telefone" value={modalVer.telefone} />
+                  <Info label="WhatsApp" value={modalVer.whatsapp} />
                   <Info label="Site" value={modalVer.site} />
+                  {modalVer.site_2 && <Info label="Site 2" value={modalVer.site_2} />}
                 </div>
               </div>
 
@@ -698,10 +766,66 @@ export default function Fornecedores() {
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Localização</p>
                 <div className="grid grid-cols-2 gap-3">
+                  <Info label="Endereço" value={modalVer.endereco ? `${modalVer.endereco}${modalVer.numero ? `, ${modalVer.numero}` : ""}` : null} />
+                  <Info label="Complemento" value={modalVer.complemento} />
+                  <Info label="Bairro" value={modalVer.bairro} />
                   <Info label="Cidade" value={modalVer.cidade} />
                   <Info label="Estado" value={modalVer.estado} />
+                  <Info label="CEP" value={modalVer.cep} />
                 </div>
               </div>
+
+              {/* Linhas de Produtos */}
+              {modalVer.linhas_produtos && modalVer.linhas_produtos.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Linhas de Produtos</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {modalVer.linhas_produtos.map((linha, i) => (
+                      <Badge key={i} variant="secondary">{linha}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Segmentos de Atuação */}
+              {modalVer.segmentos_atuacao && modalVer.segmentos_atuacao.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Segmentos de Atuação</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {modalVer.segmentos_atuacao.map((seg, i) => (
+                      <Badge key={i} variant="outline">{seg}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dados Comerciais */}
+              {(modalVer.num_orcamentos || modalVer.num_vendas || modalVer.volume_vendas) && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dados Comerciais</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Info label="Nº Orçamentos" value={modalVer.num_orcamentos?.toString()} />
+                    <Info label="Vol. Orçamentos" value={formatCurrency(modalVer.volume_orcamentos)} />
+                    <Info label="Orçamento Médio" value={formatCurrency(modalVer.orcamento_medio)} />
+                    <Info label="Nº Vendas" value={modalVer.num_vendas?.toString()} />
+                    <Info label="Vol. Vendas" value={formatCurrency(modalVer.volume_vendas)} />
+                    <Info label="Venda Média" value={formatCurrency(modalVer.venda_media)} />
+                    <Info label="A Receber" value={formatCurrency(modalVer.a_receber)} />
+                    <Info label="Pendentes" value={modalVer.pendentes?.toString()} />
+                  </div>
+                </div>
+              )}
+
+              {/* Contrato */}
+              {(modalVer.data_inicio || modalVer.contrato) && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contrato</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Info label="Data Início" value={modalVer.data_inicio} />
+                    <Info label="Contrato" value={modalVer.contrato} />
+                  </div>
+                </div>
+              )}
 
               {/* Observações */}
               {modalVer.observacoes && (
