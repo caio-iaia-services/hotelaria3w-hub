@@ -89,7 +89,7 @@ const menuSections: MenuSection[] = [
   {
     label: "FERRAMENTAS",
     items: [
-      { title: "Buscar Clientes", url: "/buscar", icon: Search },
+      { title: "Buscar Empresas", url: "/buscar", icon: Search },
     ],
   },
 ];
