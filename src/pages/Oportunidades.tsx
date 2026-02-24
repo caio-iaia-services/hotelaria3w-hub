@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Target, TrendingUp, Eye, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Target, TrendingUp, Eye, Trash2, Loader2, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner";
 import { NovaOportunidadeModal } from "@/components/oportunidades/NovaOportunidadeModal";
 import { DetalhesOportunidadeModal } from "@/components/oportunidades/DetalhesOportunidadeModal";
+import { EditarOportunidadeModal } from "@/components/oportunidades/EditarOportunidadeModal";
 import { supabase } from "@/lib/supabase";
 import type { OportunidadeComCliente } from "@/lib/types";
 
@@ -32,6 +33,8 @@ export default function Oportunidades() {
   const [viewOpen, setViewOpen] = useState(false);
   const [novaOpen, setNovaOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OportunidadeComCliente | null>(null);
+  const [editTarget, setEditTarget] = useState<OportunidadeComCliente | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const buscarOportunidades = useCallback(async () => {
     setLoading(true);
@@ -231,6 +234,17 @@ export default function Oportunidades() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
+                                variant="ghost" size="icon" className="h-7 w-7"
+                                onClick={() => { setEditTarget(opp); setEditOpen(true); }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
                                 variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                                 onClick={() => setDeleteTarget(opp)}
                               >
@@ -251,7 +265,18 @@ export default function Oportunidades() {
       </Card>
 
       <NovaOportunidadeModal open={novaOpen} onOpenChange={setNovaOpen} onSave={handleAdd} />
-      <DetalhesOportunidadeModal oportunidade={selectedView} open={viewOpen} onOpenChange={(v) => setViewOpen(v)} />
+      <DetalhesOportunidadeModal
+        oportunidade={selectedView}
+        open={viewOpen}
+        onOpenChange={(v) => setViewOpen(v)}
+        onEdit={(opp) => { setViewOpen(false); setEditTarget(opp); setEditOpen(true); }}
+      />
+      <EditarOportunidadeModal
+        oportunidade={editTarget}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onRefresh={buscarOportunidades}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
