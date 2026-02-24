@@ -446,7 +446,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
                   ? "Criando..."
                   : operacoesSelecionadas.length === 0
                     ? "Selecione ao menos 1 operação"
-                    : `Criar ${operacoesSelecionadas.length} Oportunidade(s)`
+                    : `Criar Oportunidade (${operacoesSelecionadas.length} operação${operacoesSelecionadas.length > 1 ? "ões" : ""})`
                 }
               </Button>
             </div>
