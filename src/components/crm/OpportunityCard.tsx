@@ -23,7 +23,7 @@ export function OpportunityCard({ card, index, onClick, operationColors, showOpe
     .toUpperCase();
 
   return (
-    <Draggable draggableId={card.id} index={index} isDragDisabled={!!card.substituida}>
+    <Draggable draggableId={card.id} index={index}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
