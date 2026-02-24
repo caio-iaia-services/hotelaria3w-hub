@@ -42,7 +42,7 @@ export function OpportunityCard({ card, index, onClick, operationColors, showOpe
             <div className="flex items-center gap-1.5 mb-2">
               <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
               <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 text-[9px] px-1.5 py-0">
-                SUBSTITUÍDA
+                ALERTA
               </Badge>
             </div>
           )}
