@@ -296,7 +296,15 @@ export default function Clientes() {
     setFiltros((prev) => {
       const arr = prev[key] as string[];
       const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      return { ...prev, [key]: next };
+      const updated = { ...prev, [key]: next };
+      // When region changes, remove selected states that are no longer in valid regions
+      if (key === "regiao") {
+        const validEstados = next.length > 0
+          ? next.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
+          : TODOS_ESTADOS;
+        updated.estado = prev.estado.filter((e) => validEstados.includes(e));
+      }
+      return updated;
     });
   };
 
@@ -416,11 +424,14 @@ export default function Clientes() {
             onToggle={(v) => toggleFiltro("regiao", v)}
           />
 
-          {/* Estado multi-select */}
+          {/* Estado multi-select (filtrado pela região selecionada) */}
           <MultiSelectFilter
             label="Estado"
             selected={filtros.estado}
-            options={TODOS_ESTADOS.map((e) => ({ value: e, label: e }))}
+            options={(filtros.regiao.length > 0
+              ? filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
+              : TODOS_ESTADOS
+            ).map((e) => ({ value: e, label: e }))}
             onToggle={(v) => toggleFiltro("estado", v)}
           />
         </div>
