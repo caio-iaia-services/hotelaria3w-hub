@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2 } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -16,6 +17,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
@@ -126,13 +130,72 @@ const ESTADOS_POR_REGIAO: Record<string, string[]> = {
   Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
 };
 
-const FILTROS_INICIAIS = {
-  busca: "",
-  status: "todos",
-  tipo: "todos",
-  cidade: "todos",
-  regiao: "todos",
+const TODOS_ESTADOS = [
+  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR",
+  "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+];
+
+type Filtros = {
+  busca: string;
+  status: string[];
+  tipo: string[];
+  estado: string[];
+  regiao: string[];
 };
+
+const FILTROS_INICIAIS: Filtros = {
+  busca: "",
+  status: [],
+  tipo: [],
+  estado: [],
+  regiao: [],
+};
+
+function MultiSelectFilter({
+  label,
+  selected,
+  options,
+  onToggle,
+}: {
+  label: string;
+  selected: string[];
+  options: { value: string; label: string }[];
+  onToggle: (value: string) => void;
+}) {
+  const display = selected.length === 0
+    ? label
+    : selected.length <= 2
+      ? selected.join(", ")
+      : `${selected.length} selecionados`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="justify-between font-normal w-full">
+          <span className="truncate text-sm">{display}</span>
+          <ChevronDown size={14} className="ml-1 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-2 bg-card z-50" align="start">
+        <div className="space-y-1 max-h-60 overflow-y-auto">
+          {options.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+            >
+              <Checkbox
+                checked={selected.includes(opt.value)}
+                onCheckedChange={() => onToggle(opt.value)}
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function Info({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -142,8 +205,6 @@ function Info({ label, value }: { label: string; value: string | null | undefine
     </div>
   );
 }
-
-// ─── Componente Principal ────────────────────────────────────────────────────
 export default function Fornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +214,7 @@ export default function Fornecedores() {
   const [pageSize, setPageSize] = useState(50);
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [debouncedBusca, setDebouncedBusca] = useState("");
-  const [cidades, setCidades] = useState<string[]>([]);
+  
 
   // Modais
   const [modalVer, setModalVer] = useState<Fornecedor | null>(null);
@@ -188,21 +249,6 @@ export default function Fornecedores() {
     }, 500);
   };
 
-  // Buscar cidades únicas
-  useEffect(() => {
-    async function buscarCidades() {
-      const { data } = await supabase
-        .from("fornecedores")
-        .select("cidade")
-        .not("cidade", "is", null)
-        .order("cidade");
-      if (data) {
-        const unicas = [...new Set(data.map((c: any) => c.cidade).filter(Boolean))] as string[];
-        setCidades(unicas);
-      }
-    }
-    buscarCidades();
-  }, []);
 
   // Buscar fornecedores
   const fetchFornecedores = useCallback(async () => {
@@ -216,13 +262,13 @@ export default function Fornecedores() {
         `nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%`
       );
     }
-    if (filtros.status !== "todos") query = query.eq("status", filtros.status);
-    if (filtros.tipo !== "todos") query = query.ilike("tipo", `%${filtros.tipo}%`);
-    if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
-    if (filtros.regiao !== "todos") {
-      const estados = ESTADOS_POR_REGIAO[filtros.regiao];
-      if (estados) {
-        query = query.or(estados.map(e => `estado.ilike.%${e}%`).join(','));
+    if (filtros.status.length > 0) query = query.in("status", filtros.status);
+    if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
+    if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
+    if (filtros.regiao.length > 0) {
+      const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
+      if (estados.length > 0 && filtros.estado.length === 0) {
+        query = query.in("estado", estados);
       }
     }
 
@@ -240,7 +286,7 @@ export default function Fornecedores() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.cidade, filtros.regiao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.estado, filtros.regiao]);
 
   // Buscar métricas
   const fetchMetrics = useCallback(async () => {
@@ -254,13 +300,29 @@ export default function Fornecedores() {
   useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
-  useEffect(() => { setPage(1); }, [filtros.status, filtros.tipo, filtros.cidade, filtros.regiao]);
+  useEffect(() => { setPage(1); }, [filtros.status, filtros.tipo, filtros.estado, filtros.regiao]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
 
-  const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) =>
-    setFiltros((prev) => ({ ...prev, [key]: value }));
+  const toggleFiltro = (key: keyof Filtros, value: string) => {
+    if (key === "busca") {
+      setFiltros((prev) => ({ ...prev, busca: value }));
+      return;
+    }
+    setFiltros((prev) => {
+      const arr = prev[key] as string[];
+      const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+      const updated = { ...prev, [key]: next };
+      if (key === "regiao") {
+        const validEstados = next.length > 0
+          ? next.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
+          : TODOS_ESTADOS;
+        updated.estado = prev.estado.filter((e) => validEstados.includes(e));
+      }
+      return updated;
+    });
+  };
 
   const limparFiltros = () => {
     setFiltros(FILTROS_INICIAIS);
@@ -270,10 +332,10 @@ export default function Fornecedores() {
 
   const temFiltrosAtivos =
     filtros.busca !== "" ||
-    filtros.status !== "todos" ||
-    filtros.tipo !== "todos" ||
-    filtros.cidade !== "todos" ||
-    filtros.regiao !== "todos";
+    filtros.status.length > 0 ||
+    filtros.tipo.length > 0 ||
+    filtros.estado.length > 0 ||
+    filtros.regiao.length > 0;
 
   // Salvar novo
   const salvarNovo = async (dados: FornecedorForm) => {
@@ -569,46 +631,43 @@ export default function Fornecedores() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Select value={filtros.status} onValueChange={(v) => setFiltro("status", v)}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-              <SelectItem value="em prospecção">Em Prospecção</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            label="Status"
+            selected={filtros.status}
+            options={[
+              { value: "ativo", label: "Ativo" },
+              { value: "inativo", label: "Inativo" },
+              { value: "em prospecção", label: "Em Prospecção" },
+            ]}
+            onToggle={(v) => toggleFiltro("status", v)}
+          />
 
-          <Select value={filtros.tipo} onValueChange={(v) => setFiltro("tipo", v)}>
-            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Tipos</SelectItem>
-              <SelectItem value="regular">Regular</SelectItem>
-              <SelectItem value="vip">VIP</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            label="Tipo"
+            selected={filtros.tipo}
+            options={[
+              { value: "regular", label: "Regular" },
+              { value: "vip", label: "VIP" },
+            ]}
+            onToggle={(v) => toggleFiltro("tipo", v)}
+          />
 
-          <Select value={filtros.regiao} onValueChange={(v) => setFiltro("regiao", v)}>
-            <SelectTrigger><SelectValue placeholder="Região" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todas Regiões</SelectItem>
-              <SelectItem value="Sul">Sul</SelectItem>
-              <SelectItem value="Sudeste">Sudeste</SelectItem>
-              <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
-              <SelectItem value="Norte">Norte</SelectItem>
-              <SelectItem value="Nordeste">Nordeste</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            label="Região"
+            selected={filtros.regiao}
+            options={Object.keys(ESTADOS_POR_REGIAO).map((r) => ({ value: r, label: r }))}
+            onToggle={(v) => toggleFiltro("regiao", v)}
+          />
 
-          <Select value={filtros.cidade} onValueChange={(v) => setFiltro("cidade", v)}>
-            <SelectTrigger><SelectValue placeholder="Cidade" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todas Cidades</SelectItem>
-              {cidades.map((cidade) => (
-                <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            label="Estado"
+            selected={filtros.estado}
+            options={(filtros.regiao.length > 0
+              ? filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
+              : TODOS_ESTADOS
+            ).map((e) => ({ value: e, label: e }))}
+            onToggle={(v) => toggleFiltro("estado", v)}
+          />
         </div>
       </div>
 
