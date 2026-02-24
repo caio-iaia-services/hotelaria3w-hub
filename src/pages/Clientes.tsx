@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -46,13 +50,30 @@ const ESTADOS_POR_REGIAO: Record<string, string[]> = {
   Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
 };
 
-const FILTROS_INICIAIS = {
+const TODOS_ESTADOS = [
+  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR",
+  "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+];
+
+const SEGMENTOS = ["Hotelaria", "Gastronomia", "Hospitalar", "Condominial", "Exportação", "Outros"];
+
+type Filtros = {
+  busca: string;
+  status: string[];
+  tipo: string[];
+  segmento: string[];
+  estado: string[];
+  regiao: string[];
+};
+
+const FILTROS_INICIAIS: Filtros = {
   busca: "",
-  status: "todos",
-  tipo: "todos",
-  segmento: "todos",
-  cidade: "todos",
-  regiao: "todos",
+  status: [],
+  tipo: [],
+  segmento: [],
+  estado: [],
+  regiao: [],
 };
 
 type NovoClienteForm = {
@@ -71,6 +92,54 @@ type NovoClienteForm = {
   status: string;
 };
 
+function MultiSelectFilter({
+  label,
+  selected,
+  options,
+  onToggle,
+}: {
+  label: string;
+  selected: string[];
+  options: { value: string; label: string }[];
+  onToggle: (value: string) => void;
+}) {
+  const display = selected.length === 0
+    ? label
+    : selected.length <= 2
+      ? selected.join(", ")
+      : `${selected.length} selecionados`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="justify-between font-normal w-full"
+        >
+          <span className="truncate text-sm">{display}</span>
+          <ChevronDown size={14} className="ml-1 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-2 bg-card z-50" align="start">
+        <div className="space-y-1 max-h-60 overflow-y-auto">
+          {options.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+            >
+              <Checkbox
+                checked={selected.includes(opt.value)}
+                onCheckedChange={() => onToggle(opt.value)}
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,9 +148,8 @@ export default function Clientes() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
-  const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIAIS);
   const [debouncedBusca, setDebouncedBusca] = useState("");
-  const [cidades, setCidades] = useState<string[]>([]);
 
   const [modalCliente, setModalCliente] = useState<Cliente | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -102,22 +170,7 @@ export default function Clientes() {
     return () => clearTimeout(t);
   }, [filtros.busca]);
 
-  // Buscar cidades únicas do banco
-  useEffect(() => {
-    async function buscarCidades() {
-      const { data } = await supabase
-        .from("clientes")
-        .select("cidade")
-        .not("cidade", "is", null)
-        .order("cidade");
-
-      if (data) {
-        const unicas = [...new Set(data.map((c) => c.cidade).filter(Boolean))] as string[];
-        setCidades(unicas);
-      }
-    }
-    buscarCidades();
-  }, []);
+  // No more city fetch needed
 
   const fetchClientes = useCallback(async () => {
     setLoading(true);
@@ -129,13 +182,15 @@ export default function Clientes() {
         `nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%,cidade.ilike.%${debouncedBusca}%`
       );
     }
-    if (filtros.status !== "todos") query = query.eq("status", filtros.status);
-    if (filtros.tipo !== "todos") query = query.eq("tipo", filtros.tipo);
-    if (filtros.segmento !== "todos") query = query.ilike("segmento_id", filtros.segmento);
-    if (filtros.cidade !== "todos") query = query.eq("cidade", filtros.cidade);
-    if (filtros.regiao !== "todos") {
-      const estados = ESTADOS_POR_REGIAO[filtros.regiao];
-      if (estados) query = query.in("estado", estados);
+    if (filtros.status.length > 0) query = query.in("status", filtros.status);
+    if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
+    if (filtros.segmento.length > 0) query = query.in("segmento_id", filtros.segmento);
+    if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
+    if (filtros.regiao.length > 0) {
+      const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
+      if (estados.length > 0 && filtros.estado.length === 0) {
+        query = query.in("estado", estados);
+      }
     }
 
     const from = (page - 1) * pageSize;
@@ -152,7 +207,7 @@ export default function Clientes() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao]);
 
   const fetchMetrics = useCallback(async () => {
     const { count: ativos } = await supabase
@@ -168,7 +223,7 @@ export default function Clientes() {
   // Reset page quando filtros mudam
   useEffect(() => {
     setPage(1);
-  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.cidade, filtros.regiao]);
+  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao]);
 
   const totalPages = Math.ceil(total / pageSize);
   const taxaRetencao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
@@ -233,8 +288,16 @@ export default function Clientes() {
     }
   };
 
-  const setFiltro = (key: keyof typeof FILTROS_INICIAIS, value: string) => {
-    setFiltros((prev) => ({ ...prev, [key]: value }));
+  const toggleFiltro = (key: keyof Filtros, value: string) => {
+    if (key === "busca") {
+      setFiltros((prev) => ({ ...prev, busca: value }));
+      return;
+    }
+    setFiltros((prev) => {
+      const arr = prev[key] as string[];
+      const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+      return { ...prev, [key]: next };
+    });
   };
 
   const limparFiltros = () => {
@@ -244,11 +307,11 @@ export default function Clientes() {
 
   const temFiltrosAtivos =
     filtros.busca !== "" ||
-    filtros.status !== "todos" ||
-    filtros.tipo !== "todos" ||
-    filtros.segmento !== "todos" ||
-    filtros.cidade !== "todos" ||
-    filtros.regiao !== "todos";
+    filtros.status.length > 0 ||
+    filtros.tipo.length > 0 ||
+    filtros.segmento.length > 0 ||
+    filtros.estado.length > 0 ||
+    filtros.regiao.length > 0;
 
   const metrics = [
     { label: "Total de Clientes", value: total.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
@@ -302,7 +365,7 @@ export default function Clientes() {
             <Input
               placeholder="Buscar por nome, CNPJ ou cidade..."
               value={filtros.busca}
-              onChange={(e) => setFiltro("busca", e.target.value)}
+              onChange={(e) => toggleFiltro("busca", e.target.value)}
               className="pl-9"
             />
           </div>
@@ -314,59 +377,52 @@ export default function Clientes() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <Select value={filtros.status} onValueChange={(v) => setFiltro("status", v)}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {/* Status multi-select */}
+          <MultiSelectFilter
+            label="Status"
+            selected={filtros.status}
+            options={[
+              { value: "ativo", label: "Ativo" },
+              { value: "inativo", label: "Inativo" },
+            ]}
+            onToggle={(v) => toggleFiltro("status", v)}
+          />
 
-          <Select value={filtros.tipo} onValueChange={(v) => setFiltro("tipo", v)}>
-            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Tipos</SelectItem>
-              <SelectItem value="regular">Regular</SelectItem>
-              <SelectItem value="vip">VIP</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Tipo multi-select */}
+          <MultiSelectFilter
+            label="Tipo"
+            selected={filtros.tipo}
+            options={[
+              { value: "regular", label: "Regular" },
+              { value: "vip", label: "VIP" },
+            ]}
+            onToggle={(v) => toggleFiltro("tipo", v)}
+          />
 
-          <Select value={filtros.segmento} onValueChange={(v) => setFiltro("segmento", v)}>
-            <SelectTrigger><SelectValue placeholder="Segmento" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos Segmentos</SelectItem>
-              <SelectItem value="Hotelaria">Hotelaria</SelectItem>
-              <SelectItem value="Gastronomia">Gastronomia</SelectItem>
-              <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-              <SelectItem value="Condominial">Condominial</SelectItem>
-              <SelectItem value="Exportação">Exportação</SelectItem>
-              <SelectItem value="Outros">Outros</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Segmento multi-select */}
+          <MultiSelectFilter
+            label="Segmento"
+            selected={filtros.segmento}
+            options={SEGMENTOS.map((s) => ({ value: s, label: s }))}
+            onToggle={(v) => toggleFiltro("segmento", v)}
+          />
 
-          <Select value={filtros.regiao} onValueChange={(v) => setFiltro("regiao", v)}>
-            <SelectTrigger><SelectValue placeholder="Região" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todas Regiões</SelectItem>
-              <SelectItem value="Sul">Sul</SelectItem>
-              <SelectItem value="Sudeste">Sudeste</SelectItem>
-              <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
-              <SelectItem value="Norte">Norte</SelectItem>
-              <SelectItem value="Nordeste">Nordeste</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Região multi-select */}
+          <MultiSelectFilter
+            label="Região"
+            selected={filtros.regiao}
+            options={Object.keys(ESTADOS_POR_REGIAO).map((r) => ({ value: r, label: r }))}
+            onToggle={(v) => toggleFiltro("regiao", v)}
+          />
 
-          <Select value={filtros.cidade} onValueChange={(v) => setFiltro("cidade", v)}>
-            <SelectTrigger><SelectValue placeholder="Cidade" /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todas Cidades</SelectItem>
-              {cidades.map((cidade) => (
-                <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Estado multi-select */}
+          <MultiSelectFilter
+            label="Estado"
+            selected={filtros.estado}
+            options={TODOS_ESTADOS.map((e) => ({ value: e, label: e }))}
+            onToggle={(v) => toggleFiltro("estado", v)}
+          />
         </div>
       </div>
 
