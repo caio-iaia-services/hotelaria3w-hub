@@ -77,14 +77,24 @@ export function DetalhesOportunidadeModal({ oportunidade, open, onOpenChange, on
           </Card>
 
           <Card>
-            <CardContent className="p-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Operação</h4>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className={gestaoColors[oportunidade.gestao] || ""}>
-                  {oportunidade.gestao}
-                </Badge>
-                <Badge variant="secondary">{oportunidade.operacao}</Badge>
+            <CardContent className="p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Operações</h4>
+              <div className="flex flex-wrap gap-1">
+                {oportunidade.operacao.split(", ").map((op, i) => (
+                  <Badge key={i} variant="secondary">{op.trim()}</Badge>
+                ))}
               </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gestões Impactadas</h4>
+              <div className="flex flex-wrap gap-1">
+                {oportunidade.gestao.split(", ").map((g, i) => (
+                  <Badge key={i} variant="outline" className={gestaoColors[g.trim()] || ""}>
+                    {g.trim()}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cards no Funil: {oportunidade.operacao.split(", ").length}
+              </p>
             </CardContent>
           </Card>
 

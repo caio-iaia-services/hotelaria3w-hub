@@ -184,49 +184,53 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
         clienteEstado = clienteSelecionado.estado || "";
       }
 
-      for (const operacao of operacoesSelecionadas) {
-        const gestao = operacaoGestaoLabel[operacao] || "G1";
+      // Identificar gestões impactadas
+      const gestoesImpactadas = [...new Set(operacoesSelecionadas.map(op => operacaoGestaoLabel[op] || "G1"))];
 
-        const { count } = await supabase
-          .from("oportunidades")
-          .select("*", { count: "exact", head: true });
+      // Gerar número único
+      const { count } = await supabase
+        .from("oportunidades")
+        .select("*", { count: "exact", head: true });
 
-        const numero = `OPP-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, "0")}`;
+      const numero = `OPP-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, "0")}`;
 
-        const { data: opp, error: erroOpp } = await supabase
-          .from("oportunidades")
-          .insert({
-            numero,
-            cliente_id: clienteId,
-            operacao,
-            gestao,
-            observacoes,
-            status: "em_andamento",
-          })
-          .select()
-          .single();
+      // 1. CRIAR UMA ÚNICA OPORTUNIDADE
+      const { data: opp, error: erroOpp } = await supabase
+        .from("oportunidades")
+        .insert({
+          numero,
+          cliente_id: clienteId,
+          operacao: operacoesSelecionadas.join(", "),
+          gestao: gestoesImpactadas.join(", "),
+          observacoes,
+          status: "em_andamento",
+        })
+        .select()
+        .single();
 
-        if (erroOpp) throw erroOpp;
+      if (erroOpp) throw erroOpp;
 
-        const { error: erroCard } = await supabase
-          .from("crm_cards")
-          .insert({
-            oportunidade_id: opp.id,
-            cliente_id: clienteId,
-            operacao,
-            gestao,
-            estagio: "lead",
-            cliente_nome: clienteNome,
-            cliente_cnpj: clienteCnpj,
-            cliente_cidade: clienteCidade,
-            cliente_estado: clienteEstado,
-            observacoes,
-          });
+      // 2. CRIAR UM CARD NO CRM PARA CADA OPERAÇÃO
+      const cardsParaInserir = operacoesSelecionadas.map(operacao => ({
+        oportunidade_id: opp.id,
+        cliente_id: clienteId,
+        operacao,
+        gestao: operacaoGestaoLabel[operacao] || "G1",
+        estagio: "lead" as const,
+        cliente_nome: clienteNome,
+        cliente_cnpj: clienteCnpj,
+        cliente_cidade: clienteCidade,
+        cliente_estado: clienteEstado,
+        observacoes,
+      }));
 
-        if (erroCard) throw erroCard;
-      }
+      const { error: erroCards } = await supabase
+        .from("crm_cards")
+        .insert(cardsParaInserir);
 
-      toast.success(`${operacoesSelecionadas.length} oportunidade(s) criada(s) com sucesso!`);
+      if (erroCards) throw erroCards;
+
+      toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} operação(ões)!`);
       onSave?.();
       handleClose(false);
     } catch (error) {
