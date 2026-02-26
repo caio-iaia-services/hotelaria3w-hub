@@ -327,7 +327,7 @@ export default function Fornecedores() {
     setLoading(true);
     let query = supabase
       .from("fornecedores")
-      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, linhas_produtos", { count: "exact" });
+      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
@@ -909,7 +909,7 @@ export default function Fornecedores() {
                 <TableHead>Razão Social</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Cidade/UF</TableHead>
-                <TableHead>Linhas de Produtos</TableHead>
+                <TableHead>Gestão</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
@@ -950,15 +950,8 @@ export default function Fornecedores() {
                       {f.cidade || "-"}/{f.estado?.split(" - ")[0] || "-"}
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
-                      {f.linhas_produtos && f.linhas_produtos.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {f.linhas_produtos.slice(0, 2).map((linha, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">{linha}</Badge>
-                          ))}
-                          {f.linhas_produtos.length > 2 && (
-                            <Badge variant="outline" className="text-xs">+{f.linhas_produtos.length - 2}</Badge>
-                          )}
-                        </div>
+                      {f.gestao ? (
+                        <Badge variant="secondary" className="text-xs">{f.gestao}</Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
