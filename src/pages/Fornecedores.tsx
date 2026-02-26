@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2, ChevronDown, Upload, FileText, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,9 @@ interface Fornecedor {
   linhas_produtos?: string[] | null;
   segmentos_atuacao?: string[] | null;
   observacoes?: string | null;
+  gestao?: string | null;
+  produtos_servicos?: string | null;
+  comissao_vendas?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -80,7 +83,24 @@ type FornecedorForm = {
   tipo: string;
   status: string;
   observacoes: string;
+  gestao: string;
+  produtos_servicos: string;
+  comissao_vendas: string;
 };
+
+interface Contato {
+  nome: string;
+  cargo: string;
+  whatsapp: string;
+  email: string;
+}
+
+interface ArquivoUpload {
+  nome: string;
+  tamanho: number;
+  tipo: string;
+  file: File;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatCNPJ(cnpj: string | null) {
@@ -221,6 +241,10 @@ export default function Fornecedores() {
   const [modalEditar, setModalEditar] = useState<Fornecedor | null>(null);
   const [modalNovo, setModalNovo] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [contatos, setContatos] = useState<Contato[]>([]);
+  const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
+  const [contatosEdit, setContatosEdit] = useState<Contato[]>([]);
+  const [arquivosEdit, setArquivosEdit] = useState<ArquivoUpload[]>([]);
 
   // Forms
   const {
@@ -235,8 +259,10 @@ export default function Fornecedores() {
 
   const tipoNovoValue = watchNovo("tipo");
   const statusNovoValue = watchNovo("status");
+  const gestaoNovoValue = watchNovo("gestao");
   const tipoEditValue = watchEdit("tipo");
   const statusEditValue = watchEdit("status");
+  const gestaoEditValue = watchEdit("gestao");
 
   // Debounce busca
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -249,8 +275,54 @@ export default function Fornecedores() {
     }, 500);
   };
 
+  // Contatos helpers
+  const adicionarContato = (list: Contato[], setter: React.Dispatch<React.SetStateAction<Contato[]>>) => {
+    setter([...list, { nome: '', cargo: '', whatsapp: '', email: '' }]);
+  };
+  const removerContato = (index: number, list: Contato[], setter: React.Dispatch<React.SetStateAction<Contato[]>>) => {
+    setter(list.filter((_, i) => i !== index));
+  };
+  const atualizarContato = (index: number, campo: keyof Contato, valor: string, list: Contato[], setter: React.Dispatch<React.SetStateAction<Contato[]>>) => {
+    const novos = [...list];
+    novos[index] = { ...novos[index], [campo]: valor };
+    setter(novos);
+  };
 
-  // Buscar fornecedores
+  // Arquivos helpers
+  const handleUploadArquivos = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>, current: ArquivoUpload[]) => {
+    const files = Array.from(e.target.files || []);
+    const validos = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: `Arquivo ${file.name} excede 10MB`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    });
+    const novos = validos.map(file => ({ nome: file.name, tamanho: file.size, tipo: file.type, file }));
+    setter([...current, ...novos]);
+  };
+  const removerArquivo = (index: number, list: ArquivoUpload[], setter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>) => {
+    setter(list.filter((_, i) => i !== index));
+  };
+
+  const uploadArquivosStorage = async (arqs: ArquivoUpload[]) => {
+    const urls: { nome: string; url: string; tipo: string }[] = [];
+    for (const arq of arqs) {
+      const nomeArquivo = `${Date.now()}_${arq.nome}`;
+      const { error: uploadError } = await supabase.storage
+        .from('fornecedores-documentos')
+        .upload(nomeArquivo, arq.file);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('fornecedores-documentos')
+          .getPublicUrl(nomeArquivo);
+        urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
+      }
+    }
+    return urls;
+  };
+
+
   const fetchFornecedores = useCallback(async () => {
     setLoading(true);
     let query = supabase
@@ -341,6 +413,11 @@ export default function Fornecedores() {
   const salvarNovo = async (dados: FornecedorForm) => {
     setSalvando(true);
     try {
+      let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
+      if (arquivos.length > 0) {
+        catalogosUrls = await uploadArquivosStorage(arquivos);
+      }
+
       const { error } = await supabase.from("fornecedores").insert({
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
@@ -355,11 +432,18 @@ export default function Fornecedores() {
         tipo: dados.tipo || "regular",
         status: dados.status || "ativo",
         observacoes: dados.observacoes || null,
+        gestao: dados.gestao || null,
+        produtos_servicos: dados.produtos_servicos || null,
+        comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
+        contatos: contatos.length > 0 ? contatos : null,
+        catalogos: catalogosUrls.length > 0 ? catalogosUrls : null,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
       setModalNovo(false);
       resetNovo();
+      setContatos([]);
+      setArquivos([]);
       fetchFornecedores();
       fetchMetrics();
     } catch (err: any) {
@@ -400,7 +484,14 @@ export default function Fornecedores() {
       tipo: f.tipo || "regular",
       status: f.status || "ativo",
       observacoes: f.observacoes || "",
+      gestao: f.gestao || "",
+      produtos_servicos: f.produtos_servicos || "",
+      comissao_vendas: f.comissao_vendas?.toString() || "",
     });
+    // Load existing contatos
+    const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
+    setContatosEdit(existingContatos);
+    setArquivosEdit([]);
     setModalEditar(f);
   };
 
@@ -409,6 +500,16 @@ export default function Fornecedores() {
     if (!modalEditar) return;
     setSalvando(true);
     try {
+      let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
+      if (arquivosEdit.length > 0) {
+        catalogosUrls = await uploadArquivosStorage(arquivosEdit);
+      }
+      // Merge existing catalogos with new uploads
+      const existingCatalogos = modalEditar.catalogos
+        ? (typeof modalEditar.catalogos === 'string' ? JSON.parse(modalEditar.catalogos) : modalEditar.catalogos)
+        : [];
+      const allCatalogos = [...existingCatalogos, ...catalogosUrls];
+
       const { error } = await supabase
         .from("fornecedores")
         .update({
@@ -425,11 +526,18 @@ export default function Fornecedores() {
           tipo: dados.tipo || "regular",
           status: dados.status || "ativo",
           observacoes: dados.observacoes || null,
+          gestao: dados.gestao || null,
+          produtos_servicos: dados.produtos_servicos || null,
+          comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
+          contatos: contatosEdit.length > 0 ? contatosEdit : null,
+          catalogos: allCatalogos.length > 0 ? allCatalogos : null,
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
       toast({ title: "Fornecedor atualizado com sucesso!" });
       setModalEditar(null);
+      setContatosEdit([]);
+      setArquivosEdit([]);
       fetchFornecedores();
       fetchMetrics();
     } catch (err: any) {
@@ -466,6 +574,12 @@ export default function Fornecedores() {
     set: typeof setNovo,
     tipoVal: string,
     statusVal: string,
+    contatosList: Contato[],
+    contatosSetter: React.Dispatch<React.SetStateAction<Contato[]>>,
+    arquivosList: ArquivoUpload[],
+    arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,
+    gestaoVal: string,
+    uploadInputId: string,
   ) => (
     <>
       <div className="grid grid-cols-2 gap-4">
@@ -494,6 +608,19 @@ export default function Fornecedores() {
           <Label>Código</Label>
           <Input {...reg("codigo")} placeholder="Código interno" />
         </div>
+      </div>
+
+      {/* Gestão */}
+      <div className="space-y-1.5">
+        <Label>Gestão Responsável</Label>
+        <Select value={gestaoVal} onValueChange={(v) => set("gestao", v)}>
+          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+          <SelectContent className="bg-card z-50">
+            <SelectItem value="G1">Gestão 1</SelectItem>
+            <SelectItem value="G2">Gestão 2</SelectItem>
+            <SelectItem value="G3">Gestão 3</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -567,9 +694,110 @@ export default function Fornecedores() {
         </div>
       </div>
 
+      {/* Produtos e Serviços */}
+      <div className="space-y-1.5">
+        <Label>Produtos e Serviços</Label>
+        <Textarea
+          {...reg("produtos_servicos")}
+          placeholder="Descreva os principais produtos e serviços oferecidos..."
+          rows={4}
+        />
+      </div>
+
+      {/* Comissão */}
+      <div className="space-y-1.5">
+        <Label>Comissão de Vendas (%)</Label>
+        <Input
+          {...reg("comissao_vendas")}
+          type="number"
+          step="0.01"
+          min="0"
+          max="100"
+          placeholder="Ex: 5.5"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Percentual de comissão sobre vendas</p>
+      </div>
+
       <div className="space-y-1.5">
         <Label>Observações</Label>
         <Textarea {...reg("observacoes")} placeholder="Notas sobre o fornecedor..." rows={3} />
+      </div>
+
+      {/* Contatos */}
+      <div className="border-t border-border pt-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label>Contatos da Empresa</Label>
+          <Button type="button" variant="outline" size="sm" onClick={() => adicionarContato(contatosList, contatosSetter)}>
+            <Plus className="w-4 h-4 mr-1" /> Adicionar Contato
+          </Button>
+        </div>
+        {contatosList.map((contato, index) => (
+          <div key={index} className="border border-border rounded-lg p-4 mb-3 bg-muted/30">
+            <div className="flex items-start justify-between mb-3">
+              <p className="font-medium text-sm">Contato {index + 1}</p>
+              <Button type="button" variant="ghost" size="sm" onClick={() => removerContato(index, contatosList, contatosSetter)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nome *</Label>
+                <Input value={contato.nome} onChange={(e) => atualizarContato(index, 'nome', e.target.value, contatosList, contatosSetter)} placeholder="Nome completo" required />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cargo</Label>
+                <Input value={contato.cargo} onChange={(e) => atualizarContato(index, 'cargo', e.target.value, contatosList, contatosSetter)} placeholder="Ex: Gerente Comercial" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">WhatsApp</Label>
+                <Input value={contato.whatsapp} onChange={(e) => atualizarContato(index, 'whatsapp', e.target.value, contatosList, contatosSetter)} placeholder="(11) 99999-9999" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">E-mail</Label>
+                <Input type="email" value={contato.email} onChange={(e) => atualizarContato(index, 'email', e.target.value, contatosList, contatosSetter)} placeholder="contato@empresa.com" />
+              </div>
+            </div>
+          </div>
+        ))}
+        {contatosList.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhum contato adicionado</p>
+        )}
+      </div>
+
+      {/* Upload de Arquivos */}
+      <div className="border-t border-border pt-4 mt-4">
+        <Label>Catálogos e Documentos</Label>
+        <div className="mt-2">
+          <input
+            type="file"
+            id={uploadInputId}
+            multiple
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => handleUploadArquivos(e, arquivosSetter, arquivosList)}
+            className="hidden"
+          />
+          <Button type="button" variant="outline" onClick={() => document.getElementById(uploadInputId)?.click()} className="w-full">
+            <Upload className="w-4 h-4 mr-2" /> Fazer Upload de Arquivos
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB por arquivo)</p>
+        </div>
+        {arquivosList.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium">Arquivos anexados:</p>
+            {arquivosList.map((arquivo, index) => (
+              <div key={index} className="flex items-center justify-between p-2 border border-border rounded bg-background">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{arquivo.nome}</span>
+                  <Badge variant="secondary">{(arquivo.tamanho / 1024).toFixed(1)} KB</Badge>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => removerArquivo(index, arquivosList, arquivosSetter)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
@@ -808,6 +1036,8 @@ export default function Fornecedores() {
                   <Info label="Razão Social" value={modalVer.razao_social} />
                   <Info label="CNPJ" value={formatCNPJ(modalVer.cnpj)} />
                   <Info label="Código" value={modalVer.codigo} />
+                  <Info label="Gestão" value={modalVer.gestao} />
+                  <Info label="Comissão" value={modalVer.comissao_vendas ? `${modalVer.comissao_vendas}%` : null} />
                   <div className="flex gap-2 items-start flex-col">
                     <p className="text-xs text-muted-foreground">Tipo</p>
                     <Badge variant="outline" className={tipoColors[modalVer.tipo] || tipoColors.regular}>
@@ -907,6 +1137,60 @@ export default function Fornecedores() {
                   <p className="text-sm text-foreground bg-muted/40 rounded-md p-3">{modalVer.observacoes}</p>
                 </div>
               )}
+              {/* Produtos e Serviços */}
+              {modalVer.produtos_servicos && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Produtos e Serviços</p>
+                  <p className="text-sm text-foreground bg-muted/40 rounded-md p-3">{modalVer.produtos_servicos}</p>
+                </div>
+              )}
+
+              {/* Contatos da Empresa */}
+              {modalVer.contatos && (() => {
+                const contatosParsed = typeof modalVer.contatos === 'string' ? JSON.parse(modalVer.contatos) : modalVer.contatos;
+                return Array.isArray(contatosParsed) && contatosParsed.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contatos</p>
+                    <div className="space-y-3">
+                      {contatosParsed.map((c: any, i: number) => (
+                        <div key={i} className="border-l-4 border-primary pl-3">
+                          <p className="font-medium text-sm">{c.nome}</p>
+                          {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
+                          <div className="flex gap-4 mt-1 text-sm">
+                            {c.whatsapp && <p>📱 {c.whatsapp}</p>}
+                            {c.email && <p>✉️ {c.email}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Catálogos e Documentos */}
+              {modalVer.catalogos && (() => {
+                const catalogosParsed = typeof modalVer.catalogos === 'string' ? JSON.parse(modalVer.catalogos) : modalVer.catalogos;
+                return Array.isArray(catalogosParsed) && catalogosParsed.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Catálogos e Documentos</p>
+                    <div className="space-y-2">
+                      {catalogosParsed.map((doc: any, i: number) => (
+                        <a
+                          key={i}
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 border border-border rounded hover:bg-muted/50"
+                        >
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm flex-1">{doc.nome}</span>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setModalVer(null)}>Fechar</Button>
@@ -917,14 +1201,14 @@ export default function Fornecedores() {
       </Dialog>
 
       {/* ─── MODAL NOVO FORNECEDOR ─── */}
-      <Dialog open={modalNovo} onOpenChange={(o) => { setModalNovo(o); if (!o) resetNovo(); }}>
+      <Dialog open={modalNovo} onOpenChange={(o) => { setModalNovo(o); if (!o) { resetNovo(); setContatos([]); setArquivos([]); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Fornecedor</DialogTitle>
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue)}
+            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, "upload-arquivos-novo")}
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -950,7 +1234,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue)}
+            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, "upload-arquivos-edit")}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button
                 type="button"
