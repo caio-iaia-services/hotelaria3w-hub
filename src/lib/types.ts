@@ -8,6 +8,7 @@ export interface Cliente {
   cidade: string | null
   estado: string | null
   segmento_id: string | null
+  segmento: string | null
   status: string
   tipo: string
   created_at?: string

@@ -149,6 +149,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Info label="Nome Fantasia" value={cliente.nome_fantasia} />
               <Info label="Razão Social" value={cliente.razao_social} />
               <Info label="CNPJ" value={formatCNPJ(cliente.cnpj)} />
+              <Info label="Segmento" value={cliente.segmento} />
               <Info label="E-mail" value={cliente.email} />
               <Info label="Telefone" value={cliente.telefone} />
               <Info label="Cidade/UF" value={`${cliente.cidade || "-"}/${cliente.estado || "-"}`} />

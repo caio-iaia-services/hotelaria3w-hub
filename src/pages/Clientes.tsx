@@ -80,7 +80,7 @@ type NovoClienteForm = {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
-  segmento_id: string;
+  segmento: string;
   email: string;
   telefone: string;
   cidade: string;
@@ -175,16 +175,6 @@ export default function Clientes() {
   const fetchClientes = useCallback(async () => {
     setLoading(true);
 
-    // If filtering by segmento name, first resolve UUIDs
-    let segmentoIds: string[] = [];
-    if (filtros.segmento.length > 0) {
-      const { data: segs } = await supabase
-        .from("segmentos")
-        .select("id")
-        .in("nome", filtros.segmento);
-      segmentoIds = (segs || []).map((s) => s.id);
-    }
-
     let query = supabase.from("clientes").select("*", { count: "exact" });
 
     if (debouncedBusca) {
@@ -195,12 +185,7 @@ export default function Clientes() {
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
     if (filtros.segmento.length > 0) {
-      if (segmentoIds.length > 0) {
-        query = query.in("segmento_id", segmentoIds);
-      } else {
-        // No matching segmentos — force empty result
-        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
-      }
+      query = query.in("segmento", filtros.segmento);
     }
     if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
     if (filtros.regiao.length > 0) {
@@ -277,7 +262,7 @@ export default function Clientes() {
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
         cnpj: dados.cnpj,
-        segmento_id: dados.segmento_id || null,
+        segmento: dados.segmento || null,
         email: dados.email || null,
         telefone: dados.telefone || null,
         cidade: dados.cidade,
@@ -347,7 +332,7 @@ export default function Clientes() {
   // Watch values for controlled selects
   const tipoValue = watch("tipo");
   const statusValue = watch("status");
-  const segmentoValue = watch("segmento_id");
+  const segmentoValue = watch("segmento");
 
   return (
     <div className="space-y-6">
@@ -463,6 +448,7 @@ export default function Clientes() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Cidade/UF</TableHead>
+                <TableHead>Segmento</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Tipo</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
@@ -472,14 +458,14 @@ export default function Clientes() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                 <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
@@ -499,6 +485,9 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{formatCNPJ(c.cnpj)}</TableCell>
                     <TableCell className="text-sm">{c.cidade || "-"}/{c.estado || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{c.segmento || "-"}</Badge>
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className={statusColors[c.status] || ""}>{c.status}</Badge>
                     </TableCell>
@@ -583,7 +572,7 @@ export default function Clientes() {
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento</Label>
-                <Select value={segmentoValue} onValueChange={(v) => setValue("segmento_id", v)}>
+                <Select value={segmentoValue} onValueChange={(v) => setValue("segmento", v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="bg-card z-50">
                     <SelectItem value="Hotelaria">Hotelaria</SelectItem>

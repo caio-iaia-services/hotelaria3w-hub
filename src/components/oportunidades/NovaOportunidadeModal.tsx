@@ -89,7 +89,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
       setLoading(true);
       const { data } = await supabase
         .from("clientes")
-        .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, status, tipo")
+        .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, segmento, status, tipo")
         .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${busca}%,cidade.ilike.%${busca}%`)
         .order("nome_fantasia", { ascending: true })
         .limit(50);
