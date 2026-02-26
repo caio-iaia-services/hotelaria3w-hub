@@ -291,7 +291,34 @@ interface ItemOrcamento {
   total: number
 }
 
-// ─── Página Principal ─────────────────────────────────────────────────────────
+// ─── Fornecedor type (local) ─────────────────────────────────────────────────
+interface FornecedorLocal {
+  id: string
+  nome_fantasia: string
+  termos_fabricante: string | null
+}
+
+// ─── ClienteCompleto type ────────────────────────────────────────────────────
+interface ClienteCompleto {
+  razao_social: string | null
+  email: string | null
+  telefone: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+}
+
+// ─── TERMOS 3W ───────────────────────────────────────────────────────────────
+const TERMOS_3W = `1. Esta proposta é válida por [VALIDADE] dias.
+2. O Faturamento será realizado diretamente pelo Fabricante/Fornecedor.
+3. Garantias, bem como eventuais manuais/materiais de instrução e bom uso, são fornecidos diretamente pelo Fabricante/Fornecedor.
+4. Alguns produtos/serviços podem sofrer pequena alteração de preço em função do ICMS do Estado onde será feito o Faturamento e Entrega.
+5. Fabricantes/Fornecedores têm políticas de "frete" e "IPI" diferentes. Consulte antecipadamente o Vendedor e atente para as condições gerais da Fatura.
+6. Embora o nosso sistema atribua automaticamente validade do Orçamento de 30 dias, os preços podem sofrer alterações por motivos de força maior, tais como variações abruptas de matéria-prima e/ou outro qualquer fator que exceda a competência direta da 3W HOTELARIA.`
 export default function AcoesComerciais() {
   const [cards, setCards] = useState<CRMCard[]>([])
   const [cardSelecionado, setCardSelecionado] = useState<CRMCard | null>(null)
@@ -309,7 +336,10 @@ export default function AcoesComerciais() {
   // Modal de orçamento
   const [modalOrcamento, setModalOrcamento] = useState(false)
   const [itensOrcamento, setItensOrcamento] = useState<ItemOrcamento[]>([])
+  const [clienteCompleto, setClienteCompleto] = useState<ClienteCompleto | null>(null)
+  const [fornecedorSelecionado, setFornecedorSelecionado] = useState<FornecedorLocal | null>(null)
   const [dadosOrcamento, setDadosOrcamento] = useState({
+    codigo_empresa: '',
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
     frete: 0,
@@ -418,8 +448,28 @@ export default function AcoesComerciais() {
   }
 
   // ─── Modal Orçamento ──────────────────────────────────────────────────────
-  function abrirModalOrcamento() {
+  async function abrirModalOrcamento() {
     if (!cardSelecionado) return
+
+    // Fetch client details
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+      .eq('id', cardSelecionado.cliente_id)
+      .maybeSingle()
+
+    setClienteCompleto(cliente as ClienteCompleto | null)
+
+    // Fetch supplier if operacao matches
+    const { data: fornecedor } = await supabase
+      .from('fornecedores')
+      .select('id, nome_fantasia, termos_fabricante')
+      .ilike('nome_fantasia', `%${cardSelecionado.operacao}%`)
+      .limit(1)
+      .maybeSingle()
+
+    setFornecedorSelecionado(fornecedor as FornecedorLocal | null)
+
     setItensOrcamento([{
       id: Date.now(),
       codigo: '',
@@ -430,6 +480,7 @@ export default function AcoesComerciais() {
       total: 0,
     }])
     setDadosOrcamento({
+      codigo_empresa: '',
       prazo_entrega: '45/60 dias',
       validade_dias: 30,
       frete: 0,
@@ -476,87 +527,137 @@ export default function AcoesComerciais() {
 
   async function gerarOrcamento() {
     if (!cardSelecionado) return
-    const itensValidos = itensOrcamento.filter(i => i.descricao.trim())
-    if (itensValidos.length === 0) {
-      toast.error('Adicione pelo menos um item com descrição')
+
+    // Validações
+    if (!dadosOrcamento.codigo_empresa) {
+      toast.error('Código da empresa é obrigatório')
+      return
+    }
+
+    if (!clienteCompleto?.logradouro || !clienteCompleto?.numero) {
+      toast.error('Endereço completo do cliente é obrigatório. Atualize o cadastro do cliente.')
+      return
+    }
+
+    if (itensOrcamento.length === 0) {
+      toast.error('Adicione pelo menos um item ao orçamento')
+      return
+    }
+
+    const itensInvalidos = itensOrcamento.filter(item => !item.descricao || item.quantidade < 1 || item.preco_unitario <= 0)
+    if (itensInvalidos.length > 0) {
+      toast.error('Preencha todos os campos obrigatórios dos itens')
       return
     }
 
     try {
-      const numero = `ORC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
+      // 1. Gerar número do orçamento
+      const { count } = await supabase
+        .from('orcamentos')
+        .select('*', { count: 'exact', head: true })
+
+      const numero = `ORC-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`
+
+      // 2. Calcular valores
       const subtotal = calcularSubtotal()
       const total = calcularTotal()
-      const dataValidade = new Date()
+
+      // 3. Calcular data de validade
+      const hoje = new Date()
+      const dataValidade = new Date(hoje)
       dataValidade.setDate(dataValidade.getDate() + dadosOrcamento.validade_dias)
 
-      // Insert into orcamentos table
-      const { data: orcamento, error: orcError } = await supabase.from('orcamentos').insert({
-        numero,
-        card_id: cardSelecionado.id,
-        cliente_id: cardSelecionado.cliente_id,
-        cliente_nome: cardSelecionado.cliente_nome,
-        cliente_cnpj: cardSelecionado.cliente_cnpj,
-        fornecedor_nome: cardSelecionado.operacao,
-        operacao: cardSelecionado.operacao,
-        gestao: cardSelecionado.gestao,
-        subtotal,
-        frete: dadosOrcamento.frete,
-        desconto: 0,
-        total,
-        prazo_entrega: dadosOrcamento.prazo_entrega,
-        validade_dias: dadosOrcamento.validade_dias,
-        data_validade: dataValidade.toISOString().split('T')[0],
-        condicoes_pagamento: dadosOrcamento.condicoes_pagamento || null,
-        observacoes: dadosOrcamento.observacoes || null,
-        status: 'rascunho',
-      }).select().single()
+      // 4. Preparar endereço completo
+      const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`
 
-      if (orcError) throw orcError
+      // 5. Preparar termos 3W
+      const termos3w = TERMOS_3W.replace('[VALIDADE]', String(dadosOrcamento.validade_dias))
 
-      // Insert items
-      const itensInsert = itensValidos.map((item, index) => ({
-        orcamento_id: orcamento.id,
-        codigo: item.codigo || null,
-        descricao: item.descricao,
-        especificacoes: item.especificacoes || null,
-        quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
-        total: item.total,
-        ordem: index + 1,
-      }))
+      // 6. Criar orçamento
+      const { data: orcamento, error: erroOrcamento } = await supabase
+        .from('orcamentos')
+        .insert({
+          numero,
+          card_id: cardSelecionado.id,
+          cliente_id: cardSelecionado.cliente_id,
+          cliente_nome: cardSelecionado.cliente_nome,
+          cliente_razao_social: clienteCompleto.razao_social,
+          cliente_cnpj: cardSelecionado.cliente_cnpj,
+          cliente_endereco: enderecoCompleto,
+          cliente_email: clienteCompleto.email,
+          cliente_telefone: clienteCompleto.telefone,
+          fornecedor_id: fornecedorSelecionado?.id,
+          fornecedor_nome: fornecedorSelecionado?.nome_fantasia,
+          operacao: cardSelecionado.operacao,
+          gestao: cardSelecionado.gestao,
+          codigo_empresa: dadosOrcamento.codigo_empresa,
+          subtotal,
+          frete: dadosOrcamento.frete || 0,
+          desconto: 0,
+          total,
+          prazo_entrega: dadosOrcamento.prazo_entrega,
+          validade_dias: dadosOrcamento.validade_dias,
+          data_validade: dataValidade.toISOString(),
+          condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
+          observacoes: dadosOrcamento.observacoes,
+          termos_3w: termos3w,
+          termos_fornecedor: fornecedorSelecionado?.termos_fabricante,
+          status: 'rascunho',
+        })
+        .select()
+        .single()
 
-      const { error: itensError } = await supabase.from('orcamento_itens').insert(itensInsert)
-      if (itensError) throw itensError
+      if (erroOrcamento) throw erroOrcamento
 
-      // Also insert into documentos_comerciais for tracking
-      const { data: doc, error: docError } = await supabase.from('documentos_comerciais').insert({
-        card_id: cardSelecionado.id,
-        cliente_id: cardSelecionado.cliente_id,
-        tipo: 'orcamento',
-        numero,
-        titulo: `Orçamento ${cardSelecionado.operacao} - ${cardSelecionado.cliente_nome}`,
-        status: 'rascunho',
-        valor_total: total,
-        conteudo: { orcamento_id: orcamento.id, itens: itensValidos.length },
-      }).select().single()
+      // 7. Criar itens do orçamento
+      const itensParaInserir = itensOrcamento
+        .filter(i => i.descricao.trim())
+        .map((item, index) => ({
+          orcamento_id: orcamento.id,
+          codigo: item.codigo || null,
+          descricao: item.descricao,
+          especificacoes: item.especificacoes || null,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario,
+          total: item.total,
+          ordem: index,
+        }))
 
-      if (docError) throw docError
+      const { error: erroItens } = await supabase.from('orcamento_itens').insert(itensParaInserir)
+      if (erroItens) throw erroItens
 
-      // Log
+      // 8. Registrar no log
       await supabase.from('acoes_comerciais_log').insert({
         card_id: cardSelecionado.id,
-        documento_id: doc.id,
-        acao: 'orcamento_preparado',
-        descricao: `Orçamento ${numero} preparado - ${formatCurrency(total)}`,
+        acao: 'orcamento_gerado',
+        descricao: `Orçamento ${numero} gerado - Total: ${formatCurrency(total)}`,
       })
 
-      toast.success('Orçamento criado com sucesso!')
+      toast.success(`Orçamento ${numero} gerado com sucesso!`)
       setModalOrcamento(false)
+
+      // Limpar estados
+      setItensOrcamento([])
+      setDadosOrcamento({
+        codigo_empresa: '',
+        prazo_entrega: '45/60 dias',
+        validade_dias: 30,
+        frete: 0,
+        condicoes_pagamento: '',
+        observacoes: '',
+      })
+      setClienteCompleto(null)
+      setFornecedorSelecionado(null)
+
       buscarDocumentos(cardSelecionado.id)
       buscarMetricas()
-    } catch (err) {
-      console.error(err)
-      toast.error('Erro ao criar orçamento')
+
+      if (confirm('Orçamento criado! Deseja visualizar agora?')) {
+        window.location.href = '/orcamentos'
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao gerar orçamento')
     }
   }
 
@@ -653,7 +754,7 @@ export default function AcoesComerciais() {
 
           <div className="space-y-6">
             {/* INFO DO CLIENTE (readonly) */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">Cliente</p>
@@ -675,7 +776,15 @@ export default function AcoesComerciais() {
             </div>
 
             {/* DADOS DO ORÇAMENTO */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>Código da Empresa *</Label>
+                <Input
+                  placeholder="Ex: 3W-001"
+                  value={dadosOrcamento.codigo_empresa}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, codigo_empresa: e.target.value }))}
+                />
+              </div>
               <div>
                 <Label>Prazo de Entrega *</Label>
                 <Input
