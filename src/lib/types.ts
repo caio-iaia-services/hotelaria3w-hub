@@ -108,6 +108,7 @@ export interface Orcamento {
   fornecedor_id: string | null
   fornecedor_nome: string | null
   operacao: string | null
+  gestao: string | null
   subtotal: number
   frete: number
   desconto: number
