@@ -123,6 +123,12 @@ export interface Orcamento {
   aprovado_em: string | null
   pdf_url: string | null
   html_content: string | null
+  codigo_empresa: string | null
+  imagem_marketing_url: string | null
+  termos_3w: string | null
+  termos_fornecedor: string | null
+  assinatura_cliente: string | null
+  assinado_em: string | null
   created_at: string
   updated_at: string
 }
