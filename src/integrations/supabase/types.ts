@@ -14,7 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fornecedores: {
+        Row: {
+          a_receber: number | null
+          bairro: string | null
+          catalogos: Json | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          codigo: string | null
+          comissao_vendas: number | null
+          complemento: string | null
+          condicoes_pagamento: Json | null
+          contatos: Json | null
+          contrato: string | null
+          created_at: string
+          data_inicio: string | null
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          gestao: string | null
+          id: string
+          linhas_produtos: string[] | null
+          logotipo_url: string | null
+          nome_fantasia: string
+          num_orcamentos: number | null
+          num_vendas: number | null
+          numero: string | null
+          observacoes: string | null
+          orcamento_medio: number | null
+          pendentes: number | null
+          produtos_servicos: string | null
+          razao_social: string
+          segmentos_atuacao: string[] | null
+          site: string | null
+          site_2: string | null
+          status: string
+          telefone: string | null
+          tipo: string
+          updated_at: string
+          venda_media: number | null
+          volume_orcamentos: number | null
+          volume_vendas: number | null
+          whatsapp: string | null
+        }
+        Insert: {
+          a_receber?: number | null
+          bairro?: string | null
+          catalogos?: Json | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          codigo?: string | null
+          comissao_vendas?: number | null
+          complemento?: string | null
+          condicoes_pagamento?: Json | null
+          contatos?: Json | null
+          contrato?: string | null
+          created_at?: string
+          data_inicio?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          gestao?: string | null
+          id?: string
+          linhas_produtos?: string[] | null
+          logotipo_url?: string | null
+          nome_fantasia: string
+          num_orcamentos?: number | null
+          num_vendas?: number | null
+          numero?: string | null
+          observacoes?: string | null
+          orcamento_medio?: number | null
+          pendentes?: number | null
+          produtos_servicos?: string | null
+          razao_social: string
+          segmentos_atuacao?: string[] | null
+          site?: string | null
+          site_2?: string | null
+          status?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+          venda_media?: number | null
+          volume_orcamentos?: number | null
+          volume_vendas?: number | null
+          whatsapp?: string | null
+        }
+        Update: {
+          a_receber?: number | null
+          bairro?: string | null
+          catalogos?: Json | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          codigo?: string | null
+          comissao_vendas?: number | null
+          complemento?: string | null
+          condicoes_pagamento?: Json | null
+          contatos?: Json | null
+          contrato?: string | null
+          created_at?: string
+          data_inicio?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          gestao?: string | null
+          id?: string
+          linhas_produtos?: string[] | null
+          logotipo_url?: string | null
+          nome_fantasia?: string
+          num_orcamentos?: number | null
+          num_vendas?: number | null
+          numero?: string | null
+          observacoes?: string | null
+          orcamento_medio?: number | null
+          pendentes?: number | null
+          produtos_servicos?: string | null
+          razao_social?: string
+          segmentos_atuacao?: string[] | null
+          site?: string | null
+          site_2?: string | null
+          status?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+          venda_media?: number | null
+          volume_orcamentos?: number | null
+          volume_vendas?: number | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
