@@ -65,6 +65,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [cadastrandoNovo, setCadastrandoNovo] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cnpjDuplicado, setCnpjDuplicado] = useState(false);
 
   // New client form
   const [novoCliente, setNovoCliente] = useState({
@@ -100,12 +101,31 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
     return () => clearTimeout(timer);
   }, [busca]);
 
+  // Check CNPJ duplicado
+  useEffect(() => {
+    const cnpjDigits = novoCliente.cnpj.replace(/\D/g, "");
+    if (cnpjDigits.length !== 14) {
+      setCnpjDuplicado(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("cnpj", cnpjDigits)
+        .limit(1);
+      setCnpjDuplicado((data?.length || 0) > 0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [novoCliente.cnpj]);
+
   const resetForm = () => {
     setStep(1);
     setBusca("");
     setClientes([]);
     setClienteSelecionado(null);
     setCadastrandoNovo(false);
+    setCnpjDuplicado(false);
     setNovoCliente({ nomeFantasia: "", razaoSocial: "", cnpj: "", segmento: "", cidade: "", estado: "", email: "", telefone: "" });
     setOperacoesSelecionadas([]);
     setObservacoes("");
@@ -119,6 +139,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
   const novoClienteValido =
     novoCliente.nomeFantasia && novoCliente.razaoSocial &&
     novoCliente.cnpj.replace(/\D/g, "").length === 14 &&
+    !cnpjDuplicado &&
     novoCliente.segmento && novoCliente.cidade && novoCliente.estado &&
     novoCliente.email && novoCliente.telefone;
 
@@ -345,7 +366,13 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
                 </div>
                 <div><Label>Nome Fantasia *</Label><Input value={novoCliente.nomeFantasia} onChange={(e) => setNovoCliente({ ...novoCliente, nomeFantasia: e.target.value })} /></div>
                 <div><Label>Razão Social *</Label><Input value={novoCliente.razaoSocial} onChange={(e) => setNovoCliente({ ...novoCliente, razaoSocial: e.target.value })} /></div>
-                <div><Label>CNPJ *</Label><Input value={novoCliente.cnpj} onChange={(e) => setNovoCliente({ ...novoCliente, cnpj: maskCnpj(e.target.value) })} placeholder="00.000.000/0000-00" /></div>
+                <div>
+                  <Label>CNPJ *</Label>
+                  <Input value={novoCliente.cnpj} onChange={(e) => setNovoCliente({ ...novoCliente, cnpj: maskCnpj(e.target.value) })} placeholder="00.000.000/0000-00" />
+                  {cnpjDuplicado && (
+                    <p className="text-sm text-destructive mt-1 font-medium">⚠️ Cliente já cadastrado com este CNPJ. Utilize a busca para selecioná-lo.</p>
+                  )}
+                </div>
                 <div>
                   <Label>Segmento *</Label>
                   <Select value={novoCliente.segmento} onValueChange={(v) => setNovoCliente({ ...novoCliente, segmento: v })}>
