@@ -154,9 +154,14 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
     }
   }
 
-  function selecionarTodasOperacoes() {
-    setOperacoesSelecionadas([...todasOperacoes]);
-    toast.success("Todas as operações selecionadas!");
+  const todasSelecionadas = operacoesSelecionadas.length === todasOperacoes.length;
+
+  function toggleTodasOperacoes() {
+    if (todasSelecionadas) {
+      setOperacoesSelecionadas([]);
+    } else {
+      setOperacoesSelecionadas([...todasOperacoes]);
+    }
   }
 
   const handleSave = async () => {
@@ -415,13 +420,13 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant={todasSelecionadas ? "default" : "outline"}
                 size="sm"
-                onClick={selecionarTodasOperacoes}
+                onClick={toggleTodasOperacoes}
                 className="flex items-center gap-2"
               >
                 <Star className="w-4 h-4" />
-                Cliente VIP
+                {todasSelecionadas ? "Desmarcar VIP" : "Cliente VIP"}
               </Button>
             </div>
 
