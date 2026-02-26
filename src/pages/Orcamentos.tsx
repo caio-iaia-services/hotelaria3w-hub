@@ -2,19 +2,15 @@ import { supabase } from '@/lib/supabase'
 import { Orcamento } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  FileText, Plus, Eye, Send, Edit, Download,
+  FileText, Eye, Send, Edit, Download,
   Trash2, Filter, Search
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 
@@ -41,10 +37,7 @@ function getStatusLabel(status: string) {
 }
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
 function formatDate(date: string) {
@@ -57,24 +50,44 @@ export default function Orcamentos() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(50)
-  const [filtros, setFiltros] = useState({ busca: '', status: '' })
+  const [statusAtivo, setStatusAtivo] = useState('todos')
+  const [contadores, setContadores] = useState({
+    todos: 0, rascunho: 0, enviado: 0, aprovado: 0, rejeitado: 0, expirado: 0
+  })
+  const [filtros, setFiltros] = useState({ busca: '', gestao: '' })
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const buscarContadores = useCallback(async () => {
+    const counts = await Promise.all([
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }),
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }).eq('status', 'rascunho'),
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }).eq('status', 'enviado'),
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }).eq('status', 'aprovado'),
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }).eq('status', 'rejeitado'),
+      supabase.from('orcamentos').select('*', { count: 'exact', head: true }).eq('status', 'expirado'),
+    ])
+    setContadores({
+      todos: counts[0].count || 0,
+      rascunho: counts[1].count || 0,
+      enviado: counts[2].count || 0,
+      aprovado: counts[3].count || 0,
+      rejeitado: counts[4].count || 0,
+      expirado: counts[5].count || 0,
+    })
+  }, [])
 
   const buscarOrcamentos = useCallback(async () => {
     setLoading(true)
+    let query = supabase.from('orcamentos').select('*', { count: 'exact' })
 
-    let query = supabase
-      .from('orcamentos')
-      .select('*', { count: 'exact' })
-
-    if (filtros.busca) {
-      query = query.or(
-        `numero.ilike.%${filtros.busca}%,cliente_nome.ilike.%${filtros.busca}%,fornecedor_nome.ilike.%${filtros.busca}%`
-      )
+    if (statusAtivo !== 'todos') {
+      query = query.eq('status', statusAtivo)
     }
-
-    if (filtros.status) {
-      query = query.eq('status', filtros.status)
+    if (filtros.busca) {
+      query = query.or(`numero.ilike.%${filtros.busca}%,cliente_nome.ilike.%${filtros.busca}%,fornecedor_nome.ilike.%${filtros.busca}%`)
+    }
+    if (filtros.gestao) {
+      query = query.eq('gestao', filtros.gestao)
     }
 
     const from = (page - 1) * pageSize
@@ -88,13 +101,11 @@ export default function Orcamentos() {
       setOrcamentos((data as Orcamento[]) || [])
       setTotal(count || 0)
     }
-
     setLoading(false)
-  }, [page, pageSize, filtros])
+  }, [page, pageSize, filtros, statusAtivo])
 
-  useEffect(() => {
-    buscarOrcamentos()
-  }, [buscarOrcamentos])
+  useEffect(() => { buscarContadores() }, [buscarContadores])
+  useEffect(() => { buscarOrcamentos() }, [buscarOrcamentos])
 
   const handleBuscaChange = (valor: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -104,33 +115,18 @@ export default function Orcamentos() {
     }, 500)
   }
 
-  function visualizarOrcamento(_orcamento: Orcamento) {
-    toast.info('Visualização em desenvolvimento')
-  }
-
-  function editarOrcamento(_orcamento: Orcamento) {
-    toast.info('Edição em desenvolvimento')
-  }
-
-  function enviarOrcamento(_orcamento: Orcamento) {
-    toast.info('Envio em desenvolvimento')
-  }
-
-  function baixarPDF(_orcamento: Orcamento) {
-    toast.info('Download em desenvolvimento')
-  }
+  function visualizarOrcamento(_o: Orcamento) { toast.info('Visualização em desenvolvimento') }
+  function editarOrcamento(_o: Orcamento) { toast.info('Edição em desenvolvimento') }
+  function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
+  function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
 
   async function deletarOrcamento(id: string) {
     if (!confirm('Deletar este orçamento?')) return
-
-    const { error } = await supabase
-      .from('orcamentos')
-      .delete()
-      .eq('id', id)
-
+    const { error } = await supabase.from('orcamentos').delete().eq('id', id)
     if (!error) {
       toast.success('Orçamento deletado!')
       buscarOrcamentos()
+      buscarContadores()
     }
   }
 
@@ -144,10 +140,39 @@ export default function Orcamentos() {
           <FileText className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Orçamentos</h1>
-            <span className="text-sm text-muted-foreground">{total} orçamentos</span>
+            <Badge variant="secondary">
+              {statusAtivo === 'todos'
+                ? `${total} orçamentos`
+                : `${total} orçamento(s) ${getStatusLabel(statusAtivo)}`
+              }
+            </Badge>
           </div>
         </div>
       </div>
+
+      {/* ABAS POR STATUS */}
+      <Tabs value={statusAtivo} onValueChange={(v) => { setStatusAtivo(v); setPage(1) }}>
+        <TabsList>
+          <TabsTrigger value="todos">
+            Todos <Badge variant="secondary" className="ml-2">{contadores.todos}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="rascunho">
+            Rascunho <Badge variant="secondary" className="ml-2">{contadores.rascunho}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="enviado">
+            Enviado <Badge variant="secondary" className="ml-2">{contadores.enviado}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="aprovado">
+            Aprovado <Badge variant="secondary" className="ml-2">{contadores.aprovado}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="rejeitado">
+            Rejeitado <Badge variant="secondary" className="ml-2">{contadores.rejeitado}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="expirado">
+            Expirado <Badge variant="secondary" className="ml-2">{contadores.expirado}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* FILTROS */}
       <div className="flex flex-wrap items-center gap-3">
@@ -162,21 +187,19 @@ export default function Orcamentos() {
 
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-          value={filtros.status}
-          onChange={(e) => setFiltros(prev => ({ ...prev, status: e.target.value }))}
+          value={filtros.gestao}
+          onChange={(e) => { setFiltros(prev => ({ ...prev, gestao: e.target.value })); setPage(1) }}
         >
-          <option value="">Todos os Status</option>
-          <option value="rascunho">Rascunho</option>
-          <option value="enviado">Enviado</option>
-          <option value="aprovado">Aprovado</option>
-          <option value="rejeitado">Rejeitado</option>
-          <option value="expirado">Expirado</option>
+          <option value="">Todas as Gestões</option>
+          <option value="G1">Gestão 1</option>
+          <option value="G2">Gestão 2</option>
+          <option value="G3">Gestão 3</option>
         </select>
 
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setFiltros({ busca: '', status: '' })}
+          onClick={() => { setFiltros({ busca: '', gestao: '' }); setStatusAtivo('todos'); setPage(1) }}
         >
           <Filter className="h-4 w-4 mr-1" />
           Limpar Filtros
@@ -220,9 +243,7 @@ export default function Orcamentos() {
             ) : (
               orcamentos.map((orcamento) => (
                 <TableRow key={orcamento.id}>
-                  <TableCell>
-                    <span className="font-mono font-medium">{orcamento.numero}</span>
-                  </TableCell>
+                  <TableCell><span className="font-mono font-medium">{orcamento.numero}</span></TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium text-sm">{orcamento.cliente_nome}</p>
@@ -237,44 +258,23 @@ export default function Orcamentos() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <span className="font-medium">{formatCurrency(orcamento.total)}</span>
-                  </TableCell>
+                  <TableCell><span className="font-medium">{formatCurrency(orcamento.total)}</span></TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {orcamento.data_validade
-                        ? formatDate(orcamento.data_validade)
-                        : `${orcamento.validade_dias} dias`
-                      }
+                      {orcamento.data_validade ? formatDate(orcamento.data_validade) : `${orcamento.validade_dias} dias`}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(orcamento.status)}>
-                      {getStatusLabel(orcamento.status)}
-                    </Badge>
+                    <Badge variant={getStatusVariant(orcamento.status)}>{getStatusLabel(orcamento.status)}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(orcamento.created_at)}
-                    </span>
-                  </TableCell>
+                  <TableCell><span className="text-sm text-muted-foreground">{formatDate(orcamento.created_at)}</span></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editarOrcamento(orcamento)} disabled={orcamento.status === 'aprovado'}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => enviarOrcamento(orcamento)} disabled={orcamento.status !== 'rascunho'}>
-                        <Send className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => baixarPDF(orcamento)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletarOrcamento(orcamento.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}><Eye className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editarOrcamento(orcamento)} disabled={orcamento.status === 'aprovado'}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => enviarOrcamento(orcamento)} disabled={orcamento.status !== 'rascunho'}><Send className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => baixarPDF(orcamento)}><Download className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletarOrcamento(orcamento.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -291,13 +291,9 @@ export default function Orcamentos() {
             Mostrando {((page - 1) * pageSize) + 1} a {Math.min(page * pageSize, total)} de {total}
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-              Anterior
-            </Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
             <span className="text-sm">Página {page} de {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-              Próxima
-            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Próxima</Button>
           </div>
         </div>
       )}
