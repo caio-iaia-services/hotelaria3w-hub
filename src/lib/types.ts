@@ -93,3 +93,48 @@ export interface AcaoComercialLog {
   descricao: string | null
   created_at: string
 }
+
+export interface Orcamento {
+  id: string
+  numero: string
+  card_id: string | null
+  cliente_id: string
+  cliente_nome: string
+  cliente_razao_social: string | null
+  cliente_cnpj: string | null
+  cliente_endereco: string | null
+  cliente_email: string | null
+  cliente_telefone: string | null
+  fornecedor_id: string | null
+  fornecedor_nome: string | null
+  operacao: string | null
+  subtotal: number
+  frete: number
+  desconto: number
+  total: number
+  prazo_entrega: string | null
+  validade_dias: number
+  data_validade: string | null
+  condicoes_pagamento: any
+  observacoes: string | null
+  status: 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado' | 'expirado'
+  enviado_em: string | null
+  aprovado_em: string | null
+  pdf_url: string | null
+  html_content: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OrcamentoItem {
+  id: string
+  orcamento_id: string
+  codigo: string | null
+  descricao: string
+  especificacoes: string | null
+  quantidade: number
+  preco_unitario: number
+  total: number
+  ordem: number
+  created_at: string
+}
