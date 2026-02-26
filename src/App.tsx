@@ -14,6 +14,7 @@ import CrmGestao from "./pages/CrmGestao";
 import AcoesComerciais from "./pages/AcoesComerciais";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Fornecedores from "./pages/Fornecedores";
+import Orcamentos from "./pages/Orcamentos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,10 +56,13 @@ const App = () => (
               path="/fornecedores"
               element={<AppLayout><Fornecedores /></AppLayout>}
             />
+            <Route
+              path="/orcamentos"
+              element={<AppLayout><Orcamentos /></AppLayout>}
+            />
             {[
               "/atendimento",
               "/crm",
-              "/orcamentos",
               "/clientes/hotelaria",
               "/clientes/gastronomia",
               "/clientes/hospitalar",
