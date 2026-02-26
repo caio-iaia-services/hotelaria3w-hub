@@ -83,7 +83,7 @@ type FornecedorForm = {
   tipo: string;
   status: string;
   observacoes: string;
-  gestao: string;
+  gestao: string[];
   produtos_servicos: string;
   comissao_vendas: string;
 };
@@ -250,7 +250,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { tipo: "regular", status: "ativo" } });
+  } = useForm<FornecedorForm>({ defaultValues: { tipo: "regular", status: "ativo", gestao: [] } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -259,10 +259,10 @@ export default function Fornecedores() {
 
   const tipoNovoValue = watchNovo("tipo");
   const statusNovoValue = watchNovo("status");
-  const gestaoNovoValue = watchNovo("gestao");
+  const gestaoNovoValue = watchNovo("gestao") || [];
   const tipoEditValue = watchEdit("tipo");
   const statusEditValue = watchEdit("status");
-  const gestaoEditValue = watchEdit("gestao");
+  const gestaoEditValue = watchEdit("gestao") || [];
 
   // Debounce busca
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -432,7 +432,7 @@ export default function Fornecedores() {
         tipo: dados.tipo || "regular",
         status: dados.status || "ativo",
         observacoes: dados.observacoes || null,
-        gestao: dados.gestao || null,
+        gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
         produtos_servicos: dados.produtos_servicos || null,
         comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
         contatos: contatos.length > 0 ? contatos : null,
@@ -484,7 +484,7 @@ export default function Fornecedores() {
       tipo: f.tipo || "regular",
       status: f.status || "ativo",
       observacoes: f.observacoes || "",
-      gestao: f.gestao || "",
+      gestao: f.gestao ? f.gestao.split(", ").filter(Boolean) : [],
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
     });
@@ -526,7 +526,7 @@ export default function Fornecedores() {
           tipo: dados.tipo || "regular",
           status: dados.status || "ativo",
           observacoes: dados.observacoes || null,
-          gestao: dados.gestao || null,
+          gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
           produtos_servicos: dados.produtos_servicos || null,
           comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
           contatos: contatosEdit.length > 0 ? contatosEdit : null,
@@ -578,7 +578,7 @@ export default function Fornecedores() {
     contatosSetter: React.Dispatch<React.SetStateAction<Contato[]>>,
     arquivosList: ArquivoUpload[],
     arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,
-    gestaoVal: string,
+    gestaoVal: string[],
     uploadInputId: string,
   ) => (
     <>
@@ -610,17 +610,25 @@ export default function Fornecedores() {
         </div>
       </div>
 
-      {/* Gestão */}
+      {/* Gestão - Multi Select */}
       <div className="space-y-1.5">
         <Label>Gestão Responsável</Label>
-        <Select value={gestaoVal} onValueChange={(v) => set("gestao", v)}>
-          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-          <SelectContent className="bg-card z-50">
-            <SelectItem value="G1">Gestão 1</SelectItem>
-            <SelectItem value="G2">Gestão 2</SelectItem>
-            <SelectItem value="G3">Gestão 3</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-4 mt-1">
+          {["G1", "G2", "G3"].map((g) => (
+            <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
+              <Checkbox
+                checked={gestaoVal.includes(g)}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...gestaoVal, g]
+                    : gestaoVal.filter((v) => v !== g);
+                  set("gestao", next as any);
+                }}
+              />
+              {g}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -951,7 +959,11 @@ export default function Fornecedores() {
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       {f.gestao ? (
-                        <Badge variant="secondary" className="text-xs">{f.gestao}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {f.gestao.split(", ").filter(Boolean).map((g, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{g}</Badge>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
