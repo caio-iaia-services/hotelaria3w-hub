@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -15,7 +15,6 @@ import { Search, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { type Cliente } from "@/lib/types";
 import { toast } from "sonner";
-import { gestaoOperacoes } from "@/data/mockOportunidades";
 
 interface NovaOportunidadeModalProps {
   open: boolean;
@@ -29,15 +28,6 @@ const estados = [
 ];
 
 const segmentos = ["Hotelaria", "Gastronomia", "Hospitalar", "Condominial", "Exportação", "Outros"];
-
-const todasOperacoes = Object.values(gestaoOperacoes).flat();
-
-const operacaoGestaoLabel: Record<string, string> = {};
-for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
-  for (const op of ops) {
-    operacaoGestaoLabel[op] = `G${gestao}`;
-  }
-}
 
 function maskCnpj(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 14);
@@ -58,6 +48,49 @@ function maskTelefone(value: string): string {
 
 export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportunidadeModalProps) {
   const [step, setStep] = useState(1);
+
+  // Fornecedores (operações dinâmicas)
+  const [fornecedores, setFornecedores] = useState<{ nome_fantasia: string; gestao: string | null }[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("nome_fantasia, gestao")
+        .eq("status", "ativo")
+        .order("nome_fantasia");
+      setFornecedores(data || []);
+    })();
+  }, [open]);
+
+  // Construir gestaoOperacoes dinamicamente a partir dos fornecedores
+  const gestaoOperacoes = useMemo(() => {
+    const map: Record<string, string[]> = { "1": [], "2": [], "3": [] };
+    for (const f of fornecedores) {
+      if (!f.gestao) continue;
+      const gestoes = f.gestao.split(", ").filter(Boolean);
+      for (const g of gestoes) {
+        const key = g.replace("G", "");
+        if (map[key] && !map[key].includes(f.nome_fantasia)) {
+          map[key].push(f.nome_fantasia);
+        }
+      }
+    }
+    return map;
+  }, [fornecedores]);
+
+  const todasOperacoes = useMemo(() => Object.values(gestaoOperacoes).flat(), [gestaoOperacoes]);
+
+  const operacaoGestaoLabel = useMemo(() => {
+    const labels: Record<string, string> = {};
+    for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
+      for (const op of ops) {
+        labels[op] = `G${gestao}`;
+      }
+    }
+    return labels;
+  }, [gestaoOperacoes]);
 
   // Step 1 - Client search
   const [busca, setBusca] = useState("");
