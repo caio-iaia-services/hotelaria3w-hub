@@ -4,10 +4,16 @@ import { useState, useEffect } from 'react'
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
-  TrendingUp, Clock, MapPin, Eye, Download, ChevronRight,
+  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -41,26 +47,10 @@ function MetricCard({ icon, titulo, valor, cor }: MetricCardProps) {
 }
 
 // ─── Estágio helpers ──────────────────────────────────────────────────────────
-const estagioColorMap: Record<string, string> = {
-  lead: 'bg-blue-100 text-blue-800',
-  contato: 'bg-sky-100 text-sky-800',
-  proposta: 'bg-yellow-100 text-yellow-800',
-  negociacao: 'bg-orange-100 text-orange-800',
-  fechado: 'bg-green-100 text-green-800',
-  consolidacao: 'bg-teal-100 text-teal-800',
-  pos_venda: 'bg-purple-100 text-purple-800',
-  realizado: 'bg-emerald-100 text-emerald-800',
-  perdido: 'bg-red-100 text-red-800',
-}
-
 const estagioLabelMap: Record<string, string> = {
   lead: 'Lead', contato: 'Contato', proposta: 'Proposta',
   negociacao: 'Negociação', fechado: 'Fechado', consolidacao: 'Consolidação',
   pos_venda: 'Pós-Venda', realizado: 'Realizado', perdido: 'Perdido',
-}
-
-function getEstagioColor(estagio: string) {
-  return estagioColorMap[estagio] ?? 'bg-muted text-muted-foreground'
 }
 
 // ─── FunilVertical ────────────────────────────────────────────────────────────
@@ -103,10 +93,10 @@ function FunilVertical({ cards, cardSelecionado, onSelecionar }: FunilProps) {
               <Badge
                 variant={
                   card.estagio === 'lead' ? 'secondary' :
-                  card.estagio === 'contato' ? 'default' :
-                  card.estagio === 'proposta' ? 'outline' :
-                  card.estagio === 'negociacao' ? 'destructive' :
-                  'default'
+                    card.estagio === 'contato' ? 'default' :
+                      card.estagio === 'proposta' ? 'outline' :
+                        card.estagio === 'negociacao' ? 'destructive' :
+                          'default'
                 }
                 className="shrink-0 text-[10px]"
               >
@@ -285,6 +275,22 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
   )
 }
 
+// ─── Helper ───────────────────────────────────────────────────────────────────
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+// ─── Item type ────────────────────────────────────────────────────────────────
+interface ItemOrcamento {
+  id: number
+  codigo: string
+  descricao: string
+  especificacoes: string
+  quantidade: number
+  preco_unitario: number
+  total: number
+}
+
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function AcoesComerciais() {
   const [cards, setCards] = useState<CRMCard[]>([])
@@ -298,6 +304,17 @@ export default function AcoesComerciais() {
     valorTotal: 0,
     taxaConversao: 0,
     tempoMedio: 0,
+  })
+
+  // Modal de orçamento
+  const [modalOrcamento, setModalOrcamento] = useState(false)
+  const [itensOrcamento, setItensOrcamento] = useState<ItemOrcamento[]>([])
+  const [dadosOrcamento, setDadosOrcamento] = useState({
+    prazo_entrega: '45/60 dias',
+    validade_dias: 30,
+    frete: 0,
+    condicoes_pagamento: '',
+    observacoes: '',
   })
 
   useEffect(() => {
@@ -366,11 +383,11 @@ export default function AcoesComerciais() {
     })
   }
 
-  async function executarAcao(acao: string, cardId: string) {
+  async function executarAcao(acao: string, _cardId: string) {
     if (!cardSelecionado) return
     switch (acao) {
       case 'solicitar_cotacao': await solicitarCotacao(); break
-      case 'preparar_orcamento': await prepararOrcamento(); break
+      case 'preparar_orcamento': abrirModalOrcamento(); break
       case 'gerar_contrato': await gerarContrato(); break
       case 'enviar_orcamento': toast.info('Funcionalidade de envio em desenvolvimento'); break
       case 'enviar_contrato': toast.info('Funcionalidade de envio em desenvolvimento'); break
@@ -400,29 +417,147 @@ export default function AcoesComerciais() {
     } catch (err) { console.error(err); toast.error('Erro ao criar cotação') }
   }
 
-  async function prepararOrcamento() {
+  // ─── Modal Orçamento ──────────────────────────────────────────────────────
+  function abrirModalOrcamento() {
+    if (!cardSelecionado) return
+    setItensOrcamento([{
+      id: Date.now(),
+      codigo: '',
+      descricao: '',
+      especificacoes: '',
+      quantidade: 1,
+      preco_unitario: 0,
+      total: 0,
+    }])
+    setDadosOrcamento({
+      prazo_entrega: '45/60 dias',
+      validade_dias: 30,
+      frete: 0,
+      condicoes_pagamento: '',
+      observacoes: '',
+    })
+    setModalOrcamento(true)
+  }
+
+  function adicionarItem() {
+    setItensOrcamento(prev => [...prev, {
+      id: Date.now(),
+      codigo: '',
+      descricao: '',
+      especificacoes: '',
+      quantidade: 1,
+      preco_unitario: 0,
+      total: 0,
+    }])
+  }
+
+  function removerItem(id: number) {
+    setItensOrcamento(prev => prev.filter(item => item.id !== id))
+  }
+
+  function atualizarItem(id: number, campo: string, valor: string | number) {
+    setItensOrcamento(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [campo]: valor }
+        updated.total = updated.quantidade * updated.preco_unitario
+        return updated
+      }
+      return item
+    }))
+  }
+
+  function calcularSubtotal() {
+    return itensOrcamento.reduce((sum, item) => sum + item.total, 0)
+  }
+
+  function calcularTotal() {
+    return calcularSubtotal() + (dadosOrcamento.frete || 0)
+  }
+
+  async function gerarOrcamento() {
+    if (!cardSelecionado) return
+    const itensValidos = itensOrcamento.filter(i => i.descricao.trim())
+    if (itensValidos.length === 0) {
+      toast.error('Adicione pelo menos um item com descrição')
+      return
+    }
+
     try {
-      const { data: cotacao } = await supabase.from('documentos_comerciais').select('*')
-        .eq('card_id', cardSelecionado!.id).eq('tipo', 'cotacao')
-        .order('created_at', { ascending: false }).limit(1).maybeSingle()
       const numero = `ORC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
-      const { data, error } = await supabase.from('documentos_comerciais').insert({
-        card_id: cardSelecionado!.id,
-        cliente_id: cardSelecionado!.cliente_id,
-        tipo: 'orcamento', numero,
-        titulo: `Orçamento ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
+      const subtotal = calcularSubtotal()
+      const total = calcularTotal()
+      const dataValidade = new Date()
+      dataValidade.setDate(dataValidade.getDate() + dadosOrcamento.validade_dias)
+
+      // Insert into orcamentos table
+      const { data: orcamento, error: orcError } = await supabase.from('orcamentos').insert({
+        numero,
+        card_id: cardSelecionado.id,
+        cliente_id: cardSelecionado.cliente_id,
+        cliente_nome: cardSelecionado.cliente_nome,
+        cliente_cnpj: cardSelecionado.cliente_cnpj,
+        fornecedor_nome: cardSelecionado.operacao,
+        operacao: cardSelecionado.operacao,
+        gestao: cardSelecionado.gestao,
+        subtotal,
+        frete: dadosOrcamento.frete,
+        desconto: 0,
+        total,
+        prazo_entrega: dadosOrcamento.prazo_entrega,
+        validade_dias: dadosOrcamento.validade_dias,
+        data_validade: dataValidade.toISOString().split('T')[0],
+        condicoes_pagamento: dadosOrcamento.condicoes_pagamento || null,
+        observacoes: dadosOrcamento.observacoes || null,
         status: 'rascunho',
-        conteudo: { operacao: cardSelecionado!.operacao, baseado_cotacao: cotacao?.numero ?? null, itens: [] },
       }).select().single()
-      if (error) throw error
+
+      if (orcError) throw orcError
+
+      // Insert items
+      const itensInsert = itensValidos.map((item, index) => ({
+        orcamento_id: orcamento.id,
+        codigo: item.codigo || null,
+        descricao: item.descricao,
+        especificacoes: item.especificacoes || null,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        total: item.total,
+        ordem: index + 1,
+      }))
+
+      const { error: itensError } = await supabase.from('orcamento_itens').insert(itensInsert)
+      if (itensError) throw itensError
+
+      // Also insert into documentos_comerciais for tracking
+      const { data: doc, error: docError } = await supabase.from('documentos_comerciais').insert({
+        card_id: cardSelecionado.id,
+        cliente_id: cardSelecionado.cliente_id,
+        tipo: 'orcamento',
+        numero,
+        titulo: `Orçamento ${cardSelecionado.operacao} - ${cardSelecionado.cliente_nome}`,
+        status: 'rascunho',
+        valor_total: total,
+        conteudo: { orcamento_id: orcamento.id, itens: itensValidos.length },
+      }).select().single()
+
+      if (docError) throw docError
+
+      // Log
       await supabase.from('acoes_comerciais_log').insert({
-        card_id: cardSelecionado!.id, documento_id: data.id,
-        acao: 'orcamento_preparado', descricao: `Orçamento ${numero} preparado`,
+        card_id: cardSelecionado.id,
+        documento_id: doc.id,
+        acao: 'orcamento_preparado',
+        descricao: `Orçamento ${numero} preparado - ${formatCurrency(total)}`,
       })
-      toast.success('Orçamento criado! Preencha os detalhes.')
-      buscarDocumentos(cardSelecionado!.id)
+
+      toast.success('Orçamento criado com sucesso!')
+      setModalOrcamento(false)
+      buscarDocumentos(cardSelecionado.id)
       buscarMetricas()
-    } catch (err) { console.error(err); toast.error('Erro ao criar orçamento') }
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao criar orçamento')
+    }
   }
 
   async function gerarContrato() {
@@ -505,6 +640,199 @@ export default function AcoesComerciais() {
           )}
         </div>
       </div>
+
+      {/* MODAL PREPARAR ORÇAMENTO */}
+      <Dialog open={modalOrcamento} onOpenChange={setModalOrcamento}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Preparar Orçamento</DialogTitle>
+            <DialogDescription>
+              {cardSelecionado?.cliente_nome} - {cardSelecionado?.operacao}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* INFO DO CLIENTE (readonly) */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{cardSelecionado?.cliente_nome}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">CNPJ</p>
+                  <p className="font-medium">{cardSelecionado?.cliente_cnpj}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Operação</p>
+                  <Badge>{cardSelecionado?.operacao}</Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Gestão</p>
+                  <Badge variant="outline">{cardSelecionado?.gestao}</Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* DADOS DO ORÇAMENTO */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Prazo de Entrega *</Label>
+                <Input
+                  placeholder="Ex: 45/60 dias"
+                  value={dadosOrcamento.prazo_entrega}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, prazo_entrega: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Validade (dias) *</Label>
+                <Input
+                  type="number"
+                  value={dadosOrcamento.validade_dias}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, validade_dias: parseInt(e.target.value) || 30 }))}
+                />
+              </div>
+              <div>
+                <Label>Frete</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={dadosOrcamento.frete}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+
+            {/* ITENS DO ORÇAMENTO */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label>Itens do Orçamento</Label>
+                <Button type="button" variant="outline" size="sm" onClick={adicionarItem}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Adicionar Item
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {itensOrcamento.map((item, index) => (
+                  <div key={item.id} className="border rounded-lg p-4 bg-muted/30">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="font-medium text-sm">Item {index + 1}</p>
+                      {itensOrcamento.length > 1 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removerItem(item.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-3">
+                      <div className="col-span-2">
+                        <Label>Código</Label>
+                        <Input
+                          placeholder="Ex: MRC06B2"
+                          value={item.codigo}
+                          onChange={(e) => atualizarItem(item.id, 'codigo', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <Label>Descrição *</Label>
+                        <Input
+                          placeholder="Descrição do produto"
+                          value={item.descricao}
+                          onChange={(e) => atualizarItem(item.id, 'descricao', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Quantidade *</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantidade}
+                          onChange={(e) => atualizarItem(item.id, 'quantidade', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Preço Unitário *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.preco_unitario}
+                          onChange={(e) => atualizarItem(item.id, 'preco_unitario', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-span-12">
+                        <Label>Especificações</Label>
+                        <Textarea
+                          placeholder="Detalhes técnicos, cor, tamanho, etc."
+                          value={item.especificacoes}
+                          onChange={(e) => atualizarItem(item.id, 'especificacoes', e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="col-span-12 flex justify-end">
+                        <p className="text-sm font-medium">
+                          Total: {formatCurrency(item.total)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CONDIÇÕES DE PAGAMENTO */}
+            <div>
+              <Label>Condições de Pagamento</Label>
+              <Textarea
+                placeholder="Ex: À vista antecipado (sem acréscimo) ou Em 3x (30/60/90 dias) com acréscimo de 2,5%"
+                value={dadosOrcamento.condicoes_pagamento}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, condicoes_pagamento: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* OBSERVAÇÕES */}
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Informações adicionais..."
+                value={dadosOrcamento.observacoes}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, observacoes: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* RESUMO FINANCEIRO */}
+            <div className="bg-muted border rounded-lg p-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-medium">{formatCurrency(calcularSubtotal())}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Frete:</span>
+                  <span className="font-medium">{formatCurrency(dadosOrcamento.frete || 0)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-bold">Total:</span>
+                  <span className="font-bold text-lg">{formatCurrency(calcularTotal())}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOrcamento(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={gerarOrcamento}>
+              Gerar Orçamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
