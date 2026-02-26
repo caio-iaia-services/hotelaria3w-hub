@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -15,7 +15,7 @@ import { Search, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { type Cliente } from "@/lib/types";
 import { toast } from "sonner";
-import { gestaoOperacoes } from "@/data/mockOportunidades";
+import { gestaoOperacoes as gestaoOperacoesBase } from "@/data/mockOportunidades";
 
 interface NovaOportunidadeModalProps {
   open: boolean;
@@ -30,14 +30,7 @@ const estados = [
 
 const segmentos = ["Hotelaria", "Gastronomia", "Hospitalar", "Condominial", "Exportação", "Outros"];
 
-const todasOperacoes = Object.values(gestaoOperacoes).flat();
-
-const operacaoGestaoLabel: Record<string, string> = {};
-for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
-  for (const op of ops) {
-    operacaoGestaoLabel[op] = `G${gestao}`;
-  }
-}
+// Dynamic constants computed inside component
 
 function maskCnpj(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 14);
@@ -58,6 +51,49 @@ function maskTelefone(value: string): string {
 
 export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportunidadeModalProps) {
   const [step, setStep] = useState(1);
+  const [fornecedoresDb, setFornecedoresDb] = useState<{ nome_fantasia: string; gestao: string }[]>([]);
+
+  // Fetch fornecedores with gestão cadastrada
+  useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("fornecedores")
+      .select("nome_fantasia, gestao")
+      .not("gestao", "is", null)
+      .neq("gestao", "")
+      .then(({ data }) => setFornecedoresDb(data || []));
+  }, [open]);
+
+  // Merge static operations with fornecedores from DB
+  const gestaoOperacoes = useMemo(() => {
+    const merged: Record<number, string[]> = {
+      1: [...gestaoOperacoesBase[1]],
+      2: [...gestaoOperacoesBase[2]],
+      3: [...gestaoOperacoesBase[3]],
+    };
+    for (const f of fornecedoresDb) {
+      const gestoes = f.gestao.split(",").map(g => g.trim()).filter(Boolean);
+      for (const g of gestoes) {
+        const key = parseInt(g.replace(/\D/g, ""), 10);
+        if (merged[key] && !merged[key].includes(f.nome_fantasia)) {
+          merged[key].push(f.nome_fantasia);
+        }
+      }
+    }
+    return merged;
+  }, [fornecedoresDb]);
+
+  const todasOperacoes = useMemo(() => Object.values(gestaoOperacoes).flat(), [gestaoOperacoes]);
+
+  const operacaoGestaoLabel = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const [gestao, ops] of Object.entries(gestaoOperacoes)) {
+      for (const op of ops) {
+        map[op] = `G${gestao}`;
+      }
+    }
+    return map;
+  }, [gestaoOperacoes]);
 
   // Step 1 - Client search
   const [busca, setBusca] = useState("");
