@@ -303,12 +303,13 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
                 {busca.length >= 3 && !loading && clientes.length === 0 && (
                   <div className="border rounded-md p-4 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Cliente não encontrado</p>
-                    <Button onClick={() => setCadastrandoNovo(true)}>
-                      Cadastrar Novo Cliente
-                    </Button>
+                    <p className="text-sm text-muted-foreground">Cliente não encontrado</p>
                   </div>
                 )}
+
+                <Button variant="outline" className="w-full" onClick={() => setCadastrandoNovo(true)}>
+                  Cadastrar Novo Cliente
+                </Button>
               </div>
             )}
 
