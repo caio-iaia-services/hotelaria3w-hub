@@ -16,6 +16,7 @@ export interface Fornecedor {
   cep?: string | null;
   complemento?: string | null;
   observacoes?: string | null;
+  termos_fabricante?: string | null;
   created_at?: string;
 }
 
