@@ -36,17 +36,7 @@ export function KanbanBoard({ columns, onRefresh, operationColors, showOperation
       return;
     }
 
-    // If moved from LEAD → CONTATO, delete the oportunidade
-    if (estagioAtual === "lead" && novoEstagio === "contato") {
-      const sourceCol = columns.find((c) => c.id === "lead");
-      const card = sourceCol?.cards.find((c) => c.id === draggableId);
-
-      if (card?.oportunidade_id) {
-        await supabase.from("oportunidades").delete().eq("id", card.oportunidade_id);
-        toast.success("Card movido — Oportunidade removida da lista");
-      }
-    }
-
+    toast.success("Card movido com sucesso");
     onRefresh();
   };
 
