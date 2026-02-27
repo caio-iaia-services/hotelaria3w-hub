@@ -1114,27 +1114,40 @@ export default function AcoesComerciais() {
             </div>
 
             {/* RESUMO FINANCEIRO */}
-            <div className="bg-muted border rounded-lg p-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-medium">{formatCurrency(calcularSubtotal())}</span>
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-6 shadow-lg">
+              <h3 className="font-bold text-gray-900 mb-4 text-lg">Resumo Financeiro</h3>
+              
+              <div className="space-y-3">
+                {/* SUBTOTAL */}
+                <div className="flex justify-between items-center pb-3 border-b border-gray-300">
+                  <span className="text-gray-700">Subtotal:</span>
+                  <span className="font-semibold text-lg">{formatCurrency(calcularSubtotal())}</span>
                 </div>
-                {dadosOrcamento.frete > 0 && (
-                  <div className="flex justify-between">
-                    <span>Frete:</span>
-                    <span className="font-medium">{formatCurrency(dadosOrcamento.frete)}</span>
-                  </div>
-                )}
-                {dadosOrcamento.impostos > 0 && (
-                  <div className="flex justify-between text-amber-700">
-                    <span>Impostos ({dadosOrcamento.impostos}%):</span>
-                    <span className="font-medium">{formatCurrency(calcularValorImpostos())}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold">Total:</span>
-                  <span className="font-bold text-lg">{formatCurrency(calcularTotal())}</span>
+                
+                {/* IMPOSTOS */}
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-700">
+                    Impostos {dadosOrcamento.impostos > 0 && `(${dadosOrcamento.impostos}%)`}:
+                  </span>
+                  <span className="font-semibold text-amber-700">
+                    {formatCurrency(calcularValorImpostos())}
+                  </span>
+                </div>
+                
+                {/* FRETE */}
+                <div className="flex justify-between items-center pb-3 border-b-2 border-gray-400">
+                  <span className="text-blue-700">Frete:</span>
+                  <span className="font-semibold text-blue-700">
+                    {formatCurrency(dadosOrcamento.frete || 0)}
+                  </span>
+                </div>
+                
+                {/* TOTAL */}
+                <div className="flex justify-between items-center pt-2 bg-[#1E4A7C] text-white rounded-lg p-4 -mx-2">
+                  <span className="font-bold text-lg">VALOR TOTAL:</span>
+                  <span className="font-bold text-3xl">
+                    {formatCurrency(calcularTotal())}
+                  </span>
                 </div>
               </div>
             </div>
