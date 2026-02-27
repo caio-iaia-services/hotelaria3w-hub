@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { CRMCard, DocumentoComercial } from '@/lib/types'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades'
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
@@ -342,7 +343,8 @@ export default function AcoesComerciais() {
   const [clienteCompleto, setClienteCompleto] = useState<ClienteCompleto | null>(null)
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<FornecedorLocal | null>(null)
   const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<FornecedorLocal[]>([])
-  const [fornecedorSelecionadoId, setFornecedorSelecionadoId] = useState('')
+  const [fornecedoresDb, setFornecedoresDb] = useState<{ nome_fantasia: string; gestao: string }[]>([])
+  const [operacaoSelecionada, setOperacaoSelecionada] = useState('')
   const [dadosOrcamento, setDadosOrcamento] = useState({
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
@@ -351,9 +353,32 @@ export default function AcoesComerciais() {
     observacoes: '',
   })
 
+  // Merge static operations with DB fornecedores
+  const operacoesDisponiveis = useMemo(() => {
+    const merged: Record<number, string[]> = {
+      1: [...gestaoOperacoesBase[1]],
+      2: [...gestaoOperacoesBase[2]],
+      3: [...gestaoOperacoesBase[3]],
+    }
+    for (const f of fornecedoresDb) {
+      const gestoes = f.gestao.split(',').map(g => g.trim()).filter(Boolean)
+      for (const g of gestoes) {
+        const key = parseInt(g.replace(/\D/g, ''), 10)
+        if (merged[key] && !merged[key].includes(f.nome_fantasia)) {
+          merged[key].push(f.nome_fantasia)
+        }
+      }
+    }
+    return merged
+  }, [fornecedoresDb])
+
   useEffect(() => {
     buscarLeadsAtivos()
     buscarMetricas()
+    // Fetch fornecedores for operations list
+    supabase.from('fornecedores').select('nome_fantasia, gestao')
+      .not('gestao', 'is', null).neq('gestao', '')
+      .then(({ data }) => setFornecedoresDb(data || []))
   }, [])
 
   useEffect(() => {
@@ -464,8 +489,8 @@ export default function AcoesComerciais() {
 
     setClienteCompleto(cliente as ClienteCompleto | null)
 
-    // Buscar fornecedores da gestão
-    await buscarFornecedoresDisponiveis(cardSelecionado.gestao)
+    // Buscar fornecedores ativos para associação
+    await buscarFornecedoresDisponiveis()
 
     setItensOrcamento([{
       id: Date.now(),
@@ -483,38 +508,36 @@ export default function AcoesComerciais() {
       condicoes_pagamento: '',
       observacoes: '',
     })
-    setFornecedorSelecionadoId('')
+    setOperacaoSelecionada('')
     setFornecedorSelecionado(null)
     setModalOrcamento(true)
   }
 
-  async function buscarFornecedoresDisponiveis(gestao: string) {
+  async function buscarFornecedoresDisponiveis() {
     const { data, error } = await supabase
       .from('fornecedores')
       .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
-      .eq('gestao', gestao)
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
     if (!error && data) {
       setFornecedoresDisponiveis(data as FornecedorLocal[])
-      if (data.length === 1) {
-        selecionarFornecedor(data[0].id, data as FornecedorLocal[])
-      }
     }
   }
 
-  function selecionarFornecedor(fornecedorId: string, lista?: FornecedorLocal[]) {
-    setFornecedorSelecionadoId(fornecedorId)
-    if (!fornecedorId) {
+  function selecionarOperacao(operacao: string) {
+    setOperacaoSelecionada(operacao)
+    if (!operacao) {
       setFornecedorSelecionado(null)
       return
     }
-    const source = lista || fornecedoresDisponiveis
-    const fornecedor = source.find(f => f.id === fornecedorId)
+    // Try to find matching fornecedor by nome_fantasia
+    const fornecedor = fornecedoresDisponiveis.find(
+      f => f.nome_fantasia.toUpperCase() === operacao.toUpperCase()
+    )
+    setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
-      setFornecedorSelecionado(fornecedor)
-      toast.success(`Fornecedor ${fornecedor.nome_fantasia} selecionado`)
+      toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
   }
 
@@ -556,8 +579,8 @@ export default function AcoesComerciais() {
   async function gerarOrcamento() {
     if (!cardSelecionado) return
 
-    if (!fornecedorSelecionado) {
-      toast.error('Selecione um fornecedor')
+    if (!operacaoSelecionada) {
+      toast.error('Selecione uma operação')
       return
     }
 
@@ -613,11 +636,11 @@ export default function AcoesComerciais() {
           cliente_endereco: enderecoCompleto,
           cliente_email: clienteCompleto.email,
           cliente_telefone: clienteCompleto.telefone,
-          fornecedor_id: fornecedorSelecionado.id,
-          fornecedor_nome: fornecedorSelecionado.nome_fantasia,
-          operacao: cardSelecionado.operacao,
+          fornecedor_id: fornecedorSelecionado?.id || null,
+          fornecedor_nome: fornecedorSelecionado?.nome_fantasia || null,
+          operacao: operacaoSelecionada,
           gestao: cardSelecionado.gestao,
-          codigo_empresa: fornecedorSelecionado.codigo,
+          codigo_empresa: fornecedorSelecionado?.codigo || null,
           subtotal,
           frete: dadosOrcamento.frete || 0,
           desconto: 0,
@@ -628,7 +651,7 @@ export default function AcoesComerciais() {
           condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
           observacoes: dadosOrcamento.observacoes,
           termos_3w: termos3w,
-          termos_fornecedor: fornecedorSelecionado.termos_fabricante,
+          termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
           status: 'rascunho',
         })
         .select()
@@ -674,7 +697,7 @@ export default function AcoesComerciais() {
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
-      setFornecedorSelecionadoId('')
+      setOperacaoSelecionada('')
       setFornecedoresDisponiveis([])
 
       buscarDocumentos(cardSelecionado.id)
@@ -803,25 +826,31 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
-            {/* SELEÇÃO DE FORNECEDOR */}
+            {/* SELEÇÃO DE OPERAÇÃO */}
             <div className="bg-card border-2 border-primary/20 rounded-lg p-4">
-              <Label>Selecione o Fornecedor/Operação *</Label>
+              <Label>Selecione a Operação *</Label>
               <select
                 className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                value={fornecedorSelecionadoId}
-                onChange={(e) => selecionarFornecedor(e.target.value)}
+                value={operacaoSelecionada}
+                onChange={(e) => selecionarOperacao(e.target.value)}
                 required
               >
-                <option value="">Selecione o fornecedor...</option>
-                {fornecedoresDisponiveis.map(fornecedor => (
-                  <option key={fornecedor.id} value={fornecedor.id}>
-                    {fornecedor.nome_fantasia} - {fornecedor.codigo || 'Sem código'}
-                  </option>
+                <option value="">Selecione a operação...</option>
+                {Object.entries(operacoesDisponiveis).map(([gestao, ops]) => (
+                  <optgroup key={gestao} label={`Gestão ${gestao}`}>
+                    {ops.map(op => (
+                      <option key={op} value={op}>{op}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
 
               {fornecedorSelecionado && (
                 <div className="mt-3 p-3 bg-primary/5 rounded space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fornecedor vinculado:</span>
+                    <span className="font-medium">{fornecedorSelecionado.nome_fantasia}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Código:</span>
                     <span className="font-medium">{fornecedorSelecionado.codigo || 'Não informado'}</span>
@@ -841,6 +870,12 @@ export default function AcoesComerciais() {
                     </details>
                   )}
                 </div>
+              )}
+
+              {operacaoSelecionada && !fornecedorSelecionado && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Nenhum fornecedor vinculado a esta operação
+                </p>
               )}
             </div>
 
