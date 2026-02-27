@@ -54,7 +54,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Menu size={20} />
             </Button>
             <h2 className="text-lg font-heading font-semibold text-white">
-              {pageTitle}
+              3W Hotelaria {pageTitle !== "3W Hotelaria" && <>— {pageTitle}</>}
             </h2>
           </div>
 
