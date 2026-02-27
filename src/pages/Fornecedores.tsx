@@ -137,7 +137,7 @@ const statusColors: Record<string, string> = {
   ativo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   encerrado: "bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-300",
-  "em prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  "prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
 };
 
 const tipoColors: Record<string, string> = {
@@ -813,7 +813,7 @@ export default function Fornecedores() {
             <SelectItem value="ativo">Ativo</SelectItem>
             <SelectItem value="inativo">Inativo</SelectItem>
             <SelectItem value="encerrado">Encerrado</SelectItem>
-            <SelectItem value="em prospecção">Em Prospecção</SelectItem>
+            <SelectItem value="prospecção">Prospecção</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -990,7 +990,7 @@ export default function Fornecedores() {
               { value: "ativo", label: "Ativo" },
               { value: "inativo", label: "Inativo" },
               { value: "encerrado", label: "Encerrado" },
-              { value: "em prospecção", label: "Em Prospecção" },
+              { value: "prospecção", label: "Prospecção" },
             ]}
             onToggle={(v) => toggleFiltro("status", v)}
           />
