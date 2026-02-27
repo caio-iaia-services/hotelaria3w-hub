@@ -249,12 +249,22 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
       // Identificar gestões impactadas
       const gestoesImpactadas = [...new Set(operacoesSelecionadas.map(op => operacaoGestaoLabel[op] || "G1"))];
 
-      // Gerar número único
-      const { count } = await supabase
+      // Gerar número único baseado no maior número existente
+      const year = new Date().getFullYear();
+      const { data: lastOpp } = await supabase
         .from("oportunidades")
-        .select("*", { count: "exact", head: true });
+        .select("numero")
+        .ilike("numero", `OPP-${year}-%`)
+        .order("numero", { ascending: false })
+        .limit(1);
 
-      const numero = `OPP-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, "0")}`;
+      let nextSeq = 1;
+      if (lastOpp && lastOpp.length > 0) {
+        const lastNum = lastOpp[0].numero;
+        const seq = parseInt(lastNum.split("-").pop() || "0", 10);
+        nextSeq = seq + 1;
+      }
+      const numero = `OPP-${year}-${String(nextSeq).padStart(4, "0")}`;
 
       // 1. CRIAR UMA ÚNICA OPORTUNIDADE
       const { data: opp, error: erroOpp } = await supabase
