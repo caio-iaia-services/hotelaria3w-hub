@@ -14,10 +14,12 @@ export interface OportunidadeData {
   dataCadastro: string;
 }
 
+// Operações agora são carregadas dinamicamente dos fornecedores via useFornecedoresOperacoes hook
+// Mantido apenas para referência / fallback
 export const gestaoOperacoes: Record<number, string[]> = {
-  1: ["CASTOR", "RUBBERMAID", "SOLEMAR", "UNIBLU"],
-  2: ["MIDEA", "D-LOCK", "CIÇA ENXOVAIS", "IM IN"],
-  3: ["TEKA", "KENBY", "REDES DE DORMIR", "SKARA"],
+  1: [],
+  2: [],
+  3: [],
 };
 
 export function formatCnpj(cnpj: string): string {
