@@ -190,7 +190,7 @@ function MultiSelectFilter({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between font-normal w-full">
+        <Button variant="outline" className="justify-between font-normal w-full bg-[#f0f0f0] border-[#ccc]">
           <span className="truncate text-sm">{display}</span>
           <ChevronDown size={14} className="ml-1 shrink-0 opacity-50" />
         </Button>
@@ -927,7 +927,7 @@ export default function Fornecedores() {
               placeholder="Buscar por nome, razão social ou CNPJ..."
               value={filtros.busca}
               onChange={(e) => handleBuscaChange(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-[#f0f0f0] border-[#ccc]"
             />
           </div>
           {temFiltrosAtivos && (
@@ -965,7 +965,7 @@ export default function Fornecedores() {
       </div>
 
       {/* Table */}
-      <Card className="border-border/50">
+      <Card className="border-[#ccc] bg-[#f0f0f0]">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-[#1a4168]">
