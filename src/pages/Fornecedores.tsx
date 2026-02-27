@@ -135,11 +135,11 @@ function formatCurrency(value: number | null | undefined) {
 }
 
 const statusColors: Record<string, string> = {
-  ativo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  ativo: "bg-[#1a4168] text-white",
+  inativo: "bg-[#D4AF37] text-[#1a4168]",
   encerrado: "bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-300",
-  "prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  "em prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  "prospecção": "bg-blue-100 text-[#1a4168]",
+  "em prospecção": "bg-blue-100 text-[#1a4168]",
 };
 
 const statusLabels: Record<string, string> = {
