@@ -968,14 +968,14 @@ export default function Fornecedores() {
       <Card className="border-border/50">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">Logo</TableHead>
-                <TableHead>Nome Fantasia</TableHead>
-                <TableHead>Código</TableHead>
-                <TableHead>Gestão</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+            <TableHeader className="bg-[#1a4168]">
+              <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
+                <TableHead className="w-16 text-white">Logo</TableHead>
+                <TableHead className="text-white">Nome Fantasia</TableHead>
+                <TableHead className="text-white">Código</TableHead>
+                <TableHead className="text-white">Gestão</TableHead>
+                <TableHead className="text-center text-white">Status</TableHead>
+                <TableHead className="text-center text-white">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
