@@ -945,14 +945,14 @@ export default function Fornecedores() {
       {/* Card + Filters row */}
       <div className="flex gap-3 items-start">
         {/* Total card */}
-        <Card className="border-border/50 bg-[#c4942c] shrink-0">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-white/20">
-              <Users size={20} className="text-white" />
+        <Card className="border-border/50 bg-[#c4942c] shrink-0 min-w-[220px]">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-white/20">
+              <Users size={22} className="text-white" />
             </div>
             <div>
-              <p className="text-xs text-white/80 font-medium">Total</p>
-              <p className="text-xl font-bold text-white">{total.toLocaleString("pt-BR")}</p>
+              <p className="text-xs text-white/80 font-medium">Total de Fornecedores</p>
+              <p className="text-2xl font-bold text-white">{total.toLocaleString("pt-BR")}</p>
             </div>
           </CardContent>
         </Card>
