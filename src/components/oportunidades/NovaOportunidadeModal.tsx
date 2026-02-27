@@ -295,9 +295,9 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
       toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} operação(ões)!`);
       onSave?.();
       handleClose(false);
-    } catch (error) {
-      console.error("Erro ao criar oportunidade:", error);
-      toast.error("Erro ao criar oportunidades");
+    } catch (error: any) {
+      console.error("Erro ao criar oportunidade:", error?.message, error?.details, error?.hint, error);
+      toast.error(error?.message || "Erro ao criar oportunidades");
     } finally {
       setSalvando(false);
     }
