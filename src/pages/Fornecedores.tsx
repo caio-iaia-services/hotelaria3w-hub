@@ -904,14 +904,14 @@ export default function Fornecedores() {
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {metrics.map((m) => (
-          <Card key={m.label} className="border-border/50">
+          <Card key={m.label} className="border-border/50 bg-[#c4942c]">
             <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-muted">
-                <m.icon size={22} className={m.color} />
+              <div className="p-3 rounded-xl bg-white/20">
+                <m.icon size={22} className="text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">{m.label}</p>
-                <p className="text-xl font-bold text-foreground">{m.value}</p>
+                <p className="text-xs text-white/80 font-medium">{m.label}</p>
+                <p className="text-xl font-bold text-white">{m.value}</p>
               </div>
             </CardContent>
           </Card>
