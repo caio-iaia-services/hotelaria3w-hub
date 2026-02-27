@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, X } from "lucide-react";
 import type { Cliente } from "@/lib/types";
+import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
 
 interface Props {
   cliente: Cliente | null;
@@ -111,12 +112,28 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Cidade</Label>
-                <Input value={form.cidade || ""} onChange={(e) => set("cidade", e.target.value)} />
+                <Label>Estado</Label>
+                <Select value={form.estado || ""} onValueChange={(v) => {
+                  setForm(prev => ({ ...prev, estado: v, cidade: "" }));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+                  <SelectContent className="bg-card z-50 max-h-60">
+                    {Object.keys(CIDADES_POR_ESTADO).sort().map(uf => (
+                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Estado</Label>
-                <Input maxLength={2} value={form.estado || ""} onChange={(e) => set("estado", e.target.value.toUpperCase())} />
+                <Label>Cidade</Label>
+                <Select value={form.cidade || ""} onValueChange={(v) => set("cidade", v)} disabled={!form.estado}>
+                  <SelectTrigger><SelectValue placeholder={form.estado ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>
+                  <SelectContent className="bg-card z-50 max-h-60">
+                    {(CIDADES_POR_ESTADO[form.estado || ""] || []).map(cidade => (
+                      <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">
