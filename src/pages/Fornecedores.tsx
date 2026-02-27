@@ -942,7 +942,7 @@ export default function Fornecedores() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Fornecedores</h1>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Fornecedores</h1>
           <p className="text-muted-foreground text-sm">
             Gestão completa da base de fornecedores 3W Hotelaria
           </p>
