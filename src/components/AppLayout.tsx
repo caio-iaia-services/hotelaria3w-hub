@@ -43,7 +43,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 h-16 bg-[#D4AF37] border-b border-[#D4AF37] flex items-center justify-between px-4 lg:px-8 shadow-sm">
+        <header className="sticky top-0 z-30 h-16 bg-[#c4942c] border-b border-[#c4942c] flex items-center justify-between px-4 lg:px-8 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
