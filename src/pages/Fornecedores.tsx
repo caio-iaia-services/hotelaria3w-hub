@@ -927,7 +927,7 @@ export default function Fornecedores() {
   );
 
   return (
-    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
+    <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -936,82 +936,78 @@ export default function Fornecedores() {
             Gestão completa da base de fornecedores 3W Hotelaria
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline">{total.toLocaleString("pt-BR")} fornecedores</Badge>
-          <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
-            <Plus size={16} />
-            Novo Fornecedor
-          </Button>
-        </div>
+        <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
+          <Plus size={16} />
+          Novo Fornecedor
+        </Button>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {metrics.map((m) => (
-          <Card key={m.label} className="border-border/50 bg-[#c4942c]">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-white/20">
-                <m.icon size={22} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-white/80 font-medium">{m.label}</p>
-                <p className="text-xl font-bold text-white">{m.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Card + Filters row */}
+      <div className="flex gap-3 items-start">
+        {/* Total card */}
+        <Card className="border-border/50 bg-[#c4942c] shrink-0">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-white/20">
+              <Users size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-white/80 font-medium">Total</p>
+              <p className="text-xl font-bold text-white">{total.toLocaleString("pt-BR")}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Filters */}
-      <div className="space-y-3">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, razão social ou CNPJ..."
-              value={filtros.busca}
-              onChange={(e) => handleBuscaChange(e.target.value)}
-              className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
+        {/* Filters */}
+        <div className="flex-1 space-y-2">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, razão social ou CNPJ..."
+                value={filtros.busca}
+                onChange={(e) => handleBuscaChange(e.target.value)}
+                className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
+              />
+            </div>
+            {temFiltrosAtivos && (
+              <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
+                <X size={14} />
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <MultiSelectFilter
+              label="Status"
+              selected={filtros.status}
+              options={[
+                { value: "ativo", label: "Ativo" },
+                { value: "inativo", label: "Inativo" },
+                { value: "encerrado", label: "Encerrado" },
+                { value: "prospecção", label: "Prospecção" },
+              ]}
+              onToggle={(v) => toggleFiltro("status", v)}
+            />
+
+            <MultiSelectFilter
+              label="Segmento"
+              selected={filtros.segmento}
+              options={SEGMENTOS_OPTIONS}
+              onToggle={(v) => toggleFiltro("segmento", v)}
+            />
+
+            <MultiSelectFilter
+              label="Gestão"
+              selected={filtros.gestao}
+              options={[
+                { value: "G1", label: "G1" },
+                { value: "G2", label: "G2" },
+                { value: "G3", label: "G3" },
+              ]}
+              onToggle={(v) => toggleFiltro("gestao", v)}
             />
           </div>
-          {temFiltrosAtivos && (
-            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
-              <X size={14} />
-              Limpar Filtros
-            </Button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <MultiSelectFilter
-            label="Status"
-            selected={filtros.status}
-            options={[
-              { value: "ativo", label: "Ativo" },
-              { value: "inativo", label: "Inativo" },
-              { value: "encerrado", label: "Encerrado" },
-              { value: "prospecção", label: "Prospecção" },
-            ]}
-            onToggle={(v) => toggleFiltro("status", v)}
-          />
-
-          <MultiSelectFilter
-            label="Segmento"
-            selected={filtros.segmento}
-            options={SEGMENTOS_OPTIONS}
-            onToggle={(v) => toggleFiltro("segmento", v)}
-          />
-
-          <MultiSelectFilter
-            label="Gestão"
-            selected={filtros.gestao}
-            options={[
-              { value: "G1", label: "G1" },
-              { value: "G2", label: "G2" },
-              { value: "G3", label: "G3" },
-            ]}
-            onToggle={(v) => toggleFiltro("gestao", v)}
-          />
         </div>
       </div>
 
