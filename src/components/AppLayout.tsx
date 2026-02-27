@@ -43,17 +43,17 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center justify-between px-4 lg:px-8 shadow-sm">
+        <header className="sticky top-0 z-30 h-16 bg-[#1a4168] border-b border-[#1a4168] flex items-center justify-between px-4 lg:px-8 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden text-white hover:bg-white/10"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={20} />
             </Button>
-            <h2 className="text-lg font-heading font-semibold text-foreground">
+            <h2 className="text-lg font-heading font-semibold text-white">
               {pageTitle}
             </h2>
           </div>
@@ -63,21 +63,21 @@ export function AppLayout({ children }: AppLayoutProps) {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="transition-transform duration-300"
+              className="transition-transform duration-300 text-white hover:bg-white/10"
             >
               {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
             </Button>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
             </Button>
             <div className="hidden sm:flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xs font-bold">
+                <AvatarFallback className="bg-[#D4AF37] text-white font-heading text-xs font-bold">
                   AD
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-medium text-white">
                 Administrador
               </span>
             </div>
