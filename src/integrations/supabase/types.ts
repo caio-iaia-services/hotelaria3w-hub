@@ -149,6 +149,173 @@ export type Database = {
         }
         Relationships: []
       }
+      orcamento_itens: {
+        Row: {
+          codigo: string | null
+          created_at: string
+          descricao: string
+          especificacoes: string | null
+          id: string
+          orcamento_id: string
+          ordem: number
+          preco_unitario: number
+          quantidade: number
+          total: number
+        }
+        Insert: {
+          codigo?: string | null
+          created_at?: string
+          descricao: string
+          especificacoes?: string | null
+          id?: string
+          orcamento_id: string
+          ordem?: number
+          preco_unitario?: number
+          quantidade?: number
+          total?: number
+        }
+        Update: {
+          codigo?: string | null
+          created_at?: string
+          descricao?: string
+          especificacoes?: string | null
+          id?: string
+          orcamento_id?: string
+          ordem?: number
+          preco_unitario?: number
+          quantidade?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_itens_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orcamentos: {
+        Row: {
+          aprovado_em: string | null
+          assinado_em: string | null
+          assinatura_cliente: string | null
+          card_id: string | null
+          cliente_cnpj: string | null
+          cliente_email: string | null
+          cliente_endereco: string | null
+          cliente_id: string
+          cliente_nome: string
+          cliente_razao_social: string | null
+          cliente_telefone: string | null
+          codigo_empresa: string | null
+          condicoes_pagamento: Json | null
+          created_at: string
+          data_validade: string | null
+          desconto: number
+          enviado_em: string | null
+          fornecedor_id: string | null
+          fornecedor_nome: string | null
+          frete: number
+          gestao: string | null
+          html_content: string | null
+          id: string
+          imagem_marketing_url: string | null
+          impostos: number
+          numero: string
+          observacoes: string | null
+          operacao: string | null
+          pdf_url: string | null
+          prazo_entrega: string | null
+          status: string
+          subtotal: number
+          termos_3w: string | null
+          termos_fornecedor: string | null
+          total: number
+          updated_at: string
+          validade_dias: number
+        }
+        Insert: {
+          aprovado_em?: string | null
+          assinado_em?: string | null
+          assinatura_cliente?: string | null
+          card_id?: string | null
+          cliente_cnpj?: string | null
+          cliente_email?: string | null
+          cliente_endereco?: string | null
+          cliente_id: string
+          cliente_nome: string
+          cliente_razao_social?: string | null
+          cliente_telefone?: string | null
+          codigo_empresa?: string | null
+          condicoes_pagamento?: Json | null
+          created_at?: string
+          data_validade?: string | null
+          desconto?: number
+          enviado_em?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          frete?: number
+          gestao?: string | null
+          html_content?: string | null
+          id?: string
+          imagem_marketing_url?: string | null
+          impostos?: number
+          numero: string
+          observacoes?: string | null
+          operacao?: string | null
+          pdf_url?: string | null
+          prazo_entrega?: string | null
+          status?: string
+          subtotal?: number
+          termos_3w?: string | null
+          termos_fornecedor?: string | null
+          total?: number
+          updated_at?: string
+          validade_dias?: number
+        }
+        Update: {
+          aprovado_em?: string | null
+          assinado_em?: string | null
+          assinatura_cliente?: string | null
+          card_id?: string | null
+          cliente_cnpj?: string | null
+          cliente_email?: string | null
+          cliente_endereco?: string | null
+          cliente_id?: string
+          cliente_nome?: string
+          cliente_razao_social?: string | null
+          cliente_telefone?: string | null
+          codigo_empresa?: string | null
+          condicoes_pagamento?: Json | null
+          created_at?: string
+          data_validade?: string | null
+          desconto?: number
+          enviado_em?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          frete?: number
+          gestao?: string | null
+          html_content?: string | null
+          id?: string
+          imagem_marketing_url?: string | null
+          impostos?: number
+          numero?: string
+          observacoes?: string | null
+          operacao?: string | null
+          pdf_url?: string | null
+          prazo_entrega?: string | null
+          status?: string
+          subtotal?: number
+          termos_3w?: string | null
+          termos_fornecedor?: string | null
+          total?: number
+          updated_at?: string
+          validade_dias?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

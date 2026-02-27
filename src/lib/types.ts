@@ -111,6 +111,7 @@ export interface Orcamento {
   gestao: string | null
   subtotal: number
   frete: number
+  impostos: number
   desconto: number
   total: number
   prazo_entrega: string | null
