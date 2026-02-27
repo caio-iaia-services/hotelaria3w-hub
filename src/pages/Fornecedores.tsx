@@ -159,17 +159,13 @@ const TODOS_ESTADOS = [
 type Filtros = {
   busca: string;
   status: string[];
-  tipo: string[];
-  estado: string[];
-  regiao: string[];
+  gestao: string[];
 };
 
 const FILTROS_INICIAIS: Filtros = {
   busca: "",
   status: [],
-  tipo: [],
-  estado: [],
-  regiao: [],
+  gestao: [],
 };
 
 function MultiSelectFilter({
@@ -365,13 +361,9 @@ export default function Fornecedores() {
       );
     }
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
-    if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
-    if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
-    if (filtros.regiao.length > 0) {
-      const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
-      if (estados.length > 0 && filtros.estado.length === 0) {
-        query = query.in("estado", estados);
-      }
+    if (filtros.gestao.length > 0) {
+      const gestaoFilters = filtros.gestao.map(g => `gestao.ilike.%${g}%`).join(",");
+      query = query.or(gestaoFilters);
     }
 
     const from = (page - 1) * pageSize;
@@ -388,7 +380,7 @@ export default function Fornecedores() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.estado, filtros.regiao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.gestao]);
 
   // Buscar métricas
   const fetchMetrics = useCallback(async () => {
@@ -402,7 +394,7 @@ export default function Fornecedores() {
   useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
-  useEffect(() => { setPage(1); }, [filtros.status, filtros.tipo, filtros.estado, filtros.regiao]);
+  useEffect(() => { setPage(1); }, [filtros.status, filtros.gestao]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
@@ -415,14 +407,7 @@ export default function Fornecedores() {
     setFiltros((prev) => {
       const arr = prev[key] as string[];
       const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      const updated = { ...prev, [key]: next };
-      if (key === "regiao") {
-        const validEstados = next.length > 0
-          ? next.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
-          : TODOS_ESTADOS;
-        updated.estado = prev.estado.filter((e) => validEstados.includes(e));
-      }
-      return updated;
+      return { ...prev, [key]: next };
     });
   };
 
@@ -435,9 +420,7 @@ export default function Fornecedores() {
   const temFiltrosAtivos =
     filtros.busca !== "" ||
     filtros.status.length > 0 ||
-    filtros.tipo.length > 0 ||
-    filtros.estado.length > 0 ||
-    filtros.regiao.length > 0;
+    filtros.gestao.length > 0;
 
   // Salvar novo
   const salvarNovo = async (dados: FornecedorForm) => {
@@ -945,7 +928,7 @@ export default function Fornecedores() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <MultiSelectFilter
             label="Status"
             selected={filtros.status}
@@ -958,30 +941,14 @@ export default function Fornecedores() {
           />
 
           <MultiSelectFilter
-            label="Tipo"
-            selected={filtros.tipo}
+            label="Gestão"
+            selected={filtros.gestao}
             options={[
-              { value: "regular", label: "Regular" },
-              { value: "vip", label: "VIP" },
+              { value: "G1", label: "G1" },
+              { value: "G2", label: "G2" },
+              { value: "G3", label: "G3" },
             ]}
-            onToggle={(v) => toggleFiltro("tipo", v)}
-          />
-
-          <MultiSelectFilter
-            label="Região"
-            selected={filtros.regiao}
-            options={Object.keys(ESTADOS_POR_REGIAO).map((r) => ({ value: r, label: r }))}
-            onToggle={(v) => toggleFiltro("regiao", v)}
-          />
-
-          <MultiSelectFilter
-            label="Estado"
-            selected={filtros.estado}
-            options={(filtros.regiao.length > 0
-              ? filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
-              : TODOS_ESTADOS
-            ).map((e) => ({ value: e, label: e }))}
-            onToggle={(v) => toggleFiltro("estado", v)}
+            onToggle={(v) => toggleFiltro("gestao", v)}
           />
         </div>
       </div>
