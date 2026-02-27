@@ -883,7 +883,7 @@ export default function Fornecedores() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
