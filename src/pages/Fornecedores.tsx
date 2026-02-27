@@ -24,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
+import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Fornecedor {
@@ -81,7 +82,6 @@ type FornecedorForm = {
   site: string;
   cidade: string;
   estado: string;
-  tipo: string;
   status: string;
   observacoes: string;
   gestao: string[];
@@ -251,19 +251,21 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { tipo: "regular", status: "ativo", gestao: [] } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [] } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
     setValue: setEdit, watch: watchEdit,
   } = useForm<FornecedorForm>();
 
-  const tipoNovoValue = watchNovo("tipo");
   const statusNovoValue = watchNovo("status");
   const gestaoNovoValue = watchNovo("gestao") || [];
-  const tipoEditValue = watchEdit("tipo");
+  const estadoNovoValue = watchNovo("estado") || "";
+  const cidadeNovoValue = watchNovo("cidade") || "";
   const statusEditValue = watchEdit("status");
   const gestaoEditValue = watchEdit("gestao") || [];
+  const estadoEditValue = watchEdit("estado") || "";
+  const cidadeEditValue = watchEdit("cidade") || "";
 
   // Debounce busca
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -458,8 +460,8 @@ export default function Fornecedores() {
         site: dados.site || null,
         cidade: dados.cidade,
         estado: dados.estado?.toUpperCase() || null,
-        tipo: dados.tipo || "regular",
-        status: dados.status || "ativo",
+      tipo: "regular",
+      status: dados.status || "ativo",
         observacoes: dados.observacoes || null,
         gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
         produtos_servicos: dados.produtos_servicos || null,
@@ -513,7 +515,6 @@ export default function Fornecedores() {
       site: f.site || "",
       cidade: f.cidade || "",
       estado: f.estado || "",
-      tipo: f.tipo || "regular",
       status: f.status || "ativo",
       observacoes: f.observacoes || "",
       gestao: f.gestao ? f.gestao.split(", ").filter(Boolean) : [],
@@ -564,7 +565,7 @@ export default function Fornecedores() {
           site: dados.site || null,
           cidade: dados.cidade,
           estado: dados.estado?.toUpperCase() || null,
-          tipo: dados.tipo || "regular",
+          tipo: "regular",
           status: dados.status || "ativo",
           observacoes: dados.observacoes || null,
           gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
@@ -614,13 +615,14 @@ export default function Fornecedores() {
   const renderFormFields = (
     reg: typeof regNovo,
     set: typeof setNovo,
-    tipoVal: string,
     statusVal: string,
     contatosList: Contato[],
     contatosSetter: React.Dispatch<React.SetStateAction<Contato[]>>,
     arquivosList: ArquivoUpload[],
     arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,
     gestaoVal: string[],
+    estadoVal: string,
+    cidadeVal: string,
     uploadInputId: string,
     currentLogoPreview: string | null,
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
@@ -735,43 +737,39 @@ export default function Fornecedores() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label>Cidade *</Label>
-          <Input {...reg("cidade")} placeholder="São Paulo" required />
+          <Label>Estado</Label>
+          <Select value={estadoVal} onValueChange={(v) => { set("estado", v); set("cidade", ""); }}>
+            <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+            <SelectContent className="bg-card z-50 max-h-60">
+              {TODOS_ESTADOS.map((uf) => (
+                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Estado *</Label>
-          <Input
-            {...reg("estado")}
-            placeholder="SP"
-            maxLength={2}
-            required
-            onChange={(e) => set("estado", e.target.value.toUpperCase())}
-          />
+          <Label>Cidade</Label>
+          <Select value={cidadeVal} onValueChange={(v) => set("cidade", v)} disabled={!estadoVal}>
+            <SelectTrigger><SelectValue placeholder={estadoVal ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>
+            <SelectContent className="bg-card z-50 max-h-60">
+              {estadoVal && CIDADES_POR_ESTADO[estadoVal]?.map((cidade) => (
+                <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Tipo</Label>
-          <Select value={tipoVal} onValueChange={(v) => set("tipo", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="regular">Regular</SelectItem>
-              <SelectItem value="vip">VIP</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Status</Label>
-          <Select value={statusVal} onValueChange={(v) => set("status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-              <SelectItem value="em prospecção">Em Prospecção</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-1.5">
+        <Label>Status *</Label>
+        <Select value={statusVal} onValueChange={(v) => set("status", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-card z-50">
+            <SelectItem value="ativo">Ativo</SelectItem>
+            <SelectItem value="inativo">Inativo</SelectItem>
+            <SelectItem value="em prospecção">Em Prospecção</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Produtos e Serviços */}
@@ -1264,14 +1262,14 @@ export default function Fornecedores() {
       </Dialog>
 
       {/* ─── MODAL NOVO FORNECEDOR ─── */}
-      <Dialog open={modalNovo} onOpenChange={(o) => { setModalNovo(o); if (!o) { resetNovo(); setContatos([]); setArquivos([]); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={modalNovo} onOpenChange={() => {}}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button[class*='absolute']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Novo Fornecedor</DialogTitle>
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
-          <form onSubmit={subNovo(salvarNovo)} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
+          <form onSubmit={subNovo(salvarNovo)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
+            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -1290,14 +1288,14 @@ export default function Fornecedores() {
       </Dialog>
 
       {/* ─── MODAL EDITAR FORNECEDOR ─── */}
-      <Dialog open={!!modalEditar} onOpenChange={(o) => { if (!o) setModalEditar(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={!!modalEditar} onOpenChange={() => {}}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button[class*='absolute']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Editar Fornecedor</DialogTitle>
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
-          <form onSubmit={subEdit(salvarEdicao)} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
+          <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button
                 type="button"
