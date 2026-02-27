@@ -894,7 +894,7 @@ export default function Fornecedores() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline">{total.toLocaleString("pt-BR")} fornecedores</Badge>
-          <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0">
+          <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
             <Plus size={16} />
             Novo Fornecedor
           </Button>
