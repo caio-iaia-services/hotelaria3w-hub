@@ -190,7 +190,7 @@ function MultiSelectFilter({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between font-normal w-full bg-[#f7f7f7] border-[#ddd]">
+        <Button variant="outline" className="justify-between font-normal w-full bg-[#fcfcfc] border-[#e8e8e8]">
           <span className="truncate text-sm">{display}</span>
           <ChevronDown size={14} className="ml-1 shrink-0 opacity-50" />
         </Button>
@@ -927,11 +927,11 @@ export default function Fornecedores() {
               placeholder="Buscar por nome, razão social ou CNPJ..."
               value={filtros.busca}
               onChange={(e) => handleBuscaChange(e.target.value)}
-              className="pl-9 bg-[#f7f7f7] border-[#ddd]"
+              className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
             />
           </div>
           {temFiltrosAtivos && (
-            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#f7f7f7] border-[#ddd]">
+            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
               <X size={14} />
               Limpar Filtros
             </Button>
@@ -965,7 +965,7 @@ export default function Fornecedores() {
       </div>
 
       {/* Table */}
-      <Card className="border-[#ddd] bg-[#f7f7f7]">
+      <Card className="border-[#e8e8e8] bg-[#fcfcfc]">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-[#1a4168]">
@@ -1058,13 +1058,13 @@ export default function Fornecedores() {
             {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} de {total} fornecedores
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="bg-[#f7f7f7] border-[#ddd]" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Anterior
             </Button>
             <span className="text-sm text-muted-foreground">
               Página {page} de {totalPages}
             </span>
-            <Button variant="outline" size="sm" className="bg-[#f7f7f7] border-[#ddd]" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
               Próxima
             </Button>
             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
