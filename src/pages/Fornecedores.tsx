@@ -23,6 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
+import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Fornecedor {
@@ -337,15 +338,24 @@ export default function Fornecedores() {
     setPreview(URL.createObjectURL(file));
   };
 
-  const uploadLogo = async (file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop();
+  const uploadLogo = async (file: File): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
     const path = `logos/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('fornecedores-documentos').upload(path, file);
+
+    const { error } = await cloudSupabase.storage
+      .from('fornecedores-documentos')
+      .upload(path, file, { upsert: true, contentType: file.type || undefined });
+
     if (error) {
-      console.error('Logo upload error:', error);
-      return null;
+      throw new Error(`Falha no upload do logo: ${error.message}`);
     }
-    const { data: urlData } = supabase.storage.from('fornecedores-documentos').getPublicUrl(path);
+
+    const { data: urlData } = cloudSupabase.storage.from('fornecedores-documentos').getPublicUrl(path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Falha ao gerar URL pública do logo');
+    }
+
     return urlData.publicUrl;
   };
 
