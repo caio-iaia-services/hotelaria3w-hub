@@ -454,8 +454,8 @@ export default function Fornecedores() {
         gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
         produtos_servicos: dados.produtos_servicos || null,
         comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
-        contatos: contatos.length > 0 ? contatos : null,
-        catalogos: catalogosUrls.length > 0 ? catalogosUrls : null,
+        contatos: contatos.length > 0 ? JSON.parse(JSON.stringify(contatos)) : null,
+        catalogos: catalogosUrls.length > 0 ? JSON.parse(JSON.stringify(catalogosUrls)) : null,
         logotipo_url: logotipoUrl,
       });
       if (error) throw error;
@@ -560,8 +560,8 @@ export default function Fornecedores() {
           gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
           produtos_servicos: dados.produtos_servicos || null,
           comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
-          contatos: contatosEdit.length > 0 ? contatosEdit : null,
-          catalogos: allCatalogos.length > 0 ? allCatalogos : null,
+          contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
+          catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
           logotipo_url: logotipoUrl,
         })
         .eq("id", modalEditar.id);
