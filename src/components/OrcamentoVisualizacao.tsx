@@ -162,6 +162,13 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             </div>
           )}
 
+          {orcamento.impostos > 0 && (
+            <div className="flex justify-between text-amber-700">
+              <span>Impostos:</span>
+              <span className="font-semibold">{formatCurrency(orcamento.impostos)}</span>
+            </div>
+          )}
+
           {orcamento.desconto > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Desconto:</span>

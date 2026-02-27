@@ -352,6 +352,7 @@ export default function AcoesComerciais() {
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
     frete: 0,
+    impostos: 0,
     condicoes_pagamento: '',
     observacoes: '',
   })
@@ -508,6 +509,7 @@ export default function AcoesComerciais() {
       prazo_entrega: '45/60 dias',
       validade_dias: 30,
       frete: 0,
+      impostos: 0,
       condicoes_pagamento: '',
       observacoes: '',
     })
@@ -596,8 +598,12 @@ export default function AcoesComerciais() {
     return itensOrcamento.reduce((sum, item) => sum + item.total, 0)
   }
 
+  function calcularValorImpostos() {
+    return calcularSubtotal() * (dadosOrcamento.impostos / 100)
+  }
+
   function calcularTotal() {
-    return calcularSubtotal() + (dadosOrcamento.frete || 0)
+    return calcularSubtotal() + (dadosOrcamento.frete || 0) + calcularValorImpostos()
   }
 
   async function gerarOrcamento() {
@@ -688,7 +694,7 @@ export default function AcoesComerciais() {
           codigo_empresa: fornecedorSelecionado?.codigo || null,
           subtotal,
           frete: dadosOrcamento.frete || 0,
-          desconto: 0,
+          impostos: calcularValorImpostos(),
           total,
           prazo_entrega: dadosOrcamento.prazo_entrega,
           validade_dias: dadosOrcamento.validade_dias,
@@ -738,6 +744,7 @@ export default function AcoesComerciais() {
         prazo_entrega: '45/60 dias',
         validade_dias: 30,
         frete: 0,
+        impostos: 0,
         condicoes_pagamento: '',
         observacoes: '',
       })
@@ -956,6 +963,25 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
+            {/* IMPOSTOS */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Impostos (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="0.00"
+                  value={dadosOrcamento.impostos}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, impostos: parseFloat(e.target.value) || 0 }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor: {formatCurrency(calcularValorImpostos())}
+                </p>
+              </div>
+            </div>
+
             {/* ITENS DO ORÇAMENTO */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -1089,10 +1115,18 @@ export default function AcoesComerciais() {
                   <span>Subtotal:</span>
                   <span className="font-medium">{formatCurrency(calcularSubtotal())}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Frete:</span>
-                  <span className="font-medium">{formatCurrency(dadosOrcamento.frete || 0)}</span>
-                </div>
+                {dadosOrcamento.frete > 0 && (
+                  <div className="flex justify-between">
+                    <span>Frete:</span>
+                    <span className="font-medium">{formatCurrency(dadosOrcamento.frete)}</span>
+                  </div>
+                )}
+                {dadosOrcamento.impostos > 0 && (
+                  <div className="flex justify-between text-amber-700">
+                    <span>Impostos ({dadosOrcamento.impostos}%):</span>
+                    <span className="font-medium">{formatCurrency(calcularValorImpostos())}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t pt-2">
                   <span className="font-bold">Total:</span>
                   <span className="font-bold text-lg">{formatCurrency(calcularTotal())}</span>
