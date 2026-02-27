@@ -348,6 +348,8 @@ export default function AcoesComerciais() {
   const [imagemMarketing, setImagemMarketing] = useState<File | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const [uploadingImagem, setUploadingImagem] = useState(false)
+  const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([])
+  const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
   const [dadosOrcamento, setDadosOrcamento] = useState({
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
@@ -513,8 +515,15 @@ export default function AcoesComerciais() {
       condicoes_pagamento: '',
       observacoes: '',
     })
-    setOperacaoSelecionada('')
-    setFornecedorSelecionado(null)
+    // Auto-select operação from card
+    if (cardSelecionado.operacao) {
+      selecionarOperacao(cardSelecionado.operacao)
+    } else {
+      setOperacaoSelecionada('')
+      setFornecedorSelecionado(null)
+    }
+    setImagensAdicionais([])
+    setImagensAdicionaisPreview([])
     setModalOrcamento(true)
   }
 
@@ -566,11 +575,31 @@ export default function AcoesComerciais() {
     setItensOrcamento(prev => prev.map(item => {
       if (item.id === id) {
         const updated = { ...item, [campo]: valor }
-        updated.total = updated.quantidade * updated.preco_unitario
+        // Parse quantidade and preco_unitario as numbers for total calc
+        const qty = typeof updated.quantidade === 'string' ? parseFloat(String(updated.quantidade).replace(',', '.')) || 0 : updated.quantidade
+        const price = typeof updated.preco_unitario === 'string' ? parseFloat(String(updated.preco_unitario).replace(',', '.')) || 0 : updated.preco_unitario
+        updated.total = qty * price
         return updated
       }
       return item
     }))
+  }
+
+  function handleImagensAdicionais(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    const validFiles = files.filter(f => {
+      if (!f.type.startsWith('image/')) { toast.error(`${f.name} não é uma imagem`); return false }
+      if (f.size > 5 * 1024 * 1024) { toast.error(`${f.name} excede 5MB`); return false }
+      return true
+    })
+    setImagensAdicionais(prev => [...prev, ...validFiles])
+    setImagensAdicionaisPreview(prev => [...prev, ...validFiles.map(f => URL.createObjectURL(f))])
+  }
+
+  function removerImagemAdicional(index: number) {
+    URL.revokeObjectURL(imagensAdicionaisPreview[index])
+    setImagensAdicionais(prev => prev.filter((_, i) => i !== index))
+    setImagensAdicionaisPreview(prev => prev.filter((_, i) => i !== index))
   }
 
   function handleImagemMarketing(e: React.ChangeEvent<HTMLInputElement>) {
@@ -629,7 +658,11 @@ export default function AcoesComerciais() {
       return
     }
 
-    const itensInvalidos = itensOrcamento.filter(item => !item.descricao || item.quantidade < 1 || item.preco_unitario <= 0)
+    const itensInvalidos = itensOrcamento.filter(item => {
+      const qty = parseFloat(String(item.quantidade).replace(',', '.')) || 0
+      const price = parseFloat(String(item.preco_unitario).replace(',', '.')) || 0
+      return !item.descricao || qty < 1 || price <= 0
+    })
     if (itensInvalidos.length > 0) {
       toast.error('Preencha todos os campos obrigatórios dos itens')
       return
@@ -724,8 +757,8 @@ export default function AcoesComerciais() {
           codigo: item.codigo || null,
           descricao: item.descricao,
           especificacoes: item.especificacoes || null,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario,
+          quantidade: parseFloat(String(item.quantidade).replace(',', '.')) || 0,
+          preco_unitario: parseFloat(String(item.preco_unitario).replace(',', '.')) || 0,
           total: item.total,
           ordem: index,
         }))
@@ -885,24 +918,12 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
-            {/* SELEÇÃO DE OPERAÇÃO */}
+            {/* OPERAÇÃO (auto-selecionada) */}
             <div className="bg-card border-2 border-primary/20 rounded-lg p-4">
-              <Label>Selecione a Operação *</Label>
-              <select
-                className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                value={operacaoSelecionada}
-                onChange={(e) => selecionarOperacao(e.target.value)}
-                required
-              >
-                <option value="">Selecione a operação...</option>
-                {Object.entries(operacoesDisponiveis).map(([gestao, ops]) => (
-                  <optgroup key={gestao} label={`Gestão ${gestao}`}>
-                    {ops.map(op => (
-                      <option key={op} value={op}>{op}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <Label>Operação</Label>
+              <div className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+                {operacaoSelecionada || cardSelecionado?.operacao || 'Não definida'}
+              </div>
 
               {fornecedorSelecionado && (
                 <div className="mt-3 p-3 bg-primary/5 rounded space-y-2 text-sm">
@@ -989,13 +1010,7 @@ export default function AcoesComerciais() {
 
             {/* ITENS DO ORÇAMENTO */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label>Itens do Orçamento</Label>
-                <Button type="button" variant="outline" size="sm" onClick={adicionarItem}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Adicionar Item
-                </Button>
-              </div>
+              <Label className="mb-3 block">Itens do Orçamento</Label>
 
               <div className="space-y-3">
                 {itensOrcamento.map((item, index) => (
@@ -1029,20 +1044,17 @@ export default function AcoesComerciais() {
                       <div className="col-span-2">
                         <Label>Quantidade *</Label>
                         <Input
-                          type="number"
-                          min="1"
-                          value={item.quantidade}
-                          onChange={(e) => atualizarItem(item.id, 'quantidade', parseInt(e.target.value) || 1)}
+                          placeholder="1"
+                          value={item.quantidade || ''}
+                          onChange={(e) => atualizarItem(item.id, 'quantidade', e.target.value)}
                         />
                       </div>
                       <div className="col-span-3">
                         <Label>Preço Unitário *</Label>
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.preco_unitario}
-                          onChange={(e) => atualizarItem(item.id, 'preco_unitario', parseFloat(e.target.value) || 0)}
+                          placeholder="0,00"
+                          value={item.preco_unitario || ''}
+                          onChange={(e) => atualizarItem(item.id, 'preco_unitario', e.target.value)}
                         />
                       </div>
                       <div className="col-span-12">
@@ -1063,6 +1075,11 @@ export default function AcoesComerciais() {
                   </div>
                 ))}
               </div>
+
+              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={adicionarItem}>
+                <Plus className="w-4 h-4 mr-1" />
+                Adicionar Item
+              </Button>
             </div>
 
             {/* CONDIÇÕES DE PAGAMENTO */}
@@ -1089,10 +1106,14 @@ export default function AcoesComerciais() {
 
             {/* IMAGEM DE MARKETING */}
             <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
-              <Label className="mb-2 block">Imagem de Marketing (opcional)</Label>
-              {imagemPreview ? (
-                <div className="relative">
-                  <img src={imagemPreview} alt="Preview marketing" className="w-full max-h-48 object-cover rounded-lg" />
+              <Label className="mb-2 block">Imagem de Marketing</Label>
+              <div className="relative">
+                <img
+                  src={imagemPreview || '/placeholder.svg'}
+                  alt="Preview marketing"
+                  className="w-full max-h-48 object-cover rounded-lg bg-muted"
+                />
+                {imagemPreview && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -1102,15 +1123,49 @@ export default function AcoesComerciais() {
                   >
                     <X className="w-4 h-4" />
                   </Button>
+                )}
+              </div>
+              <label className="mt-2 inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Alterar Imagem
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
+              </label>
+            </div>
+
+            {/* IMAGENS ADICIONAIS */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagens Adicionais</Label>
+              {imagensAdicionaisPreview.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  {imagensAdicionaisPreview.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Adicional ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0"
+                        onClick={() => removerImagemAdicional(i)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center h-32 cursor-pointer rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                  <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                  <span className="text-sm text-muted-foreground">Clique para selecionar uma imagem</span>
-                  <span className="text-xs text-muted-foreground mt-1">PNG, JPG até 5MB</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
-                </label>
               )}
+              <label className="inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Adicionar Imagens
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagensAdicionais} />
+              </label>
             </div>
 
             {/* RESUMO FINANCEIRO */}
