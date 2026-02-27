@@ -245,6 +245,10 @@ export default function Fornecedores() {
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
   const [contatosEdit, setContatosEdit] = useState<Contato[]>([]);
   const [arquivosEdit, setArquivosEdit] = useState<ArquivoUpload[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFileEdit, setLogoFileEdit] = useState<File | null>(null);
+  const [logoPreviewEdit, setLogoPreviewEdit] = useState<string | null>(null);
 
   // Forms
   const {
@@ -322,12 +326,38 @@ export default function Fornecedores() {
     return urls;
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, setFile: React.Dispatch<React.SetStateAction<File | null>>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Selecione um arquivo de imagem", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem deve ter no máximo 5MB", variant: "destructive" });
+      return;
+    }
+    setFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `logos/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('fornecedores-documentos').upload(path, file);
+    if (error) {
+      console.error('Logo upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('fornecedores-documentos').getPublicUrl(path);
+    return urlData.publicUrl;
+  };
 
   const fetchFornecedores = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("fornecedores")
-      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao", { count: "exact" });
+      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao, logotipo_url", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
@@ -418,6 +448,12 @@ export default function Fornecedores() {
         catalogosUrls = await uploadArquivosStorage(arquivos);
       }
 
+      // Upload logo
+      let logotipoUrl: string | null = null;
+      if (logoFile) {
+        logotipoUrl = await uploadLogo(logoFile);
+      }
+
       const { error } = await supabase.from("fornecedores").insert({
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
@@ -437,6 +473,7 @@ export default function Fornecedores() {
         comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
         contatos: contatos.length > 0 ? contatos : null,
         catalogos: catalogosUrls.length > 0 ? catalogosUrls : null,
+        logotipo_url: logotipoUrl,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -444,6 +481,8 @@ export default function Fornecedores() {
       resetNovo();
       setContatos([]);
       setArquivos([]);
+      setLogoFile(null);
+      setLogoPreview(null);
       fetchFornecedores();
       fetchMetrics();
     } catch (err: any) {
@@ -492,6 +531,8 @@ export default function Fornecedores() {
     const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
     setContatosEdit(existingContatos);
     setArquivosEdit([]);
+    setLogoFileEdit(null);
+    setLogoPreviewEdit(f.logotipo_url || null);
     setModalEditar(f);
   };
 
@@ -509,6 +550,13 @@ export default function Fornecedores() {
         ? (typeof modalEditar.catalogos === 'string' ? JSON.parse(modalEditar.catalogos) : modalEditar.catalogos)
         : [];
       const allCatalogos = [...existingCatalogos, ...catalogosUrls];
+
+      // Upload logo if changed
+      let logotipoUrl = modalEditar.logotipo_url || null;
+      if (logoFileEdit) {
+        const uploaded = await uploadLogo(logoFileEdit);
+        if (uploaded) logotipoUrl = uploaded;
+      }
 
       const { error } = await supabase
         .from("fornecedores")
@@ -531,6 +579,7 @@ export default function Fornecedores() {
           comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
           contatos: contatosEdit.length > 0 ? contatosEdit : null,
           catalogos: allCatalogos.length > 0 ? allCatalogos : null,
+          logotipo_url: logotipoUrl,
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
@@ -580,8 +629,38 @@ export default function Fornecedores() {
     arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,
     gestaoVal: string[],
     uploadInputId: string,
+    currentLogoPreview: string | null,
+    onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    onLogoRemove: () => void,
   ) => (
     <>
+      {/* Logo Upload */}
+      <div className="space-y-2">
+        <Label>Logotipo</Label>
+        <div className="flex items-center gap-4">
+          {currentLogoPreview ? (
+            <div className="relative">
+              <img src={currentLogoPreview} alt="Logo" className="w-20 h-20 rounded-lg object-contain border border-border bg-white" />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                onClick={onLogoRemove}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center w-20 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">
+              <Upload className="w-5 h-5 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground mt-1">Logo</span>
+              <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
+            </label>
+          )}
+          <p className="text-xs text-muted-foreground">PNG, JPG até 5MB</p>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Nome Fantasia *</Label>
@@ -913,10 +992,9 @@ export default function Fornecedores() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Razão Social</TableHead>
-                <TableHead>CNPJ</TableHead>
-                <TableHead>Cidade/UF</TableHead>
+                <TableHead className="w-16">Logo</TableHead>
+                <TableHead>Nome Fantasia</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Gestão</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
@@ -926,20 +1004,29 @@ export default function Fornecedores() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : fornecedores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 fornecedores.map((f) => (
                   <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell onClick={() => verDetalhes(f)}>
+                      {f.logotipo_url ? (
+                        <img src={f.logotipo_url} alt={f.nome_fantasia} className="w-10 h-10 rounded-md object-contain border border-border bg-white" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                          {f.nome_fantasia?.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{f.nome_fantasia}</p>
@@ -948,14 +1035,8 @@ export default function Fornecedores() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground" onClick={() => verDetalhes(f)}>
-                      {f.razao_social || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>
-                      {formatCNPJ(f.cnpj)}
-                    </TableCell>
-                    <TableCell className="text-sm" onClick={() => verDetalhes(f)}>
-                      {f.cidade || "-"}/{f.estado?.split(" - ")[0] || "-"}
+                    <TableCell className="text-sm font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>
+                      {f.codigo || "-"}
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       {f.gestao ? (
@@ -1213,7 +1294,7 @@ export default function Fornecedores() {
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, "upload-arquivos-novo")}
+            {renderFormFields(regNovo, setNovo, tipoNovoValue, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -1239,7 +1320,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, "upload-arquivos-edit")}
+            {renderFormFields(regEdit, setEdit, tipoEditValue, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button
                 type="button"
