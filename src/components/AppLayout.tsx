@@ -14,6 +14,7 @@ const pageTitles: Record<string, string> = {
   "/crm/gestao-2": "CRM - Gestão 2",
   "/crm/gestao-3": "CRM - Gestão 3",
   "/crm/outras": "Outras Categorias",
+  "/oportunidades": "Oportunidades",
   "/orcamentos": "Orçamentos",
   "/clientes": "Clientes",
   "/clientes/hotelaria": "Clientes - Hotelaria",
@@ -25,6 +26,7 @@ const pageTitles: Record<string, string> = {
   "/financeiro": "Financeiro",
   "/admin": "Administração",
   "/planejamento": "Planejamento",
+  "/acoes-comerciais": "Ações Comerciais",
 };
 
 interface AppLayoutProps {
