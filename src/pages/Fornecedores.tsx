@@ -85,6 +85,7 @@ type FornecedorForm = {
   status: string;
   observacoes: string;
   gestao: string[];
+  segmentos_atuacao: string[];
   produtos_servicos: string;
   comissao_vendas: string;
 };
@@ -158,16 +159,27 @@ const TODOS_ESTADOS = [
   "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
 ];
 
+const SEGMENTOS_OPTIONS = [
+  { value: "Hotelaria", label: "Hotelaria" },
+  { value: "Gastronomia", label: "Gastronomia" },
+  { value: "Hospitalar", label: "Hospitalar" },
+  { value: "Condominial", label: "Condominial" },
+  { value: "Exportação", label: "Exportação" },
+  { value: "Outros", label: "Outros" },
+];
+
 type Filtros = {
   busca: string;
   status: string[];
   gestao: string[];
+  segmento: string[];
 };
 
 const FILTROS_INICIAIS: Filtros = {
   busca: "",
   status: [],
   gestao: [],
+  segmento: [],
 };
 
 function MultiSelectFilter({
@@ -252,7 +264,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [] } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [] } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -261,10 +273,12 @@ export default function Fornecedores() {
 
   const statusNovoValue = watchNovo("status");
   const gestaoNovoValue = watchNovo("gestao") || [];
+  const segmentoNovoValue = watchNovo("segmentos_atuacao") || [];
   const estadoNovoValue = watchNovo("estado") || "";
   const cidadeNovoValue = watchNovo("cidade") || "";
   const statusEditValue = watchEdit("status");
   const gestaoEditValue = watchEdit("gestao") || [];
+  const segmentoEditValue = watchEdit("segmentos_atuacao") || [];
   const estadoEditValue = watchEdit("estado") || "";
   const cidadeEditValue = watchEdit("cidade") || "";
 
@@ -366,7 +380,7 @@ export default function Fornecedores() {
     setLoading(true);
     let query = supabase
       .from("fornecedores")
-      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao, logotipo_url", { count: "exact" });
+      .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao, logotipo_url, segmentos_atuacao", { count: "exact" });
 
     if (debouncedBusca) {
       query = query.or(
@@ -377,6 +391,10 @@ export default function Fornecedores() {
     if (filtros.gestao.length > 0) {
       const gestaoFilters = filtros.gestao.map(g => `gestao.ilike.%${g}%`).join(",");
       query = query.or(gestaoFilters);
+    }
+    if (filtros.segmento.length > 0) {
+      const segFilters = filtros.segmento.map(s => `segmentos_atuacao.cs.{${s}}`).join(",");
+      query = query.or(segFilters);
     }
 
     const from = (page - 1) * pageSize;
@@ -393,7 +411,7 @@ export default function Fornecedores() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.gestao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.gestao, filtros.segmento]);
 
   // Buscar métricas
   const fetchMetrics = useCallback(async () => {
@@ -407,7 +425,7 @@ export default function Fornecedores() {
   useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
-  useEffect(() => { setPage(1); }, [filtros.status, filtros.gestao]);
+  useEffect(() => { setPage(1); }, [filtros.status, filtros.gestao, filtros.segmento]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
@@ -433,7 +451,8 @@ export default function Fornecedores() {
   const temFiltrosAtivos =
     filtros.busca !== "" ||
     filtros.status.length > 0 ||
-    filtros.gestao.length > 0;
+    filtros.gestao.length > 0 ||
+    filtros.segmento.length > 0;
 
   // Salvar novo
   const salvarNovo = async (dados: FornecedorForm) => {
@@ -465,6 +484,7 @@ export default function Fornecedores() {
       status: dados.status || "ativo",
         observacoes: dados.observacoes || null,
         gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
+        segmentos_atuacao: dados.segmentos_atuacao && dados.segmentos_atuacao.length > 0 ? dados.segmentos_atuacao : null,
         produtos_servicos: dados.produtos_servicos || null,
         comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
         contatos: contatos.length > 0 ? JSON.parse(JSON.stringify(contatos)) : null,
@@ -519,6 +539,7 @@ export default function Fornecedores() {
       status: f.status || "ativo",
       observacoes: f.observacoes || "",
       gestao: f.gestao ? f.gestao.split(", ").filter(Boolean) : [],
+      segmentos_atuacao: f.segmentos_atuacao || [],
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
     });
@@ -570,6 +591,7 @@ export default function Fornecedores() {
           status: dados.status || "ativo",
           observacoes: dados.observacoes || null,
           gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
+          segmentos_atuacao: dados.segmentos_atuacao && dados.segmentos_atuacao.length > 0 ? dados.segmentos_atuacao : null,
           produtos_servicos: dados.produtos_servicos || null,
           comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
           contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
@@ -622,6 +644,7 @@ export default function Fornecedores() {
     arquivosList: ArquivoUpload[],
     arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,
     gestaoVal: string[],
+    segmentoVal: string[],
     estadoVal: string,
     cidadeVal: string,
     uploadInputId: string,
@@ -682,6 +705,27 @@ export default function Fornecedores() {
         <div className="space-y-1.5">
           <Label>Código</Label>
           <Input {...reg("codigo")} placeholder="Código interno" />
+        </div>
+      </div>
+
+      {/* Segmento - Multi Select */}
+      <div className="space-y-1.5">
+        <Label>Segmento</Label>
+        <div className="flex flex-wrap gap-4 mt-1">
+          {SEGMENTOS_OPTIONS.map((s) => (
+            <label key={s.value} className="flex items-center gap-2 cursor-pointer text-sm">
+              <Checkbox
+                checked={segmentoVal.includes(s.value)}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...segmentoVal, s.value]
+                    : segmentoVal.filter((v) => v !== s.value);
+                  set("segmentos_atuacao", next as any);
+                }}
+              />
+              {s.label}
+            </label>
+          ))}
         </div>
       </div>
 
@@ -938,7 +982,7 @@ export default function Fornecedores() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <MultiSelectFilter
             label="Status"
             selected={filtros.status}
@@ -949,6 +993,13 @@ export default function Fornecedores() {
               { value: "em prospecção", label: "Em Prospecção" },
             ]}
             onToggle={(v) => toggleFiltro("status", v)}
+          />
+
+          <MultiSelectFilter
+            label="Segmento"
+            selected={filtros.segmento}
+            options={SEGMENTOS_OPTIONS}
+            onToggle={(v) => toggleFiltro("segmento", v)}
           />
 
           <MultiSelectFilter
@@ -973,6 +1024,7 @@ export default function Fornecedores() {
                 <TableHead className="w-16 text-white">Logo</TableHead>
                 <TableHead className="text-white">Nome Fantasia</TableHead>
                 <TableHead className="text-white">Código</TableHead>
+                <TableHead className="text-white">Segmento</TableHead>
                 <TableHead className="text-white">Gestão</TableHead>
                 <TableHead className="text-center text-white">Status</TableHead>
                 <TableHead className="text-center text-white">Ações</TableHead>
@@ -982,14 +1034,14 @@ export default function Fornecedores() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : fornecedores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </TableCell>
                 </TableRow>
@@ -1015,6 +1067,17 @@ export default function Fornecedores() {
                     </TableCell>
                     <TableCell className="text-sm font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>
                       {f.codigo || "-"}
+                    </TableCell>
+                    <TableCell onClick={() => verDetalhes(f)}>
+                      {f.segmentos_atuacao && f.segmentos_atuacao.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {f.segmentos_atuacao.map((s, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       {f.gestao ? (
@@ -1100,6 +1163,7 @@ export default function Fornecedores() {
                   <Info label="Razão Social" value={modalVer.razao_social} />
                   <Info label="CNPJ" value={formatCNPJ(modalVer.cnpj)} />
                   <Info label="Código" value={modalVer.codigo} />
+                  <Info label="Segmento" value={modalVer.segmentos_atuacao?.join(", ")} />
                   <Info label="Gestão" value={modalVer.gestao} />
                   <Info label="Comissão" value={modalVer.comissao_vendas ? `${modalVer.comissao_vendas}%` : null} />
                   <div className="flex gap-2 items-start flex-col">
@@ -1272,7 +1336,7 @@ export default function Fornecedores() {
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
+            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -1298,7 +1362,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button
                 type="button"
