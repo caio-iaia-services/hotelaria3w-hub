@@ -9,42 +9,27 @@ import { KanbanBoard } from "@/components/crm/KanbanBoard";
 import type { KanbanColumnData } from "@/components/crm/KanbanColumn";
 import { supabase } from "@/lib/supabase";
 import type { CRMCard } from "@/lib/types";
+import { useFornecedoresOperacoes } from "@/hooks/useFornecedoresOperacoes";
 
-const gestaoConfig: Record<string, { gestao: string; title: string; subtitle: string; operations: string[] }> = {
-  "gestao-1": {
-    gestao: "G1",
-    title: "CRM — Gestão 1",
-    subtitle: "Funil comercial das operações G1",
-    operations: ["CASTOR", "RUBBERMAID", "SOLEMAR", "UNIBLU"],
-  },
-  "gestao-2": {
-    gestao: "G2",
-    title: "CRM — Gestão 2",
-    subtitle: "Funil comercial das operações G2",
-    operations: ["MIDEA", "D-LOCK", "CIÇA ENXOVAIS", "IM IN"],
-  },
-  "gestao-3": {
-    gestao: "G3",
-    title: "CRM — Gestão 3",
-    subtitle: "Funil comercial das operações G3",
-    operations: ["TEKA", "KENBY", "REDES DE DORMIR", "SKARA"],
-  },
+const gestaoKeys: Record<string, { gestao: string; title: string; subtitle: string }> = {
+  "gestao-1": { gestao: "G1", title: "CRM — Gestão 1", subtitle: "Funil comercial das operações G1" },
+  "gestao-2": { gestao: "G2", title: "CRM — Gestão 2", subtitle: "Funil comercial das operações G2" },
+  "gestao-3": { gestao: "G3", title: "CRM — Gestão 3", subtitle: "Funil comercial das operações G3" },
 };
 
-const operationColors: Record<string, string> = {
-  CASTOR: "bg-blue-500 text-white",
-  RUBBERMAID: "bg-emerald-500 text-white",
-  SOLEMAR: "bg-amber-500 text-white",
-  UNIBLU: "bg-violet-500 text-white",
-  MIDEA: "bg-cyan-500 text-white",
-  "D-LOCK": "bg-rose-500 text-white",
-  "CIÇA ENXOVAIS": "bg-pink-500 text-white",
-  "IM IN": "bg-teal-500 text-white",
-  TEKA: "bg-indigo-500 text-white",
-  KENBY: "bg-orange-500 text-white",
-  "REDES DE DORMIR": "bg-lime-600 text-white",
-  SKARA: "bg-fuchsia-500 text-white",
-};
+// Cores dinâmicas para operações — cicla entre cores pré-definidas
+const colorPool = [
+  "bg-blue-500 text-white", "bg-emerald-500 text-white", "bg-amber-500 text-white",
+  "bg-violet-500 text-white", "bg-cyan-500 text-white", "bg-rose-500 text-white",
+  "bg-pink-500 text-white", "bg-teal-500 text-white", "bg-indigo-500 text-white",
+  "bg-orange-500 text-white", "bg-lime-600 text-white", "bg-fuchsia-500 text-white",
+];
+
+function buildOperationColors(ops: string[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  ops.forEach((op, i) => { map[op] = colorPool[i % colorPool.length]; });
+  return map;
+}
 
 const stageIds = ["lead", "contato", "proposta", "negociacao", "fechado", "consolidacao", "pos_venda", "realizado", "perdido"] as const;
 const stageTitles: Record<string, string> = {
@@ -72,19 +57,22 @@ const stageColors: Record<string, string> = {
 
 export default function CrmGestao() {
   const { gestaoId } = useParams<{ gestaoId: string }>();
-  const config = gestaoConfig[gestaoId || "gestao-1"];
+  const baseConfig = gestaoKeys[gestaoId || "gestao-1"];
+  const { gestaoOperacoes, loading: loadingOps } = useFornecedoresOperacoes();
+  const operations = useMemo(() => gestaoOperacoes[baseConfig?.gestao] || [], [gestaoOperacoes, baseConfig]);
+  const operationColors = useMemo(() => buildOperationColors(operations), [operations]);
 
   const [cards, setCards] = useState<CRMCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOps, setSelectedOps] = useState<string[]>(() => config?.operations || []);
+  const [selectedOps, setSelectedOps] = useState<string[]>([]);
 
   const fetchCards = useCallback(async () => {
-    if (!config) return;
+    if (!baseConfig || selectedOps.length === 0) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("crm_cards")
       .select("*")
-      .eq("gestao", config.gestao)
+      .eq("gestao", baseConfig.gestao)
       .in("operacao", selectedOps)
       .order("ordem", { ascending: true });
 
@@ -92,18 +80,18 @@ export default function CrmGestao() {
       setCards(data);
     }
     setLoading(false);
-  }, [config, selectedOps]);
+  }, [baseConfig, selectedOps]);
 
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
 
-  // Reset selected ops when gestao changes
+  // Reset selected ops when gestao or operations change
   useEffect(() => {
-    if (config) {
-      setSelectedOps(config.operations);
+    if (operations.length > 0) {
+      setSelectedOps(operations);
     }
-  }, [gestaoId]);
+  }, [gestaoId, operations]);
 
   const columns = useMemo((): KanbanColumnData[] => {
     return stageIds.map((stageId) => ({
@@ -118,7 +106,7 @@ export default function CrmGestao() {
   const totalClosed = cards.filter((c) => c.estagio === "fechado").length;
   const conversion = totalCards > 0 ? Math.round((totalClosed / totalCards) * 100) : 0;
 
-  if (!config) {
+  if (!baseConfig) {
     return <div className="p-8 text-center text-muted-foreground">Gestão não encontrada.</div>;
   }
 
@@ -142,10 +130,10 @@ export default function CrmGestao() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">{config.title}</h1>
-          <Badge>{config.operations.length} operações</Badge>
+          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">{baseConfig.title}</h1>
+          <Badge>{operations.length} operações</Badge>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{config.subtitle}</p>
+        <p className="text-sm text-muted-foreground mt-1">{baseConfig.subtitle}</p>
       </div>
 
       {/* Operation Filter */}
@@ -155,7 +143,7 @@ export default function CrmGestao() {
           <span className="text-sm font-medium text-foreground/80">Filtrar Operações</span>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {config.operations.map((op) => (
+          {operations.map((op) => (
             <div key={op} className="flex items-center gap-2">
               <Checkbox
                 id={`op-${op}`}
