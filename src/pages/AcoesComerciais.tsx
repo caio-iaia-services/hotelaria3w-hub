@@ -599,11 +599,16 @@ export default function AcoesComerciais() {
   }
 
   function calcularValorImpostos() {
-    return calcularSubtotal() * (dadosOrcamento.impostos / 100)
+    const subtotal = calcularSubtotal()
+    const impostos = Number(dadosOrcamento.impostos) || 0
+    return subtotal * (impostos / 100)
   }
 
   function calcularTotal() {
-    return calcularSubtotal() + (dadosOrcamento.frete || 0) + calcularValorImpostos()
+    const subtotal = calcularSubtotal()
+    const frete = Number(dadosOrcamento.frete) || 0
+    const valorImpostos = calcularValorImpostos()
+    return subtotal + frete + valorImpostos
   }
 
   async function gerarOrcamento() {
@@ -692,10 +697,10 @@ export default function AcoesComerciais() {
           operacao: operacaoSelecionada,
           gestao: cardSelecionado.gestao,
           codigo_empresa: fornecedorSelecionado?.codigo || null,
-          subtotal,
-          frete: dadosOrcamento.frete || 0,
-          impostos: calcularValorImpostos(),
-          total,
+          subtotal: Number(subtotal) || 0,
+          frete: Number(dadosOrcamento.frete) || 0,
+          impostos: Number(calcularValorImpostos()) || 0,
+          total: Number(total) || 0,
           prazo_entrega: dadosOrcamento.prazo_entrega,
           validade_dias: dadosOrcamento.validade_dias,
           data_validade: dataValidade.toISOString(),
@@ -952,13 +957,13 @@ export default function AcoesComerciais() {
                 />
               </div>
               <div>
-                <Label>Frete</Label>
+                <Label>Frete (R$)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  value={dadosOrcamento.frete}
-                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete: parseFloat(e.target.value) || 0 }))}
+                  value={dadosOrcamento.frete || ''}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete: Number(e.target.value) || 0 }))}
                 />
               </div>
             </div>
@@ -973,8 +978,8 @@ export default function AcoesComerciais() {
                   min="0"
                   max="100"
                   placeholder="0.00"
-                  value={dadosOrcamento.impostos}
-                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, impostos: parseFloat(e.target.value) || 0 }))}
+                  value={dadosOrcamento.impostos || ''}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, impostos: Number(e.target.value) || 0 }))}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Valor: {formatCurrency(calcularValorImpostos())}
