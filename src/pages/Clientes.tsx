@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
+import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
 import ClienteModal from "@/components/clientes/ClienteModal";
 
 function formatCNPJ(cnpj: string | null) {
@@ -333,7 +334,8 @@ export default function Clientes() {
   const tipoValue = watch("tipo");
   const statusValue = watch("status");
   const segmentoValue = watch("segmento");
-
+  const watchEstado = watch("estado") || "";
+  const watchCidade = watch("cidade") || "";
   return (
     <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
@@ -601,12 +603,26 @@ export default function Clientes() {
             {/* Endereço */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Cidade *</Label>
-                <Input {...register("cidade")} placeholder="São Paulo" required />
+                <Label>Estado *</Label>
+                <Select value={watchEstado} onValueChange={(v) => { setValue("estado", v); setValue("cidade", ""); }}>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent className="bg-card z-50 max-h-60">
+                    {Object.keys(CIDADES_POR_ESTADO).sort().map(uf => (
+                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Estado *</Label>
-                <Input {...register("estado")} placeholder="SP" maxLength={2} required />
+                <Label>Cidade *</Label>
+                <Select value={watchCidade} onValueChange={(v) => setValue("cidade", v)} disabled={!watchEstado}>
+                  <SelectTrigger><SelectValue placeholder={watchEstado ? "Selecione" : "Selecione o estado"} /></SelectTrigger>
+                  <SelectContent className="bg-card z-50 max-h-60">
+                    {(CIDADES_POR_ESTADO[watchEstado] || []).map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>CEP</Label>
