@@ -290,6 +290,19 @@ export default function Fornecedores() {
   const statusEditValue = watchEdit("status");
   const gestaoEditValue = watchEdit("gestao") || [];
   const segmentoEditValue = watchEdit("segmentos_atuacao") || [];
+
+  // Auto-clear gestão when status is encerrado/inativo
+  useEffect(() => {
+    if (statusNovoValue === "encerrado" || statusNovoValue === "inativo") {
+      setNovo("gestao", [] as any);
+    }
+  }, [statusNovoValue, setNovo]);
+
+  useEffect(() => {
+    if (statusEditValue === "encerrado" || statusEditValue === "inativo") {
+      setEdit("gestao", [] as any);
+    }
+  }, [statusEditValue, setEdit]);
   const estadoEditValue = watchEdit("estado") || "";
   const cidadeEditValue = watchEdit("cidade") || "";
 
@@ -466,7 +479,13 @@ export default function Fornecedores() {
     filtros.segmento.length > 0;
 
   // Salvar novo
+  const statusRequerGestao = (status: string) => status === "ativo" || status === "prospecção";
+
   const salvarNovo = async (dados: FornecedorForm) => {
+    if (statusRequerGestao(dados.status) && (!dados.gestao || dados.gestao.length === 0)) {
+      toast({ title: "Gestão obrigatória", description: "Selecione ao menos uma gestão para fornecedores com status Ativo ou Prospecção.", variant: "destructive" });
+      return;
+    }
     setSalvando(true);
     try {
       let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
@@ -566,6 +585,10 @@ export default function Fornecedores() {
   // Salvar edição
   const salvarEdicao = async (dados: FornecedorForm) => {
     if (!modalEditar) return;
+    if (statusRequerGestao(dados.status) && (!dados.gestao || dados.gestao.length === 0)) {
+      toast({ title: "Gestão obrigatória", description: "Selecione ao menos uma gestão para fornecedores com status Ativo ou Prospecção.", variant: "destructive" });
+      return;
+    }
     setSalvando(true);
     try {
       let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
@@ -742,23 +765,30 @@ export default function Fornecedores() {
 
       {/* Gestão - Multi Select */}
       <div className="space-y-1.5">
-        <Label>Gestão Responsável</Label>
-        <div className="flex gap-4 mt-1">
-          {["G1", "G2", "G3"].map((g) => (
-            <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
-              <Checkbox
-                checked={gestaoVal.includes(g)}
-                onCheckedChange={(checked) => {
-                  const next = checked
-                    ? [...gestaoVal, g]
-                    : gestaoVal.filter((v) => v !== g);
-                  set("gestao", next as any);
-                }}
-              />
-              {g}
-            </label>
-          ))}
-        </div>
+        <Label>
+          Gestão Responsável
+          {(statusVal === "ativo" || statusVal === "prospecção") && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+        {(statusVal === "encerrado" || statusVal === "inativo") ? (
+          <p className="text-xs text-muted-foreground italic mt-1">Sem gestão para fornecedores com status {statusVal}.</p>
+        ) : (
+          <div className="flex gap-4 mt-1">
+            {["G1", "G2", "G3"].map((g) => (
+              <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
+                <Checkbox
+                  checked={gestaoVal.includes(g)}
+                  onCheckedChange={(checked) => {
+                    const next = checked
+                      ? [...gestaoVal, g]
+                      : gestaoVal.filter((v) => v !== g);
+                    set("gestao", next as any);
+                  }}
+                />
+                {g}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4">
