@@ -5,7 +5,7 @@ import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
-  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2,
+  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -345,6 +345,9 @@ export default function AcoesComerciais() {
   const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<FornecedorLocal[]>([])
   const [fornecedoresDb, setFornecedoresDb] = useState<{ nome_fantasia: string; gestao: string }[]>([])
   const [operacaoSelecionada, setOperacaoSelecionada] = useState('')
+  const [imagemMarketing, setImagemMarketing] = useState<File | null>(null)
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null)
+  const [uploadingImagem, setUploadingImagem] = useState(false)
   const [dadosOrcamento, setDadosOrcamento] = useState({
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
@@ -568,6 +571,27 @@ export default function AcoesComerciais() {
     }))
   }
 
+  function handleImagemMarketing(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem deve ter no máximo 5MB')
+      return
+    }
+    setImagemMarketing(file)
+    setImagemPreview(URL.createObjectURL(file))
+  }
+
+  function removerImagemMarketing() {
+    setImagemMarketing(null)
+    if (imagemPreview) URL.revokeObjectURL(imagemPreview)
+    setImagemPreview(null)
+  }
+
   function calcularSubtotal() {
     return itensOrcamento.reduce((sum, item) => sum + item.total, 0)
   }
@@ -623,6 +647,27 @@ export default function AcoesComerciais() {
       // 5. Preparar termos 3W
       const termos3w = TERMOS_3W.replace('[VALIDADE]', String(dadosOrcamento.validade_dias))
 
+      // 5b. Upload imagem marketing (se houver)
+      let imagemMarketingUrl: string | null = null
+      if (imagemMarketing) {
+        setUploadingImagem(true)
+        const ext = imagemMarketing.name.split('.').pop()
+        const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('orcamentos-marketing')
+          .upload(path, imagemMarketing)
+        setUploadingImagem(false)
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          toast.error('Erro ao fazer upload da imagem de marketing')
+        } else {
+          const { data: urlData } = supabase.storage
+            .from('orcamentos-marketing')
+            .getPublicUrl(path)
+          imagemMarketingUrl = urlData.publicUrl
+        }
+      }
+
       // 6. Criar orçamento
       const { data: orcamento, error: erroOrcamento } = await supabase
         .from('orcamentos')
@@ -652,6 +697,7 @@ export default function AcoesComerciais() {
           observacoes: dadosOrcamento.observacoes,
           termos_3w: termos3w,
           termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
+          imagem_marketing_url: imagemMarketingUrl,
           status: 'rascunho',
         })
         .select()
@@ -699,6 +745,7 @@ export default function AcoesComerciais() {
       setFornecedorSelecionado(null)
       setOperacaoSelecionada('')
       setFornecedoresDisponiveis([])
+      removerImagemMarketing()
 
       buscarDocumentos(cardSelecionado.id)
       buscarMetricas()
@@ -1007,6 +1054,32 @@ export default function AcoesComerciais() {
                 onChange={(e) => setDadosOrcamento(prev => ({ ...prev, observacoes: e.target.value }))}
                 rows={3}
               />
+            </div>
+
+            {/* IMAGEM DE MARKETING */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagem de Marketing (opcional)</Label>
+              {imagemPreview ? (
+                <div className="relative">
+                  <img src={imagemPreview} alt="Preview marketing" className="w-full max-h-48 object-cover rounded-lg" />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0"
+                    onClick={removerImagemMarketing}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center h-32 cursor-pointer rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">Clique para selecionar uma imagem</span>
+                  <span className="text-xs text-muted-foreground mt-1">PNG, JPG até 5MB</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
+                </label>
+              )}
             </div>
 
             {/* RESUMO FINANCEIRO */}
