@@ -51,6 +51,7 @@ export type Database = {
           site_2: string | null
           status: string
           telefone: string | null
+          termos_fabricante: string | null
           tipo: string
           updated_at: string
           venda_media: number | null
@@ -94,6 +95,7 @@ export type Database = {
           site_2?: string | null
           status?: string
           telefone?: string | null
+          termos_fabricante?: string | null
           tipo?: string
           updated_at?: string
           venda_media?: number | null
@@ -137,6 +139,7 @@ export type Database = {
           site_2?: string | null
           status?: string
           telefone?: string | null
+          termos_fabricante?: string | null
           tipo?: string
           updated_at?: string
           venda_media?: number | null

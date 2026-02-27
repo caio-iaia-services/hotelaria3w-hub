@@ -295,7 +295,10 @@ interface ItemOrcamento {
 interface FornecedorLocal {
   id: string
   nome_fantasia: string
+  codigo: string | null
+  gestao: string | null
   termos_fabricante: string | null
+  produtos_servicos: string | null
 }
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
@@ -338,8 +341,9 @@ export default function AcoesComerciais() {
   const [itensOrcamento, setItensOrcamento] = useState<ItemOrcamento[]>([])
   const [clienteCompleto, setClienteCompleto] = useState<ClienteCompleto | null>(null)
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<FornecedorLocal | null>(null)
+  const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<FornecedorLocal[]>([])
+  const [fornecedorSelecionadoId, setFornecedorSelecionadoId] = useState('')
   const [dadosOrcamento, setDadosOrcamento] = useState({
-    codigo_empresa: '',
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
     frete: 0,
@@ -460,15 +464,8 @@ export default function AcoesComerciais() {
 
     setClienteCompleto(cliente as ClienteCompleto | null)
 
-    // Fetch supplier if operacao matches
-    const { data: fornecedor } = await supabase
-      .from('fornecedores')
-      .select('id, nome_fantasia, termos_fabricante')
-      .ilike('nome_fantasia', `%${cardSelecionado.operacao}%`)
-      .limit(1)
-      .maybeSingle()
-
-    setFornecedorSelecionado(fornecedor as FornecedorLocal | null)
+    // Buscar fornecedores da gestão
+    await buscarFornecedoresDisponiveis(cardSelecionado.gestao)
 
     setItensOrcamento([{
       id: Date.now(),
@@ -480,14 +477,45 @@ export default function AcoesComerciais() {
       total: 0,
     }])
     setDadosOrcamento({
-      codigo_empresa: '',
       prazo_entrega: '45/60 dias',
       validade_dias: 30,
       frete: 0,
       condicoes_pagamento: '',
       observacoes: '',
     })
+    setFornecedorSelecionadoId('')
+    setFornecedorSelecionado(null)
     setModalOrcamento(true)
+  }
+
+  async function buscarFornecedoresDisponiveis(gestao: string) {
+    const { data, error } = await supabase
+      .from('fornecedores')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
+      .eq('gestao', gestao)
+      .eq('status', 'ativo')
+      .order('nome_fantasia')
+
+    if (!error && data) {
+      setFornecedoresDisponiveis(data as FornecedorLocal[])
+      if (data.length === 1) {
+        selecionarFornecedor(data[0].id, data as FornecedorLocal[])
+      }
+    }
+  }
+
+  function selecionarFornecedor(fornecedorId: string, lista?: FornecedorLocal[]) {
+    setFornecedorSelecionadoId(fornecedorId)
+    if (!fornecedorId) {
+      setFornecedorSelecionado(null)
+      return
+    }
+    const source = lista || fornecedoresDisponiveis
+    const fornecedor = source.find(f => f.id === fornecedorId)
+    if (fornecedor) {
+      setFornecedorSelecionado(fornecedor)
+      toast.success(`Fornecedor ${fornecedor.nome_fantasia} selecionado`)
+    }
   }
 
   function adicionarItem() {
@@ -528,9 +556,8 @@ export default function AcoesComerciais() {
   async function gerarOrcamento() {
     if (!cardSelecionado) return
 
-    // Validações
-    if (!dadosOrcamento.codigo_empresa) {
-      toast.error('Código da empresa é obrigatório')
+    if (!fornecedorSelecionado) {
+      toast.error('Selecione um fornecedor')
       return
     }
 
@@ -586,11 +613,11 @@ export default function AcoesComerciais() {
           cliente_endereco: enderecoCompleto,
           cliente_email: clienteCompleto.email,
           cliente_telefone: clienteCompleto.telefone,
-          fornecedor_id: fornecedorSelecionado?.id,
-          fornecedor_nome: fornecedorSelecionado?.nome_fantasia,
+          fornecedor_id: fornecedorSelecionado.id,
+          fornecedor_nome: fornecedorSelecionado.nome_fantasia,
           operacao: cardSelecionado.operacao,
           gestao: cardSelecionado.gestao,
-          codigo_empresa: dadosOrcamento.codigo_empresa,
+          codigo_empresa: fornecedorSelecionado.codigo,
           subtotal,
           frete: dadosOrcamento.frete || 0,
           desconto: 0,
@@ -601,7 +628,7 @@ export default function AcoesComerciais() {
           condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
           observacoes: dadosOrcamento.observacoes,
           termos_3w: termos3w,
-          termos_fornecedor: fornecedorSelecionado?.termos_fabricante,
+          termos_fornecedor: fornecedorSelecionado.termos_fabricante,
           status: 'rascunho',
         })
         .select()
@@ -639,7 +666,6 @@ export default function AcoesComerciais() {
       // Limpar estados
       setItensOrcamento([])
       setDadosOrcamento({
-        codigo_empresa: '',
         prazo_entrega: '45/60 dias',
         validade_dias: 30,
         frete: 0,
@@ -648,6 +674,8 @@ export default function AcoesComerciais() {
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
+      setFornecedorSelecionadoId('')
+      setFornecedoresDisponiveis([])
 
       buscarDocumentos(cardSelecionado.id)
       buscarMetricas()
@@ -775,16 +803,49 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
+            {/* SELEÇÃO DE FORNECEDOR */}
+            <div className="bg-card border-2 border-primary/20 rounded-lg p-4">
+              <Label>Selecione o Fornecedor/Operação *</Label>
+              <select
+                className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                value={fornecedorSelecionadoId}
+                onChange={(e) => selecionarFornecedor(e.target.value)}
+                required
+              >
+                <option value="">Selecione o fornecedor...</option>
+                {fornecedoresDisponiveis.map(fornecedor => (
+                  <option key={fornecedor.id} value={fornecedor.id}>
+                    {fornecedor.nome_fantasia} - {fornecedor.codigo || 'Sem código'}
+                  </option>
+                ))}
+              </select>
+
+              {fornecedorSelecionado && (
+                <div className="mt-3 p-3 bg-primary/5 rounded space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Código:</span>
+                    <span className="font-medium">{fornecedorSelecionado.codigo || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gestão:</span>
+                    <Badge>{fornecedorSelecionado.gestao}</Badge>
+                  </div>
+                  {fornecedorSelecionado.termos_fabricante && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-primary hover:text-primary/80">
+                        Ver termos do fabricante
+                      </summary>
+                      <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                        {fornecedorSelecionado.termos_fabricante}
+                      </p>
+                    </details>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* DADOS DO ORÇAMENTO */}
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <Label>Código da Empresa *</Label>
-                <Input
-                  placeholder="Ex: 3W-001"
-                  value={dadosOrcamento.codigo_empresa}
-                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, codigo_empresa: e.target.value }))}
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Prazo de Entrega *</Label>
                 <Input
