@@ -139,6 +139,15 @@ const statusColors: Record<string, string> = {
   inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   encerrado: "bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-300",
   "prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  "em prospecção": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+};
+
+const statusLabels: Record<string, string> = {
+  ativo: "Ativo",
+  inativo: "Inativo",
+  encerrado: "Encerrado",
+  "prospecção": "Prospecção",
+  "em prospecção": "Prospecção",
 };
 
 const tipoColors: Record<string, string> = {
@@ -1095,7 +1104,7 @@ export default function Fornecedores() {
                       )}
                     </TableCell>
                     <TableCell className="text-center" onClick={() => verDetalhes(f)}>
-                      <Badge variant="outline" className={statusColors[f.status] || ""}>{f.status}</Badge>
+                      <Badge variant="outline" className={statusColors[f.status?.toLowerCase()] || ""}>{statusLabels[f.status?.toLowerCase()] || f.status}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -1178,8 +1187,8 @@ export default function Fornecedores() {
                   </div>
                   <div className="flex gap-2 items-start flex-col">
                     <p className="text-xs text-muted-foreground">Status</p>
-                    <Badge variant="outline" className={statusColors[modalVer.status] || ""}>
-                      {modalVer.status}
+                    <Badge variant="outline" className={statusColors[modalVer.status?.toLowerCase()] || ""}>
+                      {statusLabels[modalVer.status?.toLowerCase()] || modalVer.status}
                     </Badge>
                   </div>
                 </div>
