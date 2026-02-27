@@ -43,7 +43,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 h-16 bg-[#1a4168] border-b border-[#1a4168] flex items-center justify-between px-4 lg:px-8 shadow-sm">
+        <header className="sticky top-0 z-30 h-16 bg-[#D4AF37] border-b border-[#D4AF37] flex items-center justify-between px-4 lg:px-8 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -73,7 +73,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </Button>
             <div className="hidden sm:flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-[#D4AF37] text-white font-heading text-xs font-bold">
+                <AvatarFallback className="bg-[#1a4168] text-white font-heading text-xs font-bold">
                   AD
                 </AvatarFallback>
               </Avatar>
