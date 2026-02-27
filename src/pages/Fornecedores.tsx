@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2, ChevronDown, Upload, FileText, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, Eye, Pencil, Trash2, ChevronDown, Upload, FileText, ExternalLink, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -236,6 +237,7 @@ function Info({ label, value }: { label: string; value: string | null | undefine
   );
 }
 export default function Fornecedores() {
+  const navigate = useNavigate();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -936,10 +938,16 @@ export default function Fornecedores() {
             Gestão completa da base de fornecedores 3W Hotelaria
           </p>
         </div>
-        <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
-          <Plus size={16} />
-          Novo Fornecedor
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => navigate("/acoes-comerciais")} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
+            <Zap size={16} />
+            Criar Ação
+          </Button>
+          <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
+            <Plus size={16} />
+            Novo Fornecedor
+          </Button>
+        </div>
       </div>
 
       {/* Card + Filters row */}
