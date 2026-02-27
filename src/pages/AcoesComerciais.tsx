@@ -798,10 +798,10 @@ export default function AcoesComerciais() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#dbdbdb] -m-6">
       {/* HEADER */}
-      <div className="p-6 border-b bg-background">
-        <h1 className="text-2xl font-bold">Ações Comerciais</h1>
+      <div className="p-6 border-b bg-[#dbdbdb]">
+        <h1 className="text-2xl font-bold text-[#1a4168]">Ações Comerciais</h1>
         <p className="text-sm text-muted-foreground">Gerencie cotações, orçamentos e contratos</p>
       </div>
 

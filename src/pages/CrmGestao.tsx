@@ -138,11 +138,11 @@ export default function CrmGestao() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-heading font-bold text-foreground">{config.title}</h1>
+          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">{config.title}</h1>
           <Badge>{config.operations.length} operações</Badge>
         </div>
         <p className="text-sm text-muted-foreground mt-1">{config.subtitle}</p>
@@ -174,14 +174,14 @@ export default function CrmGestao() {
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((m) => (
-          <Card key={m.label}>
+          <Card key={m.label} className="bg-[#c4942c] border-border/50">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <m.icon className="h-5 w-5 text-primary" />
+              <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <m.icon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-lg font-bold text-foreground">{m.value}</p>
-                <p className="text-xs text-muted-foreground">{m.label}</p>
+                <p className="text-lg font-bold text-white">{m.value}</p>
+                <p className="text-xs text-white/80">{m.label}</p>
               </div>
             </CardContent>
           </Card>

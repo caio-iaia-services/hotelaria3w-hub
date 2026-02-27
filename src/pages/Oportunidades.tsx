@@ -111,27 +111,27 @@ export default function Oportunidades() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Oportunidades</h1>
+          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Oportunidades</h1>
           <p className="text-sm text-muted-foreground mt-1">Cadastro e distribuição de oportunidades por gestão e operação</p>
         </div>
-        <Button className="gap-2" onClick={() => setNovaOpen(true)}>
+        <Button className="gap-2 bg-[#1a4168] hover:bg-[#153554] text-white" onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" />Nova Oportunidade
         </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         {metrics.map((m) => (
-          <Card key={m.label}>
+          <Card key={m.label} className="bg-[#c4942c] border-border/50">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <m.icon className="h-5 w-5 text-primary" />
+              <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <m.icon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-lg font-bold text-foreground">{m.value}</p>
-                <p className="text-xs text-muted-foreground">{m.label}</p>
+                <p className="text-lg font-bold text-white">{m.value}</p>
+                <p className="text-xs text-white/80">{m.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -145,12 +145,12 @@ export default function Oportunidades() {
             placeholder="Buscar por número, cliente ou operação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
           />
         </div>
       </div>
 
-      <Card>
+      <Card className="border-[#e8e8e8] bg-[#fcfcfc]">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-16 gap-3 text-muted-foreground">
@@ -159,15 +159,15 @@ export default function Oportunidades() {
             </div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[160px]">Número</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Gestão</TableHead>
-                  <TableHead>Operação</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data Cadastro</TableHead>
-                  <TableHead className="text-center w-[100px]">Ações</TableHead>
+              <TableHeader className="bg-[#1a4168]">
+                <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
+                  <TableHead className="w-[160px] text-white">Número</TableHead>
+                  <TableHead className="text-white">Cliente</TableHead>
+                  <TableHead className="text-white">Gestão</TableHead>
+                  <TableHead className="text-white">Operação</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
+                  <TableHead className="text-white">Data Cadastro</TableHead>
+                  <TableHead className="text-center w-[100px] text-white">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

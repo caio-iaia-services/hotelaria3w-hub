@@ -33,8 +33,8 @@ function formatCNPJ(cnpj: string | null) {
 }
 
 const statusColors: Record<string, string> = {
-  ativo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  inativo: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  ativo: "bg-[#1a4168] text-white",
+  inativo: "bg-[#D4AF37] text-[#1a4168]",
 };
 
 const tipoColors: Record<string, string> = {
@@ -324,9 +324,9 @@ export default function Clientes() {
     filtros.regiao.length > 0;
 
   const metrics = [
-    { label: "Total de Clientes", value: total.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
-    { label: "Clientes Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck, color: "text-emerald-600" },
-    { label: "Taxa de Retenção", value: `${taxaRetencao}%`, icon: TrendingUp, color: "text-accent" },
+    { label: "Total de Clientes", value: total.toLocaleString("pt-BR"), icon: Users },
+    { label: "Clientes Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck },
+    { label: "Taxa de Retenção", value: `${taxaRetencao}%`, icon: TrendingUp },
   ];
 
   // Watch values for controlled selects
@@ -335,16 +335,16 @@ export default function Clientes() {
   const segmentoValue = watch("segmento");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Clientes</h1>
+          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Clientes</h1>
           <p className="text-muted-foreground text-sm">
             Gestão completa da base de clientes 3W Hotelaria
           </p>
         </div>
-        <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0">
+        <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
           <Plus size={16} />
           Novo Cliente
         </Button>
@@ -353,14 +353,14 @@ export default function Clientes() {
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {metrics.map((m) => (
-          <Card key={m.label} className="border-border/50">
+          <Card key={m.label} className="border-border/50 bg-[#c4942c]">
             <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-muted">
-                <m.icon size={22} className={m.color} />
+              <div className="p-3 rounded-xl bg-white/20">
+                <m.icon size={22} className="text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">{m.label}</p>
-                <p className="text-xl font-bold text-foreground">{m.value}</p>
+                <p className="text-xs text-white/80 font-medium">{m.label}</p>
+                <p className="text-xl font-bold text-white">{m.value}</p>
               </div>
             </CardContent>
           </Card>
@@ -376,11 +376,11 @@ export default function Clientes() {
               placeholder="Buscar por nome, CNPJ ou cidade..."
               value={filtros.busca}
               onChange={(e) => toggleFiltro("busca", e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
             />
           </div>
           {temFiltrosAtivos && (
-            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0">
+            <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
               <X size={14} />
               Limpar Filtros
             </Button>
@@ -440,18 +440,18 @@ export default function Clientes() {
       </div>
 
       {/* Table */}
-      <Card className="border-border/50">
+      <Card className="border-[#e8e8e8] bg-[#fcfcfc]">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>CNPJ</TableHead>
-                <TableHead>Cidade/UF</TableHead>
-                <TableHead>Segmento</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Tipo</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+            <TableHeader className="bg-[#1a4168]">
+              <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
+                <TableHead className="text-white">Cliente</TableHead>
+                <TableHead className="text-white">CNPJ</TableHead>
+                <TableHead className="text-white">Cidade/UF</TableHead>
+                <TableHead className="text-white">Segmento</TableHead>
+                <TableHead className="text-center text-white">Status</TableHead>
+                <TableHead className="text-center text-white">Tipo</TableHead>
+                <TableHead className="text-center text-white">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

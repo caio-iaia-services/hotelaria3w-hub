@@ -27,9 +27,9 @@ const cards = [
 
 export default function Planejamento() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">Planejamento</h1>
+        <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Planejamento</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Metas, estratégias e análises</p>
       </div>
 

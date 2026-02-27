@@ -140,11 +140,11 @@ const PieLegend = ({ data }: { data: typeof pieData }) => (
 
 export default function Dashboard() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Visão geral do negócio</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

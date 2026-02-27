@@ -133,13 +133,13 @@ export default function Orcamentos() {
   const totalPages = Math.ceil(total / pageSize)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <FileText className="h-6 w-6 text-primary" />
+          <FileText className="h-6 w-6 text-[#1a4168]" />
           <div>
-            <h1 className="text-2xl font-bold">Orçamentos</h1>
+            <h1 className="text-2xl font-bold text-[#1a4168]">Orçamentos</h1>
             <Badge variant="secondary">
               {statusAtivo === 'todos'
                 ? `${total} orçamentos`
@@ -180,7 +180,7 @@ export default function Orcamentos() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por número, cliente ou fornecedor..."
-            className="pl-10"
+            className="pl-10 bg-[#fcfcfc] border-[#e8e8e8]"
             onChange={(e) => handleBuscaChange(e.target.value)}
           />
         </div>
@@ -207,18 +207,18 @@ export default function Orcamentos() {
       </div>
 
       {/* TABELA */}
-      <div className="rounded-md border">
+      <div className="rounded-md border border-[#e8e8e8] bg-[#fcfcfc]">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Número</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Fornecedor/Operação</TableHead>
-              <TableHead>Valor Total</TableHead>
-              <TableHead>Validade</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Ações</TableHead>
+          <TableHeader className="bg-[#1a4168]">
+            <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
+              <TableHead className="text-white">Número</TableHead>
+              <TableHead className="text-white">Cliente</TableHead>
+              <TableHead className="text-white">Fornecedor/Operação</TableHead>
+              <TableHead className="text-white">Valor Total</TableHead>
+              <TableHead className="text-white">Validade</TableHead>
+              <TableHead className="text-white">Status</TableHead>
+              <TableHead className="text-white">Data</TableHead>
+              <TableHead className="text-white">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
