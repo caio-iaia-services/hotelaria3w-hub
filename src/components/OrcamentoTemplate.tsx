@@ -457,7 +457,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                       <DollarSign className="w-5 h-5" /> Difal
                     </p>
                   </div>
-                  <div className="p-4 bg-blue-50 text-sm text-gray-700">
+                  <div className="p-4 bg-blue-50 text-sm text-gray-700 flex-1">
                     <p>{orcamento.difal_texto || 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.'}</p>
                   </div>
                 </div>
