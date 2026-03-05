@@ -89,6 +89,7 @@ type FornecedorForm = {
   segmentos_atuacao: string[];
   produtos_servicos: string;
   comissao_vendas: string;
+  tipo_layout: string;
 };
 
 interface Contato {
@@ -275,7 +276,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [] } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -520,6 +521,7 @@ export default function Fornecedores() {
         contatos: contatos.length > 0 ? JSON.parse(JSON.stringify(contatos)) : null,
         catalogos: catalogosUrls.length > 0 ? JSON.parse(JSON.stringify(catalogosUrls)) : null,
         logotipo_url: logotipoUrl,
+        tipo_layout: dados.tipo_layout || 'padrao',
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -572,6 +574,7 @@ export default function Fornecedores() {
       segmentos_atuacao: f.segmentos_atuacao || [],
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
+      tipo_layout: (f as any).tipo_layout || "padrao",
     });
     // Load existing contatos
     const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
@@ -631,6 +634,7 @@ export default function Fornecedores() {
           contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
           catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
           logotipo_url: logotipoUrl,
+          tipo_layout: dados.tipo_layout || 'padrao',
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
@@ -789,6 +793,22 @@ export default function Fornecedores() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Tipo de Layout do Orçamento */}
+      <div className="space-y-1.5">
+        <Label>Tipo de Layout do Orçamento</Label>
+        <select
+          {...reg("tipo_layout")}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="padrao">Padrão (genérico)</option>
+          <option value="castor">Castor (código dividido, sem box extra)</option>
+          <option value="midea">Midea (código normal, com box termos)</option>
+        </select>
+        <p className="text-xs text-muted-foreground mt-1">
+          Define como o orçamento será apresentado visualmente
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
