@@ -36,8 +36,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         }
       }
 
-      // 2) Fallback estrito por nome (sem busca parcial)
-      const nomeBusca = (orcamento.operacao || orcamento.fornecedor_nome || '').trim()
+      // 2) Fallback estrito por nome (prioriza fornecedor_nome do orçamento)
+      const nomeBusca = (orcamento.fornecedor_nome || orcamento.operacao || '').trim()
       if (!nomeBusca) return
 
       // tenta igualdade exata
