@@ -19,6 +19,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
   useEffect(() => {
     async function buscarFornecedor() {
+      // 1. Buscar por ID direto (mais confiável)
       if (orcamento.fornecedor_id) {
         const { data } = await supabase
           .from('fornecedores')
@@ -27,16 +28,25 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
           .maybeSingle()
         if (data) { setFornecedor(data as FornecedorLayout); return }
       }
-      // Fallback: buscar pelo nome do fornecedor ou operação
-      const nomeBusca = orcamento.fornecedor_nome || orcamento.operacao
+      // 2. Fallback: buscar pela operação (nome exato do fornecedor)
+      const nomeBusca = orcamento.operacao || orcamento.fornecedor_nome
       if (nomeBusca) {
-        const { data } = await supabase
+        // Tentar busca exata (case-insensitive)
+        const { data: exato } = await supabase
           .from('fornecedores')
           .select('tipo_layout, nome_fantasia, logotipo_url')
-          .ilike('nome_fantasia', `%${nomeBusca}%`)
+          .ilike('nome_fantasia', nomeBusca.trim())
           .limit(1)
           .maybeSingle()
-        if (data) setFornecedor(data as FornecedorLayout)
+        if (exato) { setFornecedor(exato as FornecedorLayout); return }
+        // 3. Último fallback: busca parcial
+        const { data: parcial } = await supabase
+          .from('fornecedores')
+          .select('tipo_layout, nome_fantasia, logotipo_url')
+          .ilike('nome_fantasia', `%${nomeBusca.trim()}%`)
+          .limit(1)
+          .maybeSingle()
+        if (parcial) setFornecedor(parcial as FornecedorLayout)
       }
     }
     buscarFornecedor()
