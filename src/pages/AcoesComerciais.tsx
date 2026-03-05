@@ -691,8 +691,14 @@ export default function AcoesComerciais() {
 
       const numero = `ORC-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`
 
-      // 2. Calcular valores
-      const subtotal = calcularSubtotal()
+      // 2. Calcular valores ANTES de salvar
+      const subtotal = itensOrcamento.reduce((sum, item) => sum + item.total, 0)
+      const valorImpostos = (subtotal * (Number(dadosOrcamento.impostos) / 100))
+      const valorDesconto = (subtotal * (Number(dadosOrcamento.desconto) / 100))
+      const valorFrete = Number(dadosOrcamento.frete) || 0
+      const total = subtotal + valorImpostos - valorDesconto + valorFrete
+
+      console.log('VALORES CALCULADOS:', { subtotal, impostos: valorImpostos, desconto: valorDesconto, frete: valorFrete, total })
 
       // 3. Calcular data de validade
       const hoje = new Date()
@@ -726,10 +732,6 @@ export default function AcoesComerciais() {
         }
       }
 
-      const valorImpostos = calcularValorImpostos()
-      const valorDesconto = calcularValorDesconto()
-      const total = calcularTotal()
-
       const orcamentoPayload: Record<string, unknown> = {
         numero,
         card_id: cardSelecionado.id,
@@ -745,15 +747,15 @@ export default function AcoesComerciais() {
         operacao: operacaoSelecionada,
         gestao: cardSelecionado.gestao,
         codigo_empresa: fornecedorSelecionado?.codigo || null,
-        subtotal: Number(subtotal) || 0,
-        frete: Number(dadosOrcamento.frete) || 0,
+        subtotal: subtotal,
+        frete: valorFrete,
         frete_tipo: dadosOrcamento.frete_tipo,
-        impostos: Number(valorImpostos) || 0,
+        impostos: valorImpostos,
         impostos_percentual: Number(dadosOrcamento.impostos) || 0,
-        desconto: Number(valorDesconto) || 0,
+        desconto: valorDesconto,
         desconto_percentual: Number(dadosOrcamento.desconto) || 0,
-        desconto_valor: Number(valorDesconto) || 0,
-        total: Number(total) || 0,
+        desconto_valor: valorDesconto,
+        total: total,
         prazo_entrega: dadosOrcamento.prazo_entrega,
         validade_dias: dadosOrcamento.validade_dias,
         data_validade: dataValidade.toISOString(),
@@ -796,6 +798,13 @@ export default function AcoesComerciais() {
       }
 
       const orcamento = await inserirOrcamentoComFallback(orcamentoPayload)
+
+      if (orcamento) {
+        console.log('ORÇAMENTO SALVO:', orcamento)
+        if (orcamento.total === 0 || orcamento.subtotal === 0) {
+          console.error('⚠️ VALORES ZERADOS! Verificar cálculo')
+        }
+      }
 
       // 7. Criar itens do orçamento
       const itensParaInserir = itensOrcamento

@@ -1,4 +1,5 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
+import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign } from 'lucide-react'
 
 interface Props {
   orcamento: Orcamento
@@ -48,11 +49,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   <span>www.3whotelaria.com.br</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-xl">📞</span>
+                  <Phone className="w-4 h-4" />
                   <span>+55 (11) 5197-5779</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-xl">✉️</span>
+                  <Mail className="w-4 h-4" />
                   <span>comercial1@3whotelaria.com.br</span>
                 </p>
               </div>
@@ -117,23 +118,23 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-start mb-4">
               {/* Dados do Cliente - Esquerda */}
-              <div className="text-sm space-y-1">
-                <p className="font-bold text-lg text-[#1a4168]">
+      <div className="text-sm space-y-1">
+                <p className="font-bold text-lg text-[#1a4168] mb-2">
                   {orcamento.cliente_cnpj}  {orcamento.cliente_nome}
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-[#1a4168]">📧</span>
+                  <Mail className="w-4 h-4 text-[#1a4168]" />
                   {orcamento.cliente_email || 'mario.quinalha@marriott.com'}
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-[#1a4168]">📍</span>
+                  <MapPin className="w-4 h-4 text-[#1a4168]" />
                   {orcamento.cliente_endereco?.split(',')[0] || 'Alameda Armenio Mendes, 70'}
                 </p>
-                <p className="ml-6">
+                <p className="ml-7 text-xs">
                   {orcamento.cliente_endereco?.split(',').slice(1).join(',') || 'Santos  SP  CEP 11035-260'}
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-[#1a4168]">📱</span>
+                  <Phone className="w-4 h-4 text-[#1a4168]" />
                   {orcamento.cliente_telefone || '(13) 99191-7669'}
                 </p>
               </div>
@@ -229,8 +230,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               {/* BOX ATENÇÃO */}
               <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center text-2xl">
-                    ⚠️
+                  <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-8 h-8 text-yellow-600" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">Atenção</h3>
                 </div>
@@ -294,7 +295,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
-                    <span>🚚</span> Frete
+                    <Truck className="w-5 h-5" /> Frete
                   </p>
                 </div>
                 <div className="p-3 text-center">
@@ -306,7 +307,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
-                    <span>📦</span> Entrega
+                    <Package className="w-5 h-5" /> Entrega
                   </p>
                 </div>
                 <div className="p-3 text-center">
@@ -318,7 +319,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <div className="col-span-8 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold text-center flex items-center justify-center gap-2">
-                    <span>💳</span> Condições e Forma de Pagamento
+                    <CreditCard className="w-5 h-5" /> Condições e Forma de Pagamento
                   </p>
                 </div>
                 <div className="p-4">
@@ -345,7 +346,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <div className="mt-6 border-2 border-gray-300 rounded-lg overflow-hidden">
               <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                 <p className="font-bold flex items-center gap-2">
-                  <span className="text-xl">💰</span>
+                  <DollarSign className="w-5 h-5" />
                   Difal
                 </p>
               </div>
@@ -409,8 +410,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
               <div className="text-sm space-y-1">
                 <p>🌐 www.3whotelaria.com.br</p>
-                <p>📞 +55 (11) 5197-5779</p>
-                <p>✉️ comercial1@3whotelaria.com.br</p>
+                <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> +55 (11) 5197-5779</p>
+                <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> comercial1@3whotelaria.com.br</p>
               </div>
               <div className="bg-[#D4AF37] text-[#1a4168] px-6 py-2 rounded font-bold">
                 Orçamento {orcamento.numero}
