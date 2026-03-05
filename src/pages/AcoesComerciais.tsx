@@ -1,5 +1,4 @@
-import { supabase } from '@/lib/supabase'
-import { supabase as supabaseCloud } from '@/integrations/supabase/client'
+import { supabase } from '@/integrations/supabase/client'
 import { CRMCard, DocumentoComercial } from '@/lib/types'
 import { useState, useEffect, useMemo } from 'react'
 import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades'
@@ -722,7 +721,7 @@ export default function AcoesComerciais() {
         setUploadingImagem(true)
         const ext = imagemMarketing.name.split('.').pop()
         const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
-        const { error: uploadError } = await supabaseCloud.storage
+        const { error: uploadError } = await supabase.storage
           .from('orcamentos-marketing')
           .upload(path, imagemMarketing)
         setUploadingImagem(false)
@@ -730,7 +729,7 @@ export default function AcoesComerciais() {
           console.error('Upload error:', uploadError)
           toast.error('Erro ao fazer upload da imagem de marketing')
         } else {
-          const { data: urlData } = supabaseCloud.storage
+          const { data: urlData } = supabase.storage
             .from('orcamentos-marketing')
             .getPublicUrl(path)
           imagemMarketingUrl = urlData.publicUrl
