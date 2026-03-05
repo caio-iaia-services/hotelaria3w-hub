@@ -1262,15 +1262,27 @@ export default function AcoesComerciais() {
                     Impostos {dadosOrcamento.impostos > 0 && `(${dadosOrcamento.impostos}%)`}:
                   </span>
                   <span className="font-semibold text-amber-700">
-                    {formatCurrency(calcularValorImpostos())}
+                    +{formatCurrency(calcularValorImpostos())}
                   </span>
                 </div>
+                
+                {/* DESCONTO */}
+                {dadosOrcamento.desconto > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700">
+                      Desconto ({dadosOrcamento.desconto}%):
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      -{formatCurrency(calcularValorDesconto())}
+                    </span>
+                  </div>
+                )}
                 
                 {/* FRETE */}
                 <div className="flex justify-between items-center pb-3 border-b-2 border-gray-400">
                   <span className="text-blue-700">Frete:</span>
                   <span className="font-semibold text-blue-700">
-                    {formatCurrency(dadosOrcamento.frete || 0)}
+                    +{formatCurrency(dadosOrcamento.frete || 0)}
                   </span>
                 </div>
                 
