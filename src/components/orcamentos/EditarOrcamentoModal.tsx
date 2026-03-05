@@ -201,10 +201,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       if (imagemFile) {
         const ext = imagemFile.name.split('.').pop()
         const path = `orcamentos/${orcamento.id}/marketing.${ext}`
-        const { error: upErr } = await supabase.storage.from('orcamentos').upload(path, imagemFile, { upsert: true })
+        const { error: upErr } = await supabaseCloud.storage.from('orcamentos-marketing').upload(path, imagemFile, { upsert: true })
         if (!upErr) {
-          const { data: urlData } = supabase.storage.from('orcamentos').getPublicUrl(path)
+          const { data: urlData } = supabaseCloud.storage.from('orcamentos-marketing').getPublicUrl(path)
           imagemMarketingUrl = urlData.publicUrl
+        } else {
+          console.warn('Erro upload imagem:', upErr)
         }
       }
 
