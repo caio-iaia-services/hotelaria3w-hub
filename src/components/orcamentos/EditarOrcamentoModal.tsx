@@ -229,7 +229,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           desconto_valor: valorDesconto,
           subtotal,
           total,
-          condicoes_pagamento: JSON.stringify({ texto: dados.condicoes_pagamento }),
+          condicoes_pagamento: { texto: dados.condicoes_pagamento },
           observacoes: dados.observacoes,
           observacoes_gerais: dados.observacoes_gerais,
           difal_texto: dados.difal_texto,
