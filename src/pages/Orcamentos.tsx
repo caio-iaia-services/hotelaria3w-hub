@@ -38,8 +38,9 @@ function getStatusLabel(status: string) {
   return labels[status] || status
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+function formatCurrency(value: any) {
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value || 0)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(num) ? 0 : num)
 }
 
 function formatDate(date: string) {
