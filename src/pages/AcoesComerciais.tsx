@@ -570,7 +570,6 @@ export default function AcoesComerciais() {
     if (fornecedor) {
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
-    }
   }
 
   function adicionarItem() {
