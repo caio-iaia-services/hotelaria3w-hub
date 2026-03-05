@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client'
+import { supabase } from '@/lib/supabase'
+import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { CRMCard, DocumentoComercial } from '@/lib/types'
 import { useState, useEffect, useMemo } from 'react'
 import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades'
