@@ -691,14 +691,19 @@ export default function AcoesComerciais() {
 
       const numero = `ORC-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`
 
-      // 2. Calcular valores ANTES de salvar
-      const subtotal = itensOrcamento.reduce((sum, item) => sum + item.total, 0)
-      const valorImpostos = (subtotal * (Number(dadosOrcamento.impostos) / 100))
-      const valorDesconto = (subtotal * (Number(dadosOrcamento.desconto) / 100))
-      const valorFrete = Number(dadosOrcamento.frete) || 0
+      // 2. Calcular valores ANTES de salvar - garantir parsing numérico
+      const subtotal = itensOrcamento.reduce((sum, item) => {
+        const itemTotal = parseFloat(String(item.total).replace(',', '.')) || 0
+        return sum + itemTotal
+      }, 0)
+      const impPerc = parseFloat(String(dadosOrcamento.impostos).replace(',', '.')) || 0
+      const descPerc = parseFloat(String(dadosOrcamento.desconto).replace(',', '.')) || 0
+      const valorImpostos = subtotal * (impPerc / 100)
+      const valorDesconto = subtotal * (descPerc / 100)
+      const valorFrete = parseFloat(String(dadosOrcamento.frete).replace(',', '.')) || 0
       const total = subtotal + valorImpostos - valorDesconto + valorFrete
 
-      console.log('VALORES CALCULADOS:', { subtotal, impostos: valorImpostos, desconto: valorDesconto, frete: valorFrete, total })
+      console.log('💰 VALORES CALCULADOS:', { subtotal, impPerc, valorImpostos, descPerc, valorDesconto, valorFrete, total, itensDetails: itensOrcamento.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total })) })
 
       // 3. Calcular data de validade
       const hoje = new Date()
