@@ -451,7 +451,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 
                 {/* DIFAL - mesma largura dos 2 acima */}
-                <div className="border-2 border-t-0 border-gray-300 rounded-b-lg overflow-hidden">
+                <div className="border-2 border-t-0 border-gray-300 rounded-b-lg overflow-hidden flex-1 flex flex-col">
                   <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                     <p className="font-bold text-center flex items-center justify-center gap-2">
                       <DollarSign className="w-5 h-5" /> Difal
