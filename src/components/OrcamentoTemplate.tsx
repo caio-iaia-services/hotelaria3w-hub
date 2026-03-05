@@ -422,7 +422,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <div className="grid grid-cols-12 gap-6 mt-8">
               
               {/* LADO ESQUERDO: Frete + Entrega + Difal */}
-              <div className="col-span-4 flex flex-col gap-0">
+              <div className="col-span-4 flex flex-col gap-0 h-full">
                 {/* Frete e Entrega lado a lado */}
                 <div className="grid grid-cols-2 gap-0">
                   {/* FRETE */}
@@ -451,13 +451,13 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 
                 {/* DIFAL - mesma largura dos 2 acima */}
-                <div className="border-2 border-t-0 border-gray-300 rounded-b-lg overflow-hidden">
+                <div className="border-2 border-t-0 border-gray-300 rounded-b-lg overflow-hidden flex-1 flex flex-col">
                   <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                     <p className="font-bold text-center flex items-center justify-center gap-2">
                       <DollarSign className="w-5 h-5" /> Difal
                     </p>
                   </div>
-                  <div className="p-4 bg-blue-50 text-sm text-gray-700">
+                  <div className="p-4 bg-blue-50 text-sm text-gray-700 flex-1">
                     <p>{orcamento.difal_texto || 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.'}</p>
                   </div>
                 </div>
