@@ -406,9 +406,10 @@ export default function AcoesComerciais() {
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      setCards(data)
-      if (data.length > 0 && !cardSelecionado) {
-        setCardSelecionado(data[0])
+      const cardsData = data as unknown as CRMCard[]
+      setCards(cardsData)
+      if (cardsData.length > 0 && !cardSelecionado) {
+        setCardSelecionado(cardsData[0])
       }
     }
     setLoading(false)
@@ -421,7 +422,7 @@ export default function AcoesComerciais() {
       .eq('card_id', cardId)
       .order('created_at', { ascending: false })
 
-    if (!error && data) setDocumentos(data)
+    if (!error && data) setDocumentos(data as unknown as DocumentoComercial[])
   }
 
   async function buscarMetricas() {
@@ -780,7 +781,7 @@ export default function AcoesComerciais() {
         for (let tentativa = 0; tentativa < 20; tentativa += 1) {
           const { data, error } = await supabase
             .from('orcamentos')
-            .insert(payload)
+            .insert(payload as any)
             .select()
             .single()
 
