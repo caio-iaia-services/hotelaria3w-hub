@@ -62,7 +62,10 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     if (value === null || value === undefined) return 0
     if (typeof value === 'number') return Number.isFinite(value) ? value : 0
 
-    const normalizado = String(value).trim().replace(/\./g, '').replace(',', '.')
+    const raw = String(value).trim()
+    const normalizado = raw.includes(',')
+      ? raw.replace(/\./g, '').replace(',', '.')
+      : raw
     const parsed = parseFloat(normalizado)
     return Number.isFinite(parsed) ? parsed : 0
   }
