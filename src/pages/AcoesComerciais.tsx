@@ -1,5 +1,4 @@
-import { supabase } from '@/lib/supabase'
-import { supabase as supabaseCloud } from '@/integrations/supabase/client'
+import { supabase } from '@/integrations/supabase/client'
 import { CRMCard, DocumentoComercial } from '@/lib/types'
 import { useState, useEffect, useMemo } from 'react'
 import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades'
@@ -407,9 +406,10 @@ export default function AcoesComerciais() {
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      setCards(data)
-      if (data.length > 0 && !cardSelecionado) {
-        setCardSelecionado(data[0])
+      const cardsData = data as unknown as CRMCard[]
+      setCards(cardsData)
+      if (cardsData.length > 0 && !cardSelecionado) {
+        setCardSelecionado(cardsData[0])
       }
     }
     setLoading(false)
@@ -422,7 +422,7 @@ export default function AcoesComerciais() {
       .eq('card_id', cardId)
       .order('created_at', { ascending: false })
 
-    if (!error && data) setDocumentos(data)
+    if (!error && data) setDocumentos(data as unknown as DocumentoComercial[])
   }
 
   async function buscarMetricas() {
@@ -722,7 +722,7 @@ export default function AcoesComerciais() {
         setUploadingImagem(true)
         const ext = imagemMarketing.name.split('.').pop()
         const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
-        const { error: uploadError } = await supabaseCloud.storage
+        const { error: uploadError } = await supabase.storage
           .from('orcamentos-marketing')
           .upload(path, imagemMarketing)
         setUploadingImagem(false)
@@ -730,7 +730,7 @@ export default function AcoesComerciais() {
           console.error('Upload error:', uploadError)
           toast.error('Erro ao fazer upload da imagem de marketing')
         } else {
-          const { data: urlData } = supabaseCloud.storage
+          const { data: urlData } = supabase.storage
             .from('orcamentos-marketing')
             .getPublicUrl(path)
           imagemMarketingUrl = urlData.publicUrl
@@ -781,7 +781,7 @@ export default function AcoesComerciais() {
         for (let tentativa = 0; tentativa < 20; tentativa += 1) {
           const { data, error } = await supabase
             .from('orcamentos')
-            .insert(payload)
+            .insert(payload as any)
             .select()
             .single()
 

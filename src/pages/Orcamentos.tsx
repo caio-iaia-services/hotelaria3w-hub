@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
