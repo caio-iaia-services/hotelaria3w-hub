@@ -210,11 +210,14 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <thead>
                 <tr className="bg-[#1a4168] text-white">
                   <th className="border border-white p-3 text-left">Item</th>
-                  {tipoLayout === 'castor' ? (
-                    <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
-                  ) : (
-                    <th className="border border-white p-3 text-center">Código</th>
-                  )}
+                  {(() => {
+                    console.log('🔢 Renderizando cabeçalho código. Tipo:', tipoLayout)
+                    return tipoLayout === 'castor' ? (
+                      <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
+                    ) : (
+                      <th className="border border-white p-3 text-center">Código</th>
+                    )
+                  })()}
                   <th className="border border-white p-3 text-left">Descrição</th>
                   <th className="border border-white p-3 text-center">Medidas</th>
                   <th className="border border-white p-3 text-center">Qtd</th>
@@ -232,26 +235,29 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         {index + 1}
                       </td>
                       
-                      {tipoLayout === 'castor' ? (
-                        <>
-                          {codigoDividido.length > 0 ? (
-                            codigoDividido.slice(0, 6).map((digito, i) => (
-                              <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
-                                {digito}
-                              </td>
-                            ))
-                          ) : (
-                            <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
-                          )}
-                          {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
-                            <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
-                          ))}
-                        </>
-                      ) : (
-                        <td className="border border-gray-300 p-3 text-center font-mono">
-                          {item.codigo || '-'}
-                        </td>
-                      )}
+                      {(() => {
+                        console.log(`📝 Item ${index + 1} - Código: ${item.codigo} - Layout: ${tipoLayout}`)
+                        return tipoLayout === 'castor' ? (
+                          <>
+                            {codigoDividido.length > 0 ? (
+                              codigoDividido.slice(0, 6).map((digito, i) => (
+                                <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
+                                  {digito}
+                                </td>
+                              ))
+                            ) : (
+                              <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
+                            )}
+                            {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
+                              <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
+                            ))}
+                          </>
+                        ) : (
+                          <td className="border border-gray-300 p-3 text-center font-mono">
+                            {item.codigo || '-'}
+                          </td>
+                        )
+                      })()}
                       
                       <td className="border border-gray-300 p-3">
                         <p className="font-semibold">{item.descricao}</p>
