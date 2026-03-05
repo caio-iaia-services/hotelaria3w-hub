@@ -729,49 +729,72 @@ export default function AcoesComerciais() {
       const valorDesconto = calcularValorDesconto()
       const total = calcularTotal()
 
-      const { data: orcamento, error: erroOrcamento } = await supabase
-        .from('orcamentos')
-        .insert({
-          numero,
-          card_id: cardSelecionado.id,
-          cliente_id: cardSelecionado.cliente_id,
-          cliente_nome: cardSelecionado.cliente_nome,
-          cliente_razao_social: clienteCompleto.razao_social,
-          cliente_cnpj: cardSelecionado.cliente_cnpj,
-          cliente_endereco: enderecoCompleto,
-          cliente_email: clienteCompleto.email,
-          cliente_telefone: clienteCompleto.telefone,
-          fornecedor_id: fornecedorSelecionado?.id || null,
-          fornecedor_nome: fornecedorSelecionado?.nome_fantasia || null,
-          operacao: operacaoSelecionada,
-          gestao: cardSelecionado.gestao,
-          codigo_empresa: fornecedorSelecionado?.codigo || null,
-          subtotal: Number(subtotal) || 0,
-          frete: Number(dadosOrcamento.frete) || 0,
-          frete_tipo: dadosOrcamento.frete_tipo,
-          impostos: Number(valorImpostos) || 0,
-          impostos_percentual: Number(dadosOrcamento.impostos) || 0,
-          desconto: Number(valorDesconto) || 0,
-          desconto_percentual: Number(dadosOrcamento.desconto) || 0,
-          desconto_valor: Number(valorDesconto) || 0,
-          total: Number(total) || 0,
-          prazo_entrega: dadosOrcamento.prazo_entrega,
-          validade_dias: dadosOrcamento.validade_dias,
-          data_validade: dataValidade.toISOString(),
-          data_emissao: new Date().toISOString(),
-          condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
-          observacoes: dadosOrcamento.observacoes,
-          observacoes_gerais: dadosOrcamento.observacoes_gerais,
-          difal_texto: dadosOrcamento.difal_texto,
-          termos_3w: termos3w,
-          termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
-          imagem_marketing_url: imagemMarketingUrl,
-          status: 'rascunho',
-        })
-        .select()
-        .single()
+      const orcamentoPayload: Record<string, unknown> = {
+        numero,
+        card_id: cardSelecionado.id,
+        cliente_id: cardSelecionado.cliente_id,
+        cliente_nome: cardSelecionado.cliente_nome,
+        cliente_razao_social: clienteCompleto.razao_social,
+        cliente_cnpj: cardSelecionado.cliente_cnpj,
+        cliente_endereco: enderecoCompleto,
+        cliente_email: clienteCompleto.email,
+        cliente_telefone: clienteCompleto.telefone,
+        fornecedor_id: fornecedorSelecionado?.id || null,
+        fornecedor_nome: fornecedorSelecionado?.nome_fantasia || null,
+        operacao: operacaoSelecionada,
+        gestao: cardSelecionado.gestao,
+        codigo_empresa: fornecedorSelecionado?.codigo || null,
+        subtotal: Number(subtotal) || 0,
+        frete: Number(dadosOrcamento.frete) || 0,
+        frete_tipo: dadosOrcamento.frete_tipo,
+        impostos: Number(valorImpostos) || 0,
+        impostos_percentual: Number(dadosOrcamento.impostos) || 0,
+        desconto: Number(valorDesconto) || 0,
+        desconto_percentual: Number(dadosOrcamento.desconto) || 0,
+        desconto_valor: Number(valorDesconto) || 0,
+        total: Number(total) || 0,
+        prazo_entrega: dadosOrcamento.prazo_entrega,
+        validade_dias: dadosOrcamento.validade_dias,
+        data_validade: dataValidade.toISOString(),
+        data_emissao: new Date().toISOString(),
+        condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
+        observacoes: dadosOrcamento.observacoes,
+        observacoes_gerais: dadosOrcamento.observacoes_gerais,
+        difal_texto: dadosOrcamento.difal_texto,
+        termos_3w: termos3w,
+        termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
+        imagem_marketing_url: imagemMarketingUrl,
+        status: 'rascunho',
+      }
 
-      if (erroOrcamento) throw erroOrcamento
+      async function inserirOrcamentoComFallback(payloadBase: Record<string, unknown>) {
+        const payload = { ...payloadBase }
+
+        for (let tentativa = 0; tentativa < 20; tentativa += 1) {
+          const { data, error } = await supabase
+            .from('orcamentos')
+            .insert(payload)
+            .select()
+            .single()
+
+          if (!error) return data
+
+          const colunaAusente = error.code === 'PGRST204'
+            ? error.message.match(/Could not find the '([^']+)' column/)?.[1]
+            : null
+
+          if (colunaAusente && colunaAusente in payload) {
+            delete payload[colunaAusente as keyof typeof payload]
+            continue
+          }
+
+          throw error
+        }
+
+        throw new Error('Falha ao inserir orçamento: schema incompatível com os campos atuais.')
+      }
+
+      const orcamento = await inserirOrcamentoComFallback(orcamentoPayload)
 
       // 7. Criar itens do orçamento
       const itensParaInserir = itensOrcamento
@@ -828,7 +851,10 @@ export default function AcoesComerciais() {
       }
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao gerar orçamento')
+      const mensagem = typeof error === 'object' && error && 'message' in error
+        ? String((error as { message?: string }).message)
+        : 'Erro ao gerar orçamento'
+      toast.error(mensagem)
     }
   }
 
