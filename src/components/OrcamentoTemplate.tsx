@@ -177,29 +177,29 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <img 
                 src="/logo_3Whotelaria.jpeg" 
                 alt="3W Hotelaria" 
-                className="h-14 mb-4"
+                className="h-24 mb-4"
               />
               
-              <div className="flex flex-col gap-2 text-sm ml-2">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 flex-shrink-0" />
-                  <span>www.3whotelaria.com.br</span>
+              <div className="flex flex-col gap-3 text-base ml-2">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-6 h-6 flex-shrink-0" />
+                  <span className="text-lg">www.3whotelaria.com.br</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 flex-shrink-0" />
-                  <span>+55 (11) 5197-5779</span>
+                <div className="flex items-center gap-3">
+                  <Phone className="w-6 h-6 flex-shrink-0" />
+                  <span className="text-lg">+55 (11) 5197-5779</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 flex-shrink-0" />
-                  <span>comercial1@3whotelaria.com.br</span>
+                <div className="flex items-center gap-3">
+                  <Mail className="w-6 h-6 flex-shrink-0" />
+                  <span className="text-lg">comercial1@3whotelaria.com.br</span>
                 </div>
               </div>
             </div>
             
             {/* LADO DIREITO: Número + Datas + Status */}
             <div className="text-right">
-              <div className="bg-[#D4AF37] text-[#1a4168] px-8 py-3 rounded-lg inline-block mb-4">
-                <p className="text-sm font-semibold">Orçamento {orcamento.numero}</p>
+              <div className="bg-[#D4AF37] text-[#1a4168] px-10 py-4 rounded-lg inline-block mb-4">
+                <p className="text-xl font-bold">Orçamento {orcamento.numero}</p>
               </div>
               
               {fornecedor?.logotipo_url ? (
@@ -226,7 +226,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
               
-              <div className="mt-2 bg-gray-200 text-gray-700 px-4 py-1 rounded inline-block text-sm font-semibold">
+              <div className="mt-6 bg-gray-200 text-gray-700 px-4 py-1 rounded inline-block text-sm font-semibold">
                 {orcamento.status.toUpperCase()}
               </div>
             </div>
