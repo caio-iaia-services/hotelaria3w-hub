@@ -19,29 +19,28 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
   useEffect(() => {
     async function buscarFornecedor() {
-      console.log('🔍 Buscando fornecedor ID:', orcamento.fornecedor_id)
-
       if (orcamento.fornecedor_id) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('fornecedores')
           .select('tipo_layout, nome_fantasia, logotipo_url')
           .eq('id', orcamento.fornecedor_id)
-          .single()
-
-        console.log('📦 Fornecedor retornado:', data)
-        console.log('❌ Erro (se houver):', error)
-
-        if (data) {
-          setFornecedor(data as FornecedorLayout)
-          console.log('✅ Fornecedor setado:', data)
-          console.log('🎨 Tipo de layout detectado:', data.tipo_layout)
-        }
-      } else {
-        console.log('⚠️ Nenhum fornecedor_id no orçamento')
+          .maybeSingle()
+        if (data) { setFornecedor(data as FornecedorLayout); return }
+      }
+      // Fallback: buscar pelo nome do fornecedor ou operação
+      const nomeBusca = orcamento.fornecedor_nome || orcamento.operacao
+      if (nomeBusca) {
+        const { data } = await supabase
+          .from('fornecedores')
+          .select('tipo_layout, nome_fantasia, logotipo_url')
+          .ilike('nome_fantasia', `%${nomeBusca}%`)
+          .limit(1)
+          .maybeSingle()
+        if (data) setFornecedor(data as FornecedorLayout)
       }
     }
     buscarFornecedor()
-  }, [orcamento.fornecedor_id])
+  }, [orcamento.fornecedor_id, orcamento.fornecedor_nome, orcamento.operacao])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
   console.log('📊 === VALORES DO ORÇAMENTO NO TEMPLATE ===')
