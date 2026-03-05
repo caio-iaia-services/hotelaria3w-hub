@@ -33,16 +33,14 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       <div className="min-h-screen flex flex-col page-break">
         
         {/* HEADER */}
-        <div className="bg-[#1E4A7C] text-white p-6">
+        <div className="bg-[#1a4168] text-white p-6">
           <div className="max-w-7xl mx-auto flex items-start justify-between">
             <div>
-              <div className="bg-white p-3 rounded inline-block mb-4">
-                <img 
-                  src="/logo_3Whotelaria.jpeg" 
-                  alt="3W Hotelaria" 
-                  className="h-12"
-                />
-              </div>
+              <img 
+                src="/logo_3Whotelaria.jpeg" 
+                alt="3W Hotelaria" 
+                className="h-16 mb-4"
+              />
               
               <div className="space-y-1 text-sm">
                 <p className="flex items-center gap-2">
@@ -61,7 +59,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
             
             <div className="text-right">
-              <div className="bg-[#D4AF37] text-[#1E4A7C] px-8 py-3 rounded-lg inline-block mb-4">
+              <div className="bg-[#D4AF37] text-[#1a4168] px-8 py-3 rounded-lg inline-block mb-4">
                 <p className="text-sm font-semibold">Orçamento {orcamento.numero}</p>
               </div>
               
@@ -92,59 +90,67 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <img 
                 src={orcamento.imagem_marketing_url} 
                 alt="Marketing" 
-                className="w-full rounded-2xl shadow-2xl"
+                className="w-full h-auto rounded-2xl shadow-2xl"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none'
+                  if (target.parentElement) {
+                    target.parentElement.innerHTML = '<div class="text-center py-20"><p class="text-4xl font-bold text-gray-400">Imagem de Marketing</p><p class="text-gray-500 mt-4">Adicione uma imagem na preparação do orçamento</p></div>'
+                  }
+                }}
               />
             </div>
           </div>
         ) : (
           <div className="flex-1 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-12">
             <div className="text-center">
-              <h2 className="text-5xl font-bold text-[#1E4A7C] mb-4">
+              <h2 className="text-5xl font-bold text-[#1a4168] mb-4">
                 {orcamento.fornecedor_nome || orcamento.operacao}
               </h2>
-              <p className="text-2xl text-gray-600">
-                é na 3W Hotelaria!
-              </p>
+              <p className="text-2xl text-gray-600">é na 3W Hotelaria!</p>
             </div>
           </div>
         )}
         
         {/* RODAPÉ - DADOS DO CLIENTE */}
         <div className="bg-[#D4AF37] p-6">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 text-sm">
-            <div>
-              <p className="font-bold text-lg text-[#1E4A7C] mb-2">
-                {orcamento.cliente_cnpj} {orcamento.cliente_nome}
-              </p>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex justify-between items-start mb-4">
+              {/* Dados do Cliente - Esquerda */}
+              <div className="text-sm space-y-1">
+                <p className="font-bold text-lg text-[#1a4168]">
+                  {orcamento.cliente_cnpj}  {orcamento.cliente_nome}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-[#1a4168]">📧</span>
+                  {orcamento.cliente_email || 'mario.quinalha@marriott.com'}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-[#1a4168]">📍</span>
+                  {orcamento.cliente_endereco?.split(',')[0] || 'Alameda Armenio Mendes, 70'}
+                </p>
+                <p className="ml-6">
+                  {orcamento.cliente_endereco?.split(',').slice(1).join(',') || 'Santos  SP  CEP 11035-260'}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-[#1a4168]">📱</span>
+                  {orcamento.cliente_telefone || '(13) 99191-7669'}
+                </p>
+              </div>
               
-              <p className="flex items-center gap-2 mb-1">
-                <span>📧</span>
-                <span>{orcamento.cliente_email || '-'}</span>
-              </p>
-              
-              <p className="flex items-center gap-2 mb-1">
-                <span>📍</span>
-                <span>{orcamento.cliente_endereco || '-'}</span>
-              </p>
-              
-              <p className="flex items-center gap-2">
-                <span>📱</span>
-                <span>{orcamento.cliente_telefone || '-'}</span>
-              </p>
+              {/* Endereço de Entrega - Direita */}
+              <div className="text-sm text-right space-y-1">
+                <p className="font-bold text-lg text-[#1a4168]">Endereço de Entrega</p>
+                <p>{orcamento.cliente_endereco?.split(',')[0] || 'Alameda Armenio Mendes, 70'}</p>
+                <p>{orcamento.cliente_endereco?.split(',').slice(1).join(',') || 'Santos  SP  CEP 11035-260'}</p>
+              </div>
             </div>
             
-            <div className="text-right">
-              <p className="font-bold text-lg text-[#1E4A7C] mb-2">
-                Endereço de Entrega
+            <div className="text-center border-t border-[#1a4168]/30 pt-4">
+              <p className="text-[#1a4168] text-sm">
+                Segue abaixo o orçamento solicitado. Estamos a disposição para quaisquer esclarecimentos e alterações. <strong>Bons Negócios!</strong>
               </p>
-              <p>{orcamento.cliente_endereco || '-'}</p>
             </div>
-          </div>
-          
-          <div className="max-w-7xl mx-auto mt-6 text-center">
-            <p className="text-[#1E4A7C]">
-              Segue abaixo o orçamento solicitado. Estamos a disposição para quaisquer esclarecimentos e alterações. <strong>Bons Negócios!</strong>
-            </p>
           </div>
         </div>
       </div>
@@ -152,43 +158,12 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       {/* ==================== PÁGINA 2 - ITENS E CÁLCULOS ==================== */}
       <div className="min-h-screen flex flex-col page-break">
         
-        {/* HEADER (repetido) */}
-        <div className="bg-[#1E4A7C] text-white p-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="bg-white p-2 rounded">
-              <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
-            </div>
-            <div className="text-sm space-y-1">
-              <p>🌐 www.3whotelaria.com.br</p>
-              <p>📞 +55 (11) 5197-5779</p>
-              <p>✉️ comercial1@3whotelaria.com.br</p>
-            </div>
-            <div className="bg-[#D4AF37] text-[#1E4A7C] px-6 py-2 rounded font-bold">
-              Orçamento {orcamento.numero}
-            </div>
-            {orcamento.fornecedor_nome && (
-              <div className="bg-white p-2 rounded">
-                <p className="text-xl font-bold text-red-600">
-                  {orcamento.fornecedor_nome.split(' ')[0]}
-                </p>
-              </div>
-            )}
-            <div className="text-sm text-right">
-              <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
-              <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
-              <div className="mt-1 bg-gray-200 text-gray-700 px-3 py-1 rounded inline-block text-xs">
-                {orcamento.status.toUpperCase()}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* TABELA DE ITENS */}
+        {/* TABELA DE ITENS - sem header repetido */}
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-[#1E4A7C] text-white">
+                <tr className="bg-[#1a4168] text-white">
                   <th className="border border-white p-3 text-left">Item</th>
                   <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
                   <th className="border border-white p-3 text-left">Descrição</th>
@@ -280,28 +255,30 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                     <span className="font-bold text-2xl">{formatCurrency(orcamento.subtotal)}</span>
                   </div>
                 </div>
-                
+
                 <div className="bg-white border-x-2 border-gray-300 p-4">
                   <div className="flex justify-between items-center">
-                    <span>Impostos</span>
-                    <span>{orcamento.impostos_percentual}%</span>
-                    <span className="font-semibold">{formatCurrency(orcamento.impostos)}</span>
+                    <div className="flex-1">Impostos</div>
+                    <div className="w-20 text-center">{orcamento.impostos_percentual?.toFixed(2) || 0}%</div>
+                    <div className="w-32 text-right font-semibold">
+                      {formatCurrency(orcamento.impostos)}
+                    </div>
                   </div>
                 </div>
-                
+
                 {orcamento.desconto_valor > 0 && (
                   <div className="bg-white border-x-2 border-gray-300 p-4">
                     <div className="flex justify-between items-center">
-                      <span>Desconto</span>
-                      <span>{orcamento.desconto_percentual}%</span>
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(orcamento.desconto_valor)}
-                      </span>
+                      <div className="flex-1">Desconto</div>
+                      <div className="w-20 text-center">{orcamento.desconto_percentual?.toFixed(2) || 0}%</div>
+                      <div className="w-32 text-right font-semibold text-red-600">
+                        -{formatCurrency(orcamento.desconto_valor)}
+                      </div>
                     </div>
                   </div>
                 )}
-                
-                <div className="bg-[#1E4A7C] text-white p-4 rounded-b-lg">
+
+                <div className="bg-[#1a4168] text-white p-4 rounded-b-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Valor Final</span>
                     <span className="font-bold text-3xl">{formatCurrency(orcamento.total)}</span>
@@ -311,40 +288,37 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
             
             {/* 3 COLUNAS: FRETE | ENTREGA | CONDIÇÕES */}
-            <div className="grid md:grid-cols-3 gap-6 mt-8">
+            <div className="grid grid-cols-12 gap-6 mt-8">
               
-              {/* FRETE */}
-              <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+              {/* FRETE - 2 colunas */}
+              <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
-                  <p className="font-bold text-center flex items-center justify-center gap-2">
-                    <span className="text-xl">🚚</span>
-                    Frete
+                  <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
+                    <span>🚚</span> Frete
                   </p>
                 </div>
-                <div className="p-4 text-center">
-                  <p className="font-semibold">{orcamento.frete_tipo || 'CIF (Incluso)'}</p>
+                <div className="p-3 text-center">
+                  <p className="text-sm font-semibold">{orcamento.frete_tipo || 'CIF (Incluso)'}</p>
                 </div>
               </div>
               
-              {/* ENTREGA */}
-              <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+              {/* ENTREGA - 2 colunas */}
+              <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
-                  <p className="font-bold text-center flex items-center justify-center gap-2">
-                    <span className="text-xl">📦</span>
-                    Entrega
+                  <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
+                    <span>📦</span> Entrega
                   </p>
                 </div>
-                <div className="p-4 text-center">
-                  <p className="font-semibold">{orcamento.prazo_entrega || '-'}</p>
+                <div className="p-3 text-center">
+                  <p className="text-sm font-semibold">{orcamento.prazo_entrega || '45/60 dias'}</p>
                 </div>
               </div>
               
-              {/* CONDIÇÕES DE PAGAMENTO */}
-              <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+              {/* CONDIÇÕES - 8 colunas (maior) */}
+              <div className="col-span-8 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold text-center flex items-center justify-center gap-2">
-                    <span className="text-xl">💳</span>
-                    Condições e Forma de Pagamento
+                    <span>💳</span> Condições e Forma de Pagamento
                   </p>
                 </div>
                 <div className="p-4">
@@ -359,7 +333,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                     <p>• para 30/60/90/120/150/180/210/240 acréscimo de 5,20%</p>
                     <p>• para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%</p>
                     <p>• para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%</p>
-                    
                     <p className="mt-3 text-gray-600 italic">
                       IMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.
                     </p>
@@ -396,7 +369,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             {/* TERMOS LEGAIS 3W */}
             <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="bg-[#1E4A7C] p-2 rounded">
+                <div className="bg-[#1a4168] p-2 rounded">
                   <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-8" />
                 </div>
                 <h3 className="text-lg font-bold text-[#D4AF37]">TERMOS LEGAIS DA 3W HOTELARIA</h3>
@@ -412,55 +385,34 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
             </div>
             
-            {/* BOTÕES DE AÇÃO */}
+            {/* BOTÕES DE AÇÃO - últimos elementos */}
             <div className="mt-6 grid md:grid-cols-2 gap-4">
               <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
                 <span className="text-2xl">💬</span>
                 <span>Clique aqui para falar com o Vendedor</span>
               </button>
               
-              <button className="bg-[#D4AF37] hover:bg-yellow-600 text-[#1E4A7C] font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+              <button className="bg-[#D4AF37] hover:bg-yellow-600 text-[#1a4168] font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
                 <span className="text-2xl">🔨</span>
                 <span>Clique aqui para confirmar o pedido</span>
               </button>
             </div>
           </div>
         </div>
-        
-        {/* RODAPÉ */}
-        <div className="bg-[#D4AF37] p-4 mt-auto">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="font-bold">{orcamento.cliente_cnpj} {orcamento.cliente_nome}</p>
-              <p>{orcamento.cliente_email}</p>
-              <p>{orcamento.cliente_endereco}</p>
-              <p>{orcamento.cliente_telefone}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-bold">Endereço de Entrega</p>
-              <p>{orcamento.cliente_endereco}</p>
-            </div>
-          </div>
-          <p className="text-center mt-4 text-[#1E4A7C]">
-            Segue abaixo o orçamento solicitado. Estamos a disposição para quaisquer esclarecimentos e alterações. <strong>Bons Negócios!</strong>
-          </p>
-        </div>
       </div>
 
       {/* ==================== PÁGINA 3 - PUBLICIDADE (SE HOUVER) ==================== */}
       {orcamento.imagem_publicidade_url && (
         <div className="min-h-screen flex flex-col page-break">
-          <div className="bg-[#1E4A7C] text-white p-4">
+          <div className="bg-[#1a4168] text-white p-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="bg-white p-2 rounded">
-                <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
-              </div>
+              <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
               <div className="text-sm space-y-1">
                 <p>🌐 www.3whotelaria.com.br</p>
                 <p>📞 +55 (11) 5197-5779</p>
                 <p>✉️ comercial1@3whotelaria.com.br</p>
               </div>
-              <div className="bg-[#D4AF37] text-[#1E4A7C] px-6 py-2 rounded font-bold">
+              <div className="bg-[#D4AF37] text-[#1a4168] px-6 py-2 rounded font-bold">
                 Orçamento {orcamento.numero}
               </div>
               {orcamento.fornecedor_nome && (
@@ -482,7 +434,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
           
           <div className="flex-1 flex items-center justify-center bg-gray-100 p-12">
             <div className="text-center max-w-4xl">
-              <h2 className="text-6xl font-bold text-[#1E4A7C] mb-8">
+              <h2 className="text-6xl font-bold text-[#1a4168] mb-8">
                 ESPAÇO PARA PUBLICIDADE
               </h2>
               
@@ -503,30 +455,12 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
             </div>
           </div>
-          
-          <div className="bg-[#D4AF37] p-4">
-            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="font-bold">{orcamento.cliente_cnpj} {orcamento.cliente_nome}</p>
-                <p>{orcamento.cliente_email}</p>
-                <p>{orcamento.cliente_endereco}</p>
-                <p>{orcamento.cliente_telefone}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold">Endereço de Entrega</p>
-                <p>{orcamento.cliente_endereco}</p>
-              </div>
-            </div>
-            <p className="text-center mt-4 text-[#1E4A7C]">
-              Segue abaixo o orçamento solicitado. Estamos a disposição para quaisquer esclarecimentos e alterações. <strong>Bons Negócios!</strong>
-            </p>
-          </div>
         </div>
       )}
       
       {/* TERMOS DO FORNECEDOR */}
       {orcamento.termos_fornecedor && orcamento.termos_fornecedor.length > 200 && (
-        <div className="mt-12 p-8 border-t-4 border-[#1E4A7C]">
+        <div className="mt-12 p-8 border-t-4 border-[#1a4168]">
           <div className="max-w-7xl mx-auto bg-blue-50 rounded-lg p-6">
             {orcamento.fornecedor_nome && (
               <div className="mb-4">
