@@ -54,7 +54,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 className="h-14 mb-4"
               />
               
-              <div className="flex flex-col gap-2 text-sm">
+              <div className="flex flex-col gap-2 text-sm ml-2">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 flex-shrink-0" />
                   <span>www.3whotelaria.com.br</span>
@@ -405,12 +405,12 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             {/* BOTÕES DE AÇÃO - últimos elementos */}
             <div className="mt-6 grid md:grid-cols-2 gap-4">
               <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <span className="text-2xl">💬</span>
+                <Phone className="w-6 h-6" />
                 <span>Clique aqui para falar com o Vendedor</span>
               </button>
               
               <button className="bg-[#D4AF37] hover:bg-yellow-600 text-[#1a4168] font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <span className="text-2xl">🔨</span>
+                <Package className="w-6 h-6" />
                 <span>Clique aqui para confirmar o pedido</span>
               </button>
             </div>
