@@ -147,6 +147,32 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     setItens(prev => prev.filter(i => i.id !== id))
   }
 
+  function handleImagemMarketing(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImagemFile(file)
+      setImagemPreview(URL.createObjectURL(file))
+    }
+  }
+
+  function removerImagemMarketing() {
+    setImagemFile(null)
+    setImagemPreview(null)
+  }
+
+  function handleImagensAdicionais(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      setImagensAdicionaisFiles(prev => [...prev, ...files])
+      setImagensAdicionaisPreview(prev => [...prev, ...files.map(f => URL.createObjectURL(f))])
+    }
+  }
+
+  function removerImagemAdicional(index: number) {
+    setImagensAdicionaisFiles(prev => prev.filter((_, i) => i !== index))
+    setImagensAdicionaisPreview(prev => prev.filter((_, i) => i !== index))
+  }
+
   const subtotal = itens.reduce((sum, i) => sum + i.total, 0)
   const valorImpostos = subtotal * (parseNum(dados.impostos_percentual) / 100)
   const valorDesconto = subtotal * (parseNum(dados.desconto_percentual) / 100)
