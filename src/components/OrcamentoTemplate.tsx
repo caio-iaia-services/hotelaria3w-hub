@@ -1,5 +1,5 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
-import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign } from 'lucide-react'
+import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 
 interface Props {
   orcamento: Orcamento
