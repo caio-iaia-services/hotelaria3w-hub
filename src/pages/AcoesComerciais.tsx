@@ -515,9 +515,13 @@ export default function AcoesComerciais() {
       prazo_entrega: '45/60 dias',
       validade_dias: 30,
       frete: 0,
+      frete_tipo: 'CIF (Incluso)',
       impostos: 0,
+      desconto: 0,
       condicoes_pagamento: '',
       observacoes: '',
+      observacoes_gerais: '',
+      difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
     })
     // Auto-select operação from card
     if (cardSelecionado.operacao) {
@@ -637,11 +641,17 @@ export default function AcoesComerciais() {
     return subtotal * (impostos / 100)
   }
 
+  function calcularValorDesconto() {
+    const subtotal = calcularSubtotal()
+    return subtotal * ((Number(dadosOrcamento.desconto) || 0) / 100)
+  }
+
   function calcularTotal() {
     const subtotal = calcularSubtotal()
     const frete = Number(dadosOrcamento.frete) || 0
     const valorImpostos = calcularValorImpostos()
-    return subtotal + frete + valorImpostos
+    const valorDesconto = calcularValorDesconto()
+    return subtotal + valorImpostos - valorDesconto + frete
   }
 
   async function gerarOrcamento() {
@@ -716,7 +726,10 @@ export default function AcoesComerciais() {
         }
       }
 
-      // 6. Criar orçamento
+      const valorImpostos = calcularValorImpostos()
+      const valorDesconto = calcularValorDesconto()
+      const total = calcularTotal()
+
       const { data: orcamento, error: erroOrcamento } = await supabase
         .from('orcamentos')
         .insert({
@@ -736,13 +749,21 @@ export default function AcoesComerciais() {
           codigo_empresa: fornecedorSelecionado?.codigo || null,
           subtotal: Number(subtotal) || 0,
           frete: Number(dadosOrcamento.frete) || 0,
-          impostos: Number(calcularValorImpostos()) || 0,
+          frete_tipo: dadosOrcamento.frete_tipo,
+          impostos: Number(valorImpostos) || 0,
+          impostos_percentual: Number(dadosOrcamento.impostos) || 0,
+          desconto: Number(valorDesconto) || 0,
+          desconto_percentual: Number(dadosOrcamento.desconto) || 0,
+          desconto_valor: Number(valorDesconto) || 0,
           total: Number(total) || 0,
           prazo_entrega: dadosOrcamento.prazo_entrega,
           validade_dias: dadosOrcamento.validade_dias,
           data_validade: dataValidade.toISOString(),
+          data_emissao: new Date().toISOString(),
           condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
           observacoes: dadosOrcamento.observacoes,
+          observacoes_gerais: dadosOrcamento.observacoes_gerais,
+          difal_texto: dadosOrcamento.difal_texto,
           termos_3w: termos3w,
           termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
           imagem_marketing_url: imagemMarketingUrl,
@@ -786,9 +807,13 @@ export default function AcoesComerciais() {
         prazo_entrega: '45/60 dias',
         validade_dias: 30,
         frete: 0,
+        frete_tipo: 'CIF (Incluso)',
         impostos: 0,
+        desconto: 0,
         condicoes_pagamento: '',
         observacoes: '',
+        observacoes_gerais: '',
+        difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
