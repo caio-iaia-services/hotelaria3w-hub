@@ -1,5 +1,6 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
+import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -200,10 +201,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       if (imagemFile) {
         const ext = imagemFile.name.split('.').pop()
         const path = `orcamentos/${orcamento.id}/marketing.${ext}`
-        const { error: upErr } = await supabase.storage.from('orcamentos').upload(path, imagemFile, { upsert: true })
+        const { error: upErr } = await supabaseCloud.storage.from('orcamentos-marketing').upload(path, imagemFile, { upsert: true })
         if (!upErr) {
-          const { data: urlData } = supabase.storage.from('orcamentos').getPublicUrl(path)
+          const { data: urlData } = supabaseCloud.storage.from('orcamentos-marketing').getPublicUrl(path)
           imagemMarketingUrl = urlData.publicUrl
+        } else {
+          console.warn('Erro upload imagem:', upErr)
         }
       }
 
@@ -261,9 +264,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       toast.success('Orçamento atualizado com sucesso!')
       onSaved()
       onOpenChange(false)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar orçamento:', err)
-      toast.error('Erro ao salvar orçamento')
+      console.error('Detalhes:', JSON.stringify(err, null, 2))
+      toast.error(`Erro ao salvar orçamento: ${err?.message || err?.details || 'erro desconhecido'}`)
     } finally {
       setSaving(false)
     }
