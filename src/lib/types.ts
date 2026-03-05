@@ -142,6 +142,29 @@ export interface Orcamento {
   updated_at: string
 }
 
+export interface Fornecedor {
+  id: string
+  nome_fantasia: string
+  razao_social: string
+  cnpj: string
+  cidade: string | null
+  estado: string | null
+  segmento_id: string | null
+  tipo: string
+  email: string | null
+  telefone: string | null
+  status: string
+  endereco?: string | null
+  numero?: string | null
+  bairro?: string | null
+  cep?: string | null
+  complemento?: string | null
+  observacoes?: string | null
+  termos_fabricante?: string | null
+  created_at?: string
+  tipo_layout: 'castor' | 'midea' | 'padrao' | null
+}
+
 export interface OrcamentoItem {
   id: string
   orcamento_id: string
