@@ -14,6 +14,244 @@ export type Database = {
   }
   public: {
     Tables: {
+      acoes_comerciais_log: {
+        Row: {
+          acao: string
+          card_id: string
+          created_at: string
+          descricao: string | null
+          documento_id: string | null
+          id: string
+        }
+        Insert: {
+          acao: string
+          card_id: string
+          created_at?: string
+          descricao?: string | null
+          documento_id?: string | null
+          id?: string
+        }
+        Update: {
+          acao?: string
+          card_id?: string
+          created_at?: string
+          descricao?: string | null
+          documento_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_comerciais_log_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          complemento: string | null
+          created_at: string
+          email: string | null
+          estado: string | null
+          id: string
+          logradouro: string | null
+          nome_fantasia: string
+          numero: string | null
+          observacoes: string | null
+          pais: string | null
+          razao_social: string
+          segmento: string | null
+          segmento_id: string | null
+          status: string
+          telefone: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          complemento?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          logradouro?: string | null
+          nome_fantasia: string
+          numero?: string | null
+          observacoes?: string | null
+          pais?: string | null
+          razao_social: string
+          segmento?: string | null
+          segmento_id?: string | null
+          status?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          complemento?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          logradouro?: string | null
+          nome_fantasia?: string
+          numero?: string | null
+          observacoes?: string | null
+          pais?: string | null
+          razao_social?: string
+          segmento?: string | null
+          segmento_id?: string | null
+          status?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_cards: {
+        Row: {
+          cliente_cidade: string
+          cliente_cnpj: string
+          cliente_estado: string
+          cliente_id: string
+          cliente_nome: string
+          cliente_segmento: string | null
+          created_at: string
+          data_substituicao: string | null
+          estagio: string
+          gestao: string
+          id: string
+          observacoes: string | null
+          operacao: string
+          operacao_nova: string | null
+          oportunidade_id: string | null
+          ordem: number
+          substituida: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          cliente_cidade?: string
+          cliente_cnpj: string
+          cliente_estado?: string
+          cliente_id: string
+          cliente_nome: string
+          cliente_segmento?: string | null
+          created_at?: string
+          data_substituicao?: string | null
+          estagio?: string
+          gestao: string
+          id?: string
+          observacoes?: string | null
+          operacao: string
+          operacao_nova?: string | null
+          oportunidade_id?: string | null
+          ordem?: number
+          substituida?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          cliente_cidade?: string
+          cliente_cnpj?: string
+          cliente_estado?: string
+          cliente_id?: string
+          cliente_nome?: string
+          cliente_segmento?: string | null
+          created_at?: string
+          data_substituicao?: string | null
+          estagio?: string
+          gestao?: string
+          id?: string
+          observacoes?: string | null
+          operacao?: string
+          operacao_nova?: string | null
+          oportunidade_id?: string | null
+          ordem?: number
+          substituida?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      documentos_comerciais: {
+        Row: {
+          aprovado_em: string | null
+          arquivo_nome: string | null
+          arquivo_url: string | null
+          card_id: string
+          cliente_id: string
+          conteudo: Json | null
+          created_at: string
+          enviado_em: string | null
+          google_drive_id: string | null
+          id: string
+          moeda: string
+          numero: string | null
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string
+          valor_total: number | null
+        }
+        Insert: {
+          aprovado_em?: string | null
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          card_id: string
+          cliente_id: string
+          conteudo?: Json | null
+          created_at?: string
+          enviado_em?: string | null
+          google_drive_id?: string | null
+          id?: string
+          moeda?: string
+          numero?: string | null
+          status?: string
+          tipo: string
+          titulo: string
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Update: {
+          aprovado_em?: string | null
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          card_id?: string
+          cliente_id?: string
+          conteudo?: Json | null
+          created_at?: string
+          enviado_em?: string | null
+          google_drive_id?: string | null
+          id?: string
+          moeda?: string
+          numero?: string | null
+          status?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_comerciais_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           a_receber: number | null
@@ -338,7 +576,22 @@ export type Database = {
           updated_at?: string
           validade_dias?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orcamentos_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
