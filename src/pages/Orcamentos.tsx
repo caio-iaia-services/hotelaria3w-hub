@@ -140,10 +140,9 @@ export default function Orcamentos() {
 
     if (!error) {
       let rows = (data || []) as any[]
-      console.log('🔍 DEBUG keys & link fields:', rows.slice(0, 3).map(r => ({ numero: r.numero, card_id: r.card_id, oportunidade_id: r.oportunidade_id, fornecedor_nome: r.fornecedor_nome, operacao: r.operacao, categoria_id: r.categoria_id, vendedor_id: r.vendedor_id })))
 
       // Enrich: resolve cliente_nome from clientes table if missing
-      const clienteIds = [...new Set(rows.filter(r => r.cliente_id && !r.cliente_nome).map(r => r.cliente_id))]
+      const clienteIds = [...new Set(rows.filter(r => r.cliente_id).map(r => r.cliente_id))]
       let clienteMap: Record<string, { nome_fantasia: string; cnpj: string }> = {}
       if (clienteIds.length > 0) {
         const { data: clientes } = await supabase
@@ -155,18 +154,21 @@ export default function Orcamentos() {
         }
       }
 
-      // Enrich: resolve operacao/fornecedor from crm_cards if missing
-      const cardIds = [...new Set(rows.filter(r => (r.card_id || r.oportunidade_id) && !r.operacao).map(r => r.card_id || r.oportunidade_id))]
+      // Enrich: resolve operacao/fornecedor from crm_cards by cliente_id
       let cardMap: Record<string, { operacao: string; gestao: string }> = {}
-      if (cardIds.length > 0) {
+      const idsParaCards = [...new Set(rows.filter(r => !r.operacao && !r.fornecedor_nome).map(r => r.cliente_id).filter(Boolean))]
+      if (idsParaCards.length > 0) {
         const { data: cards } = await supabase
           .from('crm_cards')
-          .select('id, operacao, gestao, oportunidade_id')
-          .or(`id.in.(${cardIds.join(',')}),oportunidade_id.in.(${cardIds.join(',')})`)
+          .select('id, cliente_id, operacao, gestao')
+          .in('cliente_id', idsParaCards)
+          .order('created_at', { ascending: false })
         if (cards) {
           for (const c of cards as any[]) {
-            cardMap[c.id] = { operacao: c.operacao, gestao: c.gestao }
-            if (c.oportunidade_id) cardMap[c.oportunidade_id] = { operacao: c.operacao, gestao: c.gestao }
+            // Use the most recent card per cliente
+            if (!cardMap[c.cliente_id]) {
+              cardMap[c.cliente_id] = { operacao: c.operacao, gestao: c.gestao }
+            }
           }
         }
       }
@@ -174,13 +176,14 @@ export default function Orcamentos() {
       // Map rows, filling in missing fields from joined data
       const enrichedRows = rows.map((r: any) => {
         const cliente = clienteMap[r.cliente_id]
-        const card = cardMap[r.card_id] || cardMap[r.oportunidade_id]
+        const card = cardMap[r.cliente_id]
         return {
           ...r,
           cliente_nome: r.cliente_nome || cliente?.nome_fantasia || '',
           cliente_cnpj: r.cliente_cnpj || cliente?.cnpj || '',
           fornecedor_nome: r.fornecedor_nome || card?.operacao || '',
           operacao: r.operacao || card?.operacao || null,
+          gestao: r.gestao || card?.gestao || null,
           total: parseNum(r.total) || parseNum(r.valor_total) || 0,
           subtotal: parseNum(r.subtotal) || parseNum(r.valor_produtos) || 0,
           frete: parseNum(r.frete) || parseNum(r.valor_frete) || 0,
