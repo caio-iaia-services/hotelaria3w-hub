@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase'
-import { Orcamento } from '@/lib/types'
+import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search
+  Trash2, Filter, Search, Printer, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -55,6 +57,9 @@ export default function Orcamentos() {
     todos: 0, rascunho: 0, enviado: 0, aprovado: 0, rejeitado: 0, expirado: 0
   })
   const [filtros, setFiltros] = useState({ busca: '', gestao: '' })
+  const [modalVisualizar, setModalVisualizar] = useState(false)
+  const [orcamentoVisualizar, setOrcamentoVisualizar] = useState<Orcamento | null>(null)
+  const [itensVisualizar, setItensVisualizar] = useState<OrcamentoItem[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const buscarContadores = useCallback(async () => {
@@ -115,10 +120,33 @@ export default function Orcamentos() {
     }, 500)
   }
 
-  function visualizarOrcamento(_o: Orcamento) { toast.info('Visualização em desenvolvimento') }
+  async function visualizarOrcamento(o: Orcamento) {
+    setOrcamentoVisualizar(o)
+    const { data: itens } = await supabase
+      .from('orcamento_itens')
+      .select('*')
+      .eq('orcamento_id', o.id)
+      .order('ordem')
+    setItensVisualizar((itens as OrcamentoItem[]) || [])
+    setModalVisualizar(true)
+  }
   function editarOrcamento(_o: Orcamento) { toast.info('Edição em desenvolvimento') }
   function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
   function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
+
+  // Estilo de impressão
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @media print {
+        body * { visibility: hidden; }
+        #orcamento-conteudo, #orcamento-conteudo * { visibility: visible; }
+        #orcamento-conteudo { position: absolute; left: 0; top: 0; width: 100%; }
+      }
+    `
+    document.head.appendChild(style)
+    return () => { document.head.removeChild(style) }
+  }, [])
 
   async function deletarOrcamento(id: string) {
     if (!confirm('Deletar este orçamento?')) return
@@ -297,6 +325,34 @@ export default function Orcamentos() {
           </div>
         </div>
       )}
+      {/* MODAL VISUALIZAR */}
+      <Dialog open={modalVisualizar} onOpenChange={setModalVisualizar}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+          <div className="bg-gray-100 border-b p-4 flex items-center justify-between">
+            <h3 className="font-bold text-lg">
+              Orçamento {orcamentoVisualizar?.numero}
+            </h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir/PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setModalVisualizar(false)}>
+                <X className="w-4 h-4 mr-2" />
+                Fechar
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-y-auto max-h-[85vh]" id="orcamento-conteudo">
+            {orcamentoVisualizar && (
+              <OrcamentoTemplate
+                orcamento={orcamentoVisualizar}
+                itens={itensVisualizar}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
