@@ -140,6 +140,7 @@ export default function Orcamentos() {
 
     if (!error) {
       let rows = (data || []) as any[]
+      console.log('🔍 DEBUG keys & link fields:', rows.slice(0, 3).map(r => ({ numero: r.numero, card_id: r.card_id, oportunidade_id: r.oportunidade_id, fornecedor_nome: r.fornecedor_nome, operacao: r.operacao, categoria_id: r.categoria_id, vendedor_id: r.vendedor_id })))
 
       // Enrich: resolve cliente_nome from clientes table if missing
       const clienteIds = [...new Set(rows.filter(r => r.cliente_id && !r.cliente_nome).map(r => r.cliente_id))]
