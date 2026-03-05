@@ -45,43 +45,46 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         {/* HEADER */}
         <div className="bg-[#1a4168] text-white p-6">
           <div className="max-w-7xl mx-auto flex items-start justify-between">
-            <div>
+            
+            {/* LADO ESQUERDO: Logo + Contatos ALINHADOS HORIZONTALMENTE */}
+            <div className="flex items-center gap-8">
               <img 
                 src="/logo_3Whotelaria.jpeg" 
                 alt="3W Hotelaria" 
-                className="h-16 mb-4"
+                className="h-14"
               />
               
-              <div className="space-y-1 text-sm">
-                <p className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-white" />
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 flex-shrink-0" />
                   <span>www.3whotelaria.com.br</span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 flex-shrink-0" />
                   <span>+55 (11) 5197-5779</span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 flex-shrink-0" />
                   <span>comercial1@3whotelaria.com.br</span>
-                </p>
+                </div>
               </div>
             </div>
             
+            {/* LADO DIREITO: Número + Datas + Status */}
             <div className="text-right">
               <div className="bg-[#D4AF37] text-[#1a4168] px-8 py-3 rounded-lg inline-block mb-4">
                 <p className="text-sm font-semibold">Orçamento {orcamento.numero}</p>
               </div>
               
               {orcamento.fornecedor_nome && (
-                <div className="bg-white p-3 rounded inline-block">
+                <div className="mb-4">
                   <p className="text-2xl font-bold text-red-600">
                     {orcamento.fornecedor_nome.split(' ')[0]}
                   </p>
                 </div>
               )}
               
-              <div className="mt-4 space-y-1 text-sm">
+              <div className="space-y-1 text-sm">
                 <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
@@ -128,7 +131,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <div className="flex justify-between items-start mb-4">
               {/* Dados do Cliente - Esquerda */}
       <div className="space-y-1">
-                <p className="font-bold text-base text-[#1a4168] mb-3">
+                <p className="font-bold text-xl text-[#1a4168] mb-3">
                   {orcamento.cliente_cnpj || '22.500.917/0001-98'}  {orcamento.cliente_nome || 'Mendes Plaza'}
                 </p>
                 <p className="flex items-center gap-2 text-sm">
