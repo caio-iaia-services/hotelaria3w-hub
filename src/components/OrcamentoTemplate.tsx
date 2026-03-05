@@ -18,39 +18,61 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(null)
 
   useEffect(() => {
+    let ativo = true
+    setFornecedor(null)
+
     async function buscarFornecedor() {
-      // 1. Buscar por ID direto (mais confiável)
+      // 1) Buscar por ID direto (fonte mais confiável)
       if (orcamento.fornecedor_id) {
         const { data } = await supabase
           .from('fornecedores')
           .select('tipo_layout, nome_fantasia, logotipo_url')
           .eq('id', orcamento.fornecedor_id)
           .maybeSingle()
-        if (data) { setFornecedor(data as FornecedorLayout); return }
+
+        if (data && ativo) {
+          setFornecedor(data as FornecedorLayout)
+          return
+        }
       }
-      // 2. Fallback: buscar pela operação (nome exato do fornecedor)
-      const nomeBusca = orcamento.operacao || orcamento.fornecedor_nome
-      if (nomeBusca) {
-        // Tentar busca exata (case-insensitive)
-        const { data: exato } = await supabase
-          .from('fornecedores')
-          .select('tipo_layout, nome_fantasia, logotipo_url')
-          .ilike('nome_fantasia', nomeBusca.trim())
-          .limit(1)
-          .maybeSingle()
-        if (exato) { setFornecedor(exato as FornecedorLayout); return }
-        // 3. Último fallback: busca parcial
-        const { data: parcial } = await supabase
-          .from('fornecedores')
-          .select('tipo_layout, nome_fantasia, logotipo_url')
-          .ilike('nome_fantasia', `%${nomeBusca.trim()}%`)
-          .limit(1)
-          .maybeSingle()
-        if (parcial) setFornecedor(parcial as FornecedorLayout)
+
+      // 2) Fallback estrito por nome (prioriza fornecedor_nome do orçamento)
+      const nomeBusca = (orcamento.fornecedor_nome || orcamento.operacao || '').trim()
+      if (!nomeBusca) return
+
+      // tenta igualdade exata
+      const { data: exato } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .eq('nome_fantasia', nomeBusca)
+        .maybeSingle()
+
+      if (exato && ativo) {
+        setFornecedor(exato as FornecedorLayout)
+        return
+      }
+
+      // tenta case-insensitive, ainda com match exato (sem %)
+      const { data: candidatos } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .ilike('nome_fantasia', nomeBusca)
+        .limit(10)
+
+      const encontrado = (candidatos || []).find((f: any) =>
+        String(f.nome_fantasia || '').trim().toUpperCase() === nomeBusca.toUpperCase()
+      )
+
+      if (encontrado && ativo) {
+        setFornecedor(encontrado as FornecedorLayout)
       }
     }
+
     buscarFornecedor()
-  }, [orcamento.fornecedor_id, orcamento.fornecedor_nome, orcamento.operacao])
+    return () => {
+      ativo = false
+    }
+  }, [orcamento.id, orcamento.fornecedor_id, orcamento.fornecedor_nome, orcamento.operacao])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
   console.log('📊 === VALORES DO ORÇAMENTO NO TEMPLATE ===')

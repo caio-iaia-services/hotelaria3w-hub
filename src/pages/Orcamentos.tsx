@@ -240,7 +240,27 @@ export default function Orcamentos() {
       frete: o.frete,
       fornecedor_id: o.fornecedor_id,
     })
-    setOrcamentoVisualizar(o)
+
+    // Recarrega o orçamento direto do banco para evitar dados "enriquecidos" incorretos da listagem
+    const { data: orcamentoDb } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('id', o.id)
+      .maybeSingle()
+
+    const orcamentoBase = (orcamentoDb as any)
+      ? ({
+          ...o,
+          ...(orcamentoDb as any),
+          total: parseNum((orcamentoDb as any).total) || parseNum((orcamentoDb as any).valor_total) || parseNum((o as any).total) || 0,
+          subtotal: parseNum((orcamentoDb as any).subtotal) || parseNum((orcamentoDb as any).valor_produtos) || parseNum((o as any).subtotal) || 0,
+          frete: parseNum((orcamentoDb as any).frete) || parseNum((orcamentoDb as any).valor_frete) || parseNum((o as any).frete) || 0,
+          desconto: parseNum((orcamentoDb as any).desconto) || parseNum((orcamentoDb as any).valor_desconto) || parseNum((o as any).desconto) || 0,
+        } as Orcamento)
+      : o
+
+    setOrcamentoVisualizar(orcamentoBase)
+
     const { data: itens } = await supabase
       .from('orcamento_itens')
       .select('*')
