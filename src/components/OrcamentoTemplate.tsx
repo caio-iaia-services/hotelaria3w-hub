@@ -418,34 +418,52 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
             </div>
             
-            {/* 3 COLUNAS: FRETE | ENTREGA | CONDIÇÕES */}
+            {/* GRID: FRETE/ENTREGA/DIFAL (esquerda) | CONDIÇÕES (direita) */}
             <div className="grid grid-cols-12 gap-6 mt-8">
               
-              {/* FRETE - 2 colunas */}
-              <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
-                <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
-                  <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
-                    <Truck className="w-5 h-5" /> Frete
-                  </p>
+              {/* LADO ESQUERDO: Frete + Entrega + Difal */}
+              <div className="col-span-4 flex flex-col gap-0">
+                {/* Frete e Entrega lado a lado */}
+                <div className="grid grid-cols-2 gap-0">
+                  {/* FRETE */}
+                  <div className="border-2 border-gray-300 rounded-tl-lg overflow-hidden">
+                    <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
+                      <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
+                        <Truck className="w-5 h-5" /> Frete
+                      </p>
+                    </div>
+                    <div className="p-3 text-center">
+                      <p className="text-sm font-semibold">{orcamento.frete_tipo || 'CIF (Incluso)'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* ENTREGA */}
+                  <div className="border-2 border-l-0 border-gray-300 rounded-tr-lg overflow-hidden">
+                    <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
+                      <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
+                        <Package className="w-5 h-5" /> Entrega
+                      </p>
+                    </div>
+                    <div className="p-3 text-center">
+                      <p className="text-sm font-semibold">{orcamento.prazo_entrega || '45/60 dias'}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 text-center">
-                  <p className="text-sm font-semibold">{orcamento.frete_tipo || 'CIF (Incluso)'}</p>
+                
+                {/* DIFAL - mesma largura dos 2 acima */}
+                <div className="border-2 border-t-0 border-gray-300 rounded-b-lg overflow-hidden">
+                  <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
+                    <p className="font-bold text-center flex items-center justify-center gap-2">
+                      <DollarSign className="w-5 h-5" /> Difal
+                    </p>
+                  </div>
+                  <div className="p-4 bg-blue-50 text-sm text-gray-700">
+                    <p>{orcamento.difal_texto || 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.'}</p>
+                  </div>
                 </div>
               </div>
               
-              {/* ENTREGA - 2 colunas */}
-              <div className="col-span-2 border-2 border-gray-300 rounded-lg overflow-hidden">
-                <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
-                  <p className="font-bold text-center text-sm flex items-center justify-center gap-1">
-                    <Package className="w-5 h-5" /> Entrega
-                  </p>
-                </div>
-                <div className="p-3 text-center">
-                  <p className="text-sm font-semibold">{orcamento.prazo_entrega || '45/60 dias'}</p>
-                </div>
-              </div>
-              
-              {/* CONDIÇÕES - 8 colunas (maior) */}
+              {/* LADO DIREITO: CONDIÇÕES */}
               <div className="col-span-8 border-2 border-gray-300 rounded-lg overflow-hidden">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold text-center flex items-center justify-center gap-2">
@@ -469,19 +487,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            {/* BOX DIFAL */}
-            <div className="mt-6 border-2 border-gray-300 rounded-lg overflow-hidden">
-              <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
-                <p className="font-bold flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Difal
-                </p>
-              </div>
-              <div className="p-4 bg-blue-50 text-sm text-gray-700">
-                <p>{orcamento.difal_texto || 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.'}</p>
               </div>
             </div>
             
