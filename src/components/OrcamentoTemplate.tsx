@@ -192,7 +192,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 className="h-24 mb-4"
               />
               
-              <div className="flex flex-col gap-3 text-base">
+              <div className="flex flex-col gap-3 text-base" style={{ marginLeft: '45px' }}>
                 <div className="flex items-center gap-3">
                   <Globe className="w-6 h-6 flex-shrink-0" />
                   <span className="text-lg">www.3whotelaria.com.br</span>
