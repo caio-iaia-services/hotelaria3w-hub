@@ -792,6 +792,7 @@ export default function AcoesComerciais() {
             : null
 
           if (colunaAusente && colunaAusente in payload) {
+            console.warn(`⚠️ Removendo campo ausente no schema: ${colunaAusente} = ${JSON.stringify(payload[colunaAusente])}`)
             delete payload[colunaAusente as keyof typeof payload]
             continue
           }
