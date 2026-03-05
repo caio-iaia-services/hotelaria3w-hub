@@ -354,9 +354,13 @@ export default function AcoesComerciais() {
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
     frete: 0,
+    frete_tipo: 'CIF (Incluso)',
     impostos: 0,
+    desconto: 0,
     condicoes_pagamento: '',
     observacoes: '',
+    observacoes_gerais: '',
+    difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
   })
 
   // Merge static operations with DB fornecedores
