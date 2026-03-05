@@ -120,10 +120,33 @@ export default function Orcamentos() {
     }, 500)
   }
 
-  function visualizarOrcamento(_o: Orcamento) { toast.info('Visualização em desenvolvimento') }
+  async function visualizarOrcamento(o: Orcamento) {
+    setOrcamentoVisualizar(o)
+    const { data: itens } = await supabase
+      .from('orcamento_itens')
+      .select('*')
+      .eq('orcamento_id', o.id)
+      .order('ordem')
+    setItensVisualizar((itens as OrcamentoItem[]) || [])
+    setModalVisualizar(true)
+  }
   function editarOrcamento(_o: Orcamento) { toast.info('Edição em desenvolvimento') }
   function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
   function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
+
+  // Estilo de impressão
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @media print {
+        body * { visibility: hidden; }
+        #orcamento-conteudo, #orcamento-conteudo * { visibility: visible; }
+        #orcamento-conteudo { position: absolute; left: 0; top: 0; width: 100%; }
+      }
+    `
+    document.head.appendChild(style)
+    return () => { document.head.removeChild(style) }
+  }, [])
 
   async function deletarOrcamento(id: string) {
     if (!confirm('Deletar este orçamento?')) return
