@@ -322,7 +322,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-[#1a4168] text-white">
-                  <th className="border border-white p-3 text-left">Item</th>
+                  <th className="border border-white p-3 text-center">Item</th>
                   {(() => {
                     console.log('🔢 Renderizando cabeçalho código. Tipo:', tipoLayout)
                     return tipoLayout === 'castor' ? (
