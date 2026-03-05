@@ -161,7 +161,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
               
               {fornecedor?.logotipo_url ? (
-                <div className="mb-4">
+                <div className="mb-4 flex justify-end">
                   <img 
                     src={fornecedor.logotipo_url} 
                     alt={fornecedor.nome_fantasia} 
