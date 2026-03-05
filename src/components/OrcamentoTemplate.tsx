@@ -46,12 +46,12 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         <div className="bg-[#1a4168] text-white p-6">
           <div className="max-w-7xl mx-auto flex items-start justify-between">
             
-            {/* LADO ESQUERDO: Logo + Contatos ALINHADOS HORIZONTALMENTE */}
-            <div className="flex items-center gap-8">
+            {/* LADO ESQUERDO: Logo em cima, Contatos embaixo */}
+            <div>
               <img 
                 src="/logo_3Whotelaria.jpeg" 
                 alt="3W Hotelaria" 
-                className="h-14"
+                className="h-14 mb-4"
               />
               
               <div className="flex flex-col gap-2 text-sm">
