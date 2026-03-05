@@ -422,7 +422,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <div className="grid grid-cols-12 gap-6 mt-8">
               
               {/* LADO ESQUERDO: Frete + Entrega + Difal */}
-              <div className="col-span-4 flex flex-col gap-0">
+              <div className="col-span-4 flex flex-col gap-0 h-full">
                 {/* Frete e Entrega lado a lado */}
                 <div className="grid grid-cols-2 gap-0">
                   {/* FRETE */}
