@@ -212,19 +212,27 @@ export type Database = {
           codigo_empresa: string | null
           condicoes_pagamento: Json | null
           created_at: string
+          data_emissao: string | null
           data_validade: string | null
           desconto: number
+          desconto_percentual: number | null
+          desconto_valor: number | null
+          difal_texto: string | null
           enviado_em: string | null
           fornecedor_id: string | null
           fornecedor_nome: string | null
           frete: number
+          frete_tipo: string | null
           gestao: string | null
           html_content: string | null
           id: string
           imagem_marketing_url: string | null
+          imagem_publicidade_url: string | null
           impostos: number
+          impostos_percentual: number | null
           numero: string
           observacoes: string | null
+          observacoes_gerais: string | null
           operacao: string | null
           pdf_url: string | null
           prazo_entrega: string | null
@@ -251,19 +259,27 @@ export type Database = {
           codigo_empresa?: string | null
           condicoes_pagamento?: Json | null
           created_at?: string
+          data_emissao?: string | null
           data_validade?: string | null
           desconto?: number
+          desconto_percentual?: number | null
+          desconto_valor?: number | null
+          difal_texto?: string | null
           enviado_em?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           frete?: number
+          frete_tipo?: string | null
           gestao?: string | null
           html_content?: string | null
           id?: string
           imagem_marketing_url?: string | null
+          imagem_publicidade_url?: string | null
           impostos?: number
+          impostos_percentual?: number | null
           numero: string
           observacoes?: string | null
+          observacoes_gerais?: string | null
           operacao?: string | null
           pdf_url?: string | null
           prazo_entrega?: string | null
@@ -290,19 +306,27 @@ export type Database = {
           codigo_empresa?: string | null
           condicoes_pagamento?: Json | null
           created_at?: string
+          data_emissao?: string | null
           data_validade?: string | null
           desconto?: number
+          desconto_percentual?: number | null
+          desconto_valor?: number | null
+          difal_texto?: string | null
           enviado_em?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           frete?: number
+          frete_tipo?: string | null
           gestao?: string | null
           html_content?: string | null
           id?: string
           imagem_marketing_url?: string | null
+          imagem_publicidade_url?: string | null
           impostos?: number
+          impostos_percentual?: number | null
           numero?: string
           observacoes?: string | null
+          observacoes_gerais?: string | null
           operacao?: string | null
           pdf_url?: string | null
           prazo_entrega?: string | null
