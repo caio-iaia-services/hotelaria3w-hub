@@ -1,5 +1,13 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
+
+interface FornecedorLayout {
+  tipo_layout: string | null
+  nome_fantasia: string
+  logotipo_url: string | null
+}
 
 interface Props {
   orcamento: Orcamento
@@ -7,6 +15,26 @@ interface Props {
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
+  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(null)
+
+  useEffect(() => {
+    async function buscarFornecedor() {
+      if (orcamento.fornecedor_id) {
+        const { data } = await supabase
+          .from('fornecedores')
+          .select('tipo_layout, nome_fantasia, logotipo_url')
+          .eq('id', orcamento.fornecedor_id)
+          .single()
+        if (data) {
+          setFornecedor(data as FornecedorLayout)
+          console.log('🎨 Tipo de layout:', data.tipo_layout)
+        }
+      }
+    }
+    buscarFornecedor()
+  }, [orcamento.fornecedor_id])
+
+  const tipoLayout = fornecedor?.tipo_layout || 'padrao'
   console.log('📊 ORÇAMENTO RECEBIDO:', {
     numero: orcamento.numero,
     subtotal: orcamento.subtotal,
@@ -174,7 +202,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <thead>
                 <tr className="bg-[#1a4168] text-white">
                   <th className="border border-white p-3 text-left">Item</th>
-                  <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
+                  {tipoLayout === 'castor' ? (
+                    <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
+                  ) : (
+                    <th className="border border-white p-3 text-center">Código</th>
+                  )}
                   <th className="border border-white p-3 text-left">Descrição</th>
                   <th className="border border-white p-3 text-center">Medidas</th>
                   <th className="border border-white p-3 text-center">Qtd</th>
@@ -192,15 +224,24 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         {index + 1}
                       </td>
                       
-                      {codigoDividido.length > 0 ? (
-                        codigoDividido.slice(0, 6).map((digito, i) => (
-                          <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
-                            {digito}
-                          </td>
-                        ))
+                      {tipoLayout === 'castor' ? (
+                        <>
+                          {codigoDividido.length > 0 ? (
+                            codigoDividido.slice(0, 6).map((digito, i) => (
+                              <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
+                                {digito}
+                              </td>
+                            ))
+                          ) : (
+                            <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
+                          )}
+                          {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
+                            <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
+                          ))}
+                        </>
                       ) : (
-                        <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">
-                          -
+                        <td className="border border-gray-300 p-3 text-center font-mono">
+                          {item.codigo || '-'}
                         </td>
                       )}
                       
@@ -444,8 +485,26 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
                 <div className="mt-1 bg-gray-200 text-gray-700 px-3 py-1 rounded inline-block text-xs">
                   {orcamento.status.toUpperCase()}
+            </div>
+
+            {/* TERMOS DO FORNECEDOR - APENAS MIDEA */}
+            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
+              <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  {fornecedor?.logotipo_url ? (
+                    <img src={fornecedor.logotipo_url} alt={fornecedor.nome_fantasia} className="h-12" />
+                  ) : (
+                    <p className="text-2xl font-bold text-blue-600">
+                      {orcamento.fornecedor_nome}
+                    </p>
+                  )}
+                </div>
+                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {orcamento.termos_fornecedor}
                 </div>
               </div>
+            )}
+          </div>
             </div>
           </div>
           
@@ -475,23 +534,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         </div>
       )}
       
-      {/* TERMOS DO FORNECEDOR */}
-      {orcamento.termos_fornecedor && orcamento.termos_fornecedor.length > 200 && (
-        <div className="mt-12 p-8 border-t-4 border-[#1a4168]">
-          <div className="max-w-7xl mx-auto bg-blue-50 rounded-lg p-6">
-            {orcamento.fornecedor_nome && (
-              <div className="mb-4">
-                <p className="text-2xl font-bold text-blue-600">
-                  {orcamento.fornecedor_nome}
-                </p>
-              </div>
-            )}
-            <div className="text-sm text-gray-700 whitespace-pre-wrap">
-              {orcamento.termos_fornecedor}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
