@@ -742,6 +742,14 @@ export default function AcoesComerciais() {
         }
       }
 
+      console.log('📋 PAYLOAD ANTES DO INSERT:')
+      console.log('subtotal:', subtotal, typeof subtotal)
+      console.log('impostos:', valorImpostos, typeof valorImpostos)
+      console.log('desconto:', valorDesconto, typeof valorDesconto)
+      console.log('frete:', valorFrete, typeof valorFrete)
+      console.log('total:', total, typeof total)
+      console.log('impPerc:', impPerc, 'descPerc:', descPerc)
+
       const orcamentoPayload: Record<string, unknown> = {
         numero,
         card_id: cardSelecionado.id,
@@ -757,15 +765,15 @@ export default function AcoesComerciais() {
         operacao: operacaoSelecionada,
         gestao: cardSelecionado.gestao,
         codigo_empresa: fornecedorSelecionado?.codigo || null,
-        subtotal: Number(subtotal),
-        frete: Number(valorFrete),
+        subtotal: isNaN(subtotal) ? 0 : Number(subtotal),
+        frete: isNaN(valorFrete) ? 0 : Number(valorFrete),
         frete_tipo: dadosOrcamento.frete_tipo,
-        impostos: Number(valorImpostos),
-        impostos_percentual: Number(impPerc),
-        desconto: Number(valorDesconto),
-        desconto_percentual: Number(descPerc),
-        desconto_valor: Number(valorDesconto),
-        total: Number(total),
+        impostos: isNaN(valorImpostos) ? 0 : Number(valorImpostos),
+        impostos_percentual: isNaN(impPerc) ? 0 : Number(impPerc),
+        desconto: isNaN(valorDesconto) ? 0 : Number(valorDesconto),
+        desconto_percentual: isNaN(descPerc) ? 0 : Number(descPerc),
+        desconto_valor: isNaN(valorDesconto) ? 0 : Number(valorDesconto),
+        total: isNaN(total) ? 0 : Number(total),
         prazo_entrega: dadosOrcamento.prazo_entrega,
         validade_dias: dadosOrcamento.validade_dias,
         data_validade: dataValidade.toISOString(),
@@ -779,6 +787,8 @@ export default function AcoesComerciais() {
         imagem_marketing_url: imagemMarketingUrl,
         status: 'rascunho',
       }
+
+      console.log('🔑 PAYLOAD COMPLETO:', JSON.stringify(orcamentoPayload, null, 2))
 
       async function inserirOrcamentoComFallback(payloadBase: Record<string, unknown>) {
         const payload = { ...payloadBase }
@@ -811,9 +821,10 @@ export default function AcoesComerciais() {
       const orcamento = await inserirOrcamentoComFallback(orcamentoPayload)
 
       if (orcamento) {
-        console.log('ORÇAMENTO SALVO:', orcamento)
+        console.log('✅ ORÇAMENTO SALVO COM SUCESSO:', JSON.stringify(orcamento, null, 2))
+        console.log('💰 Valores no retorno: subtotal=', orcamento.subtotal, 'total=', orcamento.total, 'impostos=', orcamento.impostos, 'desconto=', orcamento.desconto)
         if (orcamento.total === 0 || orcamento.subtotal === 0) {
-          console.error('⚠️ VALORES ZERADOS! Verificar cálculo')
+          console.error('⚠️ VALORES ZERADOS NO RETORNO! O banco não salvou os valores corretamente')
         }
       }
 
@@ -825,9 +836,9 @@ export default function AcoesComerciais() {
           codigo: item.codigo || null,
           descricao: item.descricao,
           especificacoes: item.especificacoes || null,
-          quantidade: parseFloat(String(item.quantidade).replace(',', '.')) || 0,
-          preco_unitario: parseFloat(String(item.preco_unitario).replace(',', '.')) || 0,
-          total: item.total,
+          quantidade: parseFloat(String(item.quantidade).replace(/\./g, '').replace(',', '.')) || 0,
+          preco_unitario: parseFloat(String(item.preco_unitario).replace(/\./g, '').replace(',', '.')) || 0,
+          total: isNaN(item.total) ? 0 : Number(item.total),
           ordem: index,
         }))
 
