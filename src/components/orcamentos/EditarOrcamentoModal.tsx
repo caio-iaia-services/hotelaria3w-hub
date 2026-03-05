@@ -94,7 +94,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
       })
-    }
+      setImagemPreview(o.imagem_marketing_url || null)
+      setImagemFile(null)
+      setImagensAdicionaisPreview([])
+      setImagensAdicionaisFiles([])
 
     if (itensDb) {
       setItens((itensDb as any[]).map(i => ({
