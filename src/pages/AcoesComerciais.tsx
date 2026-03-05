@@ -851,7 +851,10 @@ export default function AcoesComerciais() {
       }
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao gerar orçamento')
+      const mensagem = typeof error === 'object' && error && 'message' in error
+        ? String((error as { message?: string }).message)
+        : 'Erro ao gerar orçamento'
+      toast.error(mensagem)
     }
   }
 
