@@ -798,14 +798,14 @@ export default function Fornecedores() {
       {/* Tipo de Layout do Orçamento */}
       <div className="space-y-1.5">
         <Label>Tipo de Layout do Orçamento</Label>
-        <Select value={reg("tipo_layout").name ? undefined : "padrao"} onValueChange={(v) => set("tipo_layout", v)}>
-          <SelectTrigger><SelectValue placeholder="Selecione o layout" /></SelectTrigger>
-          <SelectContent className="bg-card z-50">
-            <SelectItem value="padrao">Padrão (genérico)</SelectItem>
-            <SelectItem value="castor">Castor (código dividido, sem box extra)</SelectItem>
-            <SelectItem value="midea">Midea (código normal, com box termos)</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          {...reg("tipo_layout")}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="padrao">Padrão (genérico)</option>
+          <option value="castor">Castor (código dividido, sem box extra)</option>
+          <option value="midea">Midea (código normal, com box termos)</option>
+        </select>
         <p className="text-xs text-muted-foreground mt-1">
           Define como o orçamento será apresentado visualmente
         </p>
