@@ -1,7 +1,7 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,6 +51,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [saving, setSaving] = useState(false)
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null)
   const [itens, setItens] = useState<ItemLocal[]>([])
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null)
+  const [imagemFile, setImagemFile] = useState<File | null>(null)
+  const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
+  const [imagensAdicionaisFiles, setImagensAdicionaisFiles] = useState<File[]>([])
   const [dados, setDados] = useState({
     prazo_entrega: '',
     validade_dias: 30,
@@ -90,6 +94,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
       })
+      setImagemPreview(o.imagem_marketing_url || null)
+      setImagemFile(null)
+      setImagensAdicionaisPreview([])
+      setImagensAdicionaisFiles([])
     }
 
     if (itensDb) {
@@ -139,6 +147,32 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     setItens(prev => prev.filter(i => i.id !== id))
   }
 
+  function handleImagemMarketing(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImagemFile(file)
+      setImagemPreview(URL.createObjectURL(file))
+    }
+  }
+
+  function removerImagemMarketing() {
+    setImagemFile(null)
+    setImagemPreview(null)
+  }
+
+  function handleImagensAdicionais(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      setImagensAdicionaisFiles(prev => [...prev, ...files])
+      setImagensAdicionaisPreview(prev => [...prev, ...files.map(f => URL.createObjectURL(f))])
+    }
+  }
+
+  function removerImagemAdicional(index: number) {
+    setImagensAdicionaisFiles(prev => prev.filter((_, i) => i !== index))
+    setImagensAdicionaisPreview(prev => prev.filter((_, i) => i !== index))
+  }
+
   const subtotal = itens.reduce((sum, i) => sum + i.total, 0)
   const valorImpostos = subtotal * (parseNum(dados.impostos_percentual) / 100)
   const valorDesconto = subtotal * (parseNum(dados.desconto_percentual) / 100)
@@ -159,6 +193,18 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         toast.error('Preencha todos os campos obrigatórios dos itens')
         setSaving(false)
         return
+      }
+
+      // Upload imagem de marketing se alterada
+      let imagemMarketingUrl = imagemPreview
+      if (imagemFile) {
+        const ext = imagemFile.name.split('.').pop()
+        const path = `orcamentos/${orcamento.id}/marketing.${ext}`
+        const { error: upErr } = await supabase.storage.from('orcamentos').upload(path, imagemFile, { upsert: true })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('orcamentos').getPublicUrl(path)
+          imagemMarketingUrl = urlData.publicUrl
+        }
       }
 
       // Update orcamento record
@@ -184,6 +230,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           observacoes: dados.observacoes,
           observacoes_gerais: dados.observacoes_gerais,
           difal_texto: dados.difal_texto,
+          imagem_marketing_url: imagemMarketingUrl,
           updated_at: new Date().toISOString(),
         })
         .eq('id', orcamento.id)
@@ -408,6 +455,70 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                 onChange={(e) => setDados(p => ({ ...p, difal_texto: e.target.value }))}
                 rows={3}
               />
+            </div>
+
+            {/* IMAGEM DE MARKETING */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagem de Marketing</Label>
+              <div className="relative">
+                <img
+                  src={imagemPreview || '/placeholder.svg'}
+                  alt="Preview marketing"
+                  className="w-full max-h-48 object-cover rounded-lg bg-muted"
+                />
+                {imagemPreview && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0"
+                    onClick={removerImagemMarketing}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <label className="mt-2 inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Alterar Imagem
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
+              </label>
+            </div>
+
+            {/* IMAGENS ADICIONAIS */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagens Adicionais</Label>
+              {imagensAdicionaisPreview.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  {imagensAdicionaisPreview.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Adicional ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0"
+                        onClick={() => removerImagemAdicional(i)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Adicionar Imagens
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagensAdicionais} />
+              </label>
             </div>
 
             {/* RESUMO FINANCEIRO */}
