@@ -121,12 +121,23 @@ export default function Orcamentos() {
   }
 
   async function visualizarOrcamento(o: Orcamento) {
+    console.log('👁️ VISUALIZAR ORÇAMENTO - dados da listagem:', {
+      id: o.id,
+      numero: o.numero,
+      subtotal: o.subtotal,
+      total: o.total,
+      impostos: o.impostos,
+      desconto: o.desconto,
+      frete: o.frete,
+      fornecedor_id: o.fornecedor_id,
+    })
     setOrcamentoVisualizar(o)
     const { data: itens } = await supabase
       .from('orcamento_itens')
       .select('*')
       .eq('orcamento_id', o.id)
       .order('ordem')
+    console.log('📦 ITENS DO ORÇAMENTO:', itens?.map(i => ({ desc: (i as any).descricao, qty: (i as any).quantidade, price: (i as any).preco_unitario, total: (i as any).total })))
     setItensVisualizar((itens as OrcamentoItem[]) || [])
     setModalVisualizar(true)
   }
