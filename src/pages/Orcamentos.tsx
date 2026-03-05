@@ -15,6 +15,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
+import { EditarOrcamentoModal } from '@/components/orcamentos/EditarOrcamentoModal'
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -74,6 +75,8 @@ export default function Orcamentos() {
   const [orcamentoVisualizar, setOrcamentoVisualizar] = useState<Orcamento | null>(null)
   const [itensVisualizar, setItensVisualizar] = useState<OrcamentoItem[]>([])
   const [totaisItensFallback, setTotaisItensFallback] = useState<Record<string, number>>({})
+  const [modalEditar, setModalEditar] = useState(false)
+  const [orcamentoEditarId, setOrcamentoEditarId] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const getTotalExibicao = useCallback((orcamento: Orcamento) => {
@@ -270,7 +273,10 @@ export default function Orcamentos() {
     setItensVisualizar((itens as OrcamentoItem[]) || [])
     setModalVisualizar(true)
   }
-  function editarOrcamento(_o: Orcamento) { toast.info('Edição em desenvolvimento') }
+  function editarOrcamento(o: Orcamento) {
+    setOrcamentoEditarId(o.id)
+    setModalEditar(true)
+  }
   function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
   function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
 
@@ -439,7 +445,7 @@ export default function Orcamentos() {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}><Eye className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editarOrcamento(orcamento)} disabled={orcamento.status === 'aprovado'}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editarOrcamento(orcamento)}><Edit className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => enviarOrcamento(orcamento)} disabled={orcamento.status !== 'rascunho'}><Send className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => baixarPDF(orcamento)}><Download className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletarOrcamento(orcamento.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -499,6 +505,17 @@ export default function Orcamentos() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL EDITAR */}
+      <EditarOrcamentoModal
+        open={modalEditar}
+        onOpenChange={setModalEditar}
+        orcamentoId={orcamentoEditarId}
+        onSaved={() => {
+          buscarOrcamentos()
+          buscarContadores()
+        }}
+      />
     </div>
   )
 }
