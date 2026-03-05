@@ -19,31 +19,39 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
   useEffect(() => {
     async function buscarFornecedor() {
+      console.log('🔍 Buscando fornecedor ID:', orcamento.fornecedor_id)
+
       if (orcamento.fornecedor_id) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('fornecedores')
           .select('tipo_layout, nome_fantasia, logotipo_url')
           .eq('id', orcamento.fornecedor_id)
           .single()
+
+        console.log('📦 Fornecedor retornado:', data)
+        console.log('❌ Erro (se houver):', error)
+
         if (data) {
           setFornecedor(data as FornecedorLayout)
-          console.log('🎨 Tipo de layout:', data.tipo_layout)
+          console.log('✅ Fornecedor setado:', data)
+          console.log('🎨 Tipo de layout detectado:', data.tipo_layout)
         }
+      } else {
+        console.log('⚠️ Nenhum fornecedor_id no orçamento')
       }
     }
     buscarFornecedor()
   }, [orcamento.fornecedor_id])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
-  console.log('📊 ORÇAMENTO RECEBIDO:', {
-    numero: orcamento.numero,
-    subtotal: orcamento.subtotal,
-    impostos: orcamento.impostos,
-    impostos_percentual: orcamento.impostos_percentual,
-    desconto: orcamento.desconto,
-    total: orcamento.total,
-    itens_count: itens.length
-  })
+  console.log('==========================================')
+  console.log('🎨 RENDERIZANDO ORÇAMENTO')
+  console.log('==========================================')
+  console.log('Fornecedor:', fornecedor)
+  console.log('Tipo Layout Final:', tipoLayout)
+  console.log('É Castor?', tipoLayout === 'castor')
+  console.log('É Midea?', tipoLayout === 'midea')
+  console.log('==========================================')
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -202,11 +210,14 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <thead>
                 <tr className="bg-[#1a4168] text-white">
                   <th className="border border-white p-3 text-left">Item</th>
-                  {tipoLayout === 'castor' ? (
-                    <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
-                  ) : (
-                    <th className="border border-white p-3 text-center">Código</th>
-                  )}
+                  {(() => {
+                    console.log('🔢 Renderizando cabeçalho código. Tipo:', tipoLayout)
+                    return tipoLayout === 'castor' ? (
+                      <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
+                    ) : (
+                      <th className="border border-white p-3 text-center">Código</th>
+                    )
+                  })()}
                   <th className="border border-white p-3 text-left">Descrição</th>
                   <th className="border border-white p-3 text-center">Medidas</th>
                   <th className="border border-white p-3 text-center">Qtd</th>
@@ -224,26 +235,29 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         {index + 1}
                       </td>
                       
-                      {tipoLayout === 'castor' ? (
-                        <>
-                          {codigoDividido.length > 0 ? (
-                            codigoDividido.slice(0, 6).map((digito, i) => (
-                              <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
-                                {digito}
-                              </td>
-                            ))
-                          ) : (
-                            <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
-                          )}
-                          {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
-                            <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
-                          ))}
-                        </>
-                      ) : (
-                        <td className="border border-gray-300 p-3 text-center font-mono">
-                          {item.codigo || '-'}
-                        </td>
-                      )}
+                      {(() => {
+                        console.log(`📝 Item ${index + 1} - Código: ${item.codigo} - Layout: ${tipoLayout}`)
+                        return tipoLayout === 'castor' ? (
+                          <>
+                            {codigoDividido.length > 0 ? (
+                              codigoDividido.slice(0, 6).map((digito, i) => (
+                                <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
+                                  {digito}
+                                </td>
+                              ))
+                            ) : (
+                              <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
+                            )}
+                            {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
+                              <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
+                            ))}
+                          </>
+                        ) : (
+                          <td className="border border-gray-300 p-3 text-center font-mono">
+                            {item.codigo || '-'}
+                          </td>
+                        )
+                      })()}
                       
                       <td className="border border-gray-300 p-3">
                         <p className="font-semibold">{item.descricao}</p>
