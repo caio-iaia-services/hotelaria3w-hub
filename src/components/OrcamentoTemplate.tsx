@@ -19,31 +19,39 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
   useEffect(() => {
     async function buscarFornecedor() {
+      console.log('🔍 Buscando fornecedor ID:', orcamento.fornecedor_id)
+
       if (orcamento.fornecedor_id) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('fornecedores')
           .select('tipo_layout, nome_fantasia, logotipo_url')
           .eq('id', orcamento.fornecedor_id)
           .single()
+
+        console.log('📦 Fornecedor retornado:', data)
+        console.log('❌ Erro (se houver):', error)
+
         if (data) {
           setFornecedor(data as FornecedorLayout)
-          console.log('🎨 Tipo de layout:', data.tipo_layout)
+          console.log('✅ Fornecedor setado:', data)
+          console.log('🎨 Tipo de layout detectado:', data.tipo_layout)
         }
+      } else {
+        console.log('⚠️ Nenhum fornecedor_id no orçamento')
       }
     }
     buscarFornecedor()
   }, [orcamento.fornecedor_id])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
-  console.log('📊 ORÇAMENTO RECEBIDO:', {
-    numero: orcamento.numero,
-    subtotal: orcamento.subtotal,
-    impostos: orcamento.impostos,
-    impostos_percentual: orcamento.impostos_percentual,
-    desconto: orcamento.desconto,
-    total: orcamento.total,
-    itens_count: itens.length
-  })
+  console.log('==========================================')
+  console.log('🎨 RENDERIZANDO ORÇAMENTO')
+  console.log('==========================================')
+  console.log('Fornecedor:', fornecedor)
+  console.log('Tipo Layout Final:', tipoLayout)
+  console.log('É Castor?', tipoLayout === 'castor')
+  console.log('É Midea?', tipoLayout === 'midea')
+  console.log('==========================================')
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
