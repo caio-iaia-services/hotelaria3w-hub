@@ -325,6 +325,34 @@ export default function Orcamentos() {
           </div>
         </div>
       )}
+      {/* MODAL VISUALIZAR */}
+      <Dialog open={modalVisualizar} onOpenChange={setModalVisualizar}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+          <div className="bg-gray-100 border-b p-4 flex items-center justify-between">
+            <h3 className="font-bold text-lg">
+              Orçamento {orcamentoVisualizar?.numero}
+            </h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir/PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setModalVisualizar(false)}>
+                <X className="w-4 h-4 mr-2" />
+                Fechar
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-y-auto max-h-[85vh]" id="orcamento-conteudo">
+            {orcamentoVisualizar && (
+              <OrcamentoTemplate
+                orcamento={orcamentoVisualizar}
+                itens={itensVisualizar}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
