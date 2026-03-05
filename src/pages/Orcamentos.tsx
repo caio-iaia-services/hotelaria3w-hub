@@ -73,7 +73,30 @@ export default function Orcamentos() {
   const [modalVisualizar, setModalVisualizar] = useState(false)
   const [orcamentoVisualizar, setOrcamentoVisualizar] = useState<Orcamento | null>(null)
   const [itensVisualizar, setItensVisualizar] = useState<OrcamentoItem[]>([])
+  const [totaisItensFallback, setTotaisItensFallback] = useState<Record<string, number>>({})
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const getTotalExibicao = useCallback((orcamento: Orcamento) => {
+    const totalDireto = parseNum((orcamento as any).total)
+    if (totalDireto > 0) return totalDireto
+
+    const subtotal = parseNum((orcamento as any).subtotal)
+    const frete = parseNum((orcamento as any).frete)
+    const impostos = parseNum((orcamento as any).impostos)
+    const desconto = parseNum((orcamento as any).desconto)
+
+    const totalItens = totaisItensFallback[orcamento.id] || 0
+    if (totalItens > 0) {
+      const impostosPercentual = parseNum((orcamento as any).impostos_percentual)
+      const descontoPercentual = parseNum((orcamento as any).desconto_percentual)
+      const impostosCalculados = impostos > 0 ? impostos : totalItens * (impostosPercentual / 100)
+      const descontoCalculado = desconto > 0 ? desconto : totalItens * (descontoPercentual / 100)
+      return totalItens + frete + impostosCalculados - descontoCalculado
+    }
+
+    const totalPorCampos = subtotal + frete + impostos - desconto
+    return totalPorCampos > 0 ? totalPorCampos : totalDireto
+  }, [totaisItensFallback])
 
   const buscarContadores = useCallback(async () => {
     const counts = await Promise.all([
@@ -116,8 +139,30 @@ export default function Orcamentos() {
       .range(from, to)
 
     if (!error) {
-      setOrcamentos((data as Orcamento[]) || [])
+      const rows = (data as Orcamento[]) || []
+      setOrcamentos(rows)
       setTotal(count || 0)
+
+      const idsSemTotal = rows
+        .filter((o) => parseNum((o as any).total) <= 0)
+        .map((o) => o.id)
+
+      if (idsSemTotal.length > 0) {
+        const { data: itensData } = await supabase
+          .from('orcamento_itens')
+          .select('orcamento_id,total')
+          .in('orcamento_id', idsSemTotal)
+
+        const totaisMap = ((itensData as Array<{ orcamento_id: string; total: any }> | null) || [])
+          .reduce<Record<string, number>>((acc, item) => {
+            acc[item.orcamento_id] = (acc[item.orcamento_id] || 0) + parseNum(item.total)
+            return acc
+          }, {})
+
+        setTotaisItensFallback(totaisMap)
+      } else {
+        setTotaisItensFallback({})
+      }
     }
     setLoading(false)
   }, [page, pageSize, filtros, statusAtivo])
@@ -310,7 +355,7 @@ export default function Orcamentos() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell><span className="font-medium">{formatCurrency(orcamento.total)}</span></TableCell>
+                  <TableCell><span className="font-medium">{formatCurrency(getTotalExibicao(orcamento))}</span></TableCell>
                   <TableCell>
                     <span className="text-sm">
                       {orcamento.data_validade ? formatDate(orcamento.data_validade) : `${orcamento.validade_dias} dias`}
