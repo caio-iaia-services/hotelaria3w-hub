@@ -354,9 +354,13 @@ export default function AcoesComerciais() {
     prazo_entrega: '45/60 dias',
     validade_dias: 30,
     frete: 0,
+    frete_tipo: 'CIF (Incluso)',
     impostos: 0,
+    desconto: 0,
     condicoes_pagamento: '',
     observacoes: '',
+    observacoes_gerais: '',
+    difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
   })
 
   // Merge static operations with DB fornecedores
@@ -511,9 +515,13 @@ export default function AcoesComerciais() {
       prazo_entrega: '45/60 dias',
       validade_dias: 30,
       frete: 0,
+      frete_tipo: 'CIF (Incluso)',
       impostos: 0,
+      desconto: 0,
       condicoes_pagamento: '',
       observacoes: '',
+      observacoes_gerais: '',
+      difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
     })
     // Auto-select operação from card
     if (cardSelecionado.operacao) {
@@ -633,11 +641,17 @@ export default function AcoesComerciais() {
     return subtotal * (impostos / 100)
   }
 
+  function calcularValorDesconto() {
+    const subtotal = calcularSubtotal()
+    return subtotal * ((Number(dadosOrcamento.desconto) || 0) / 100)
+  }
+
   function calcularTotal() {
     const subtotal = calcularSubtotal()
     const frete = Number(dadosOrcamento.frete) || 0
     const valorImpostos = calcularValorImpostos()
-    return subtotal + frete + valorImpostos
+    const valorDesconto = calcularValorDesconto()
+    return subtotal + valorImpostos - valorDesconto + frete
   }
 
   async function gerarOrcamento() {
@@ -678,7 +692,6 @@ export default function AcoesComerciais() {
 
       // 2. Calcular valores
       const subtotal = calcularSubtotal()
-      const total = calcularTotal()
 
       // 3. Calcular data de validade
       const hoje = new Date()
@@ -712,7 +725,10 @@ export default function AcoesComerciais() {
         }
       }
 
-      // 6. Criar orçamento
+      const valorImpostos = calcularValorImpostos()
+      const valorDesconto = calcularValorDesconto()
+      const total = calcularTotal()
+
       const { data: orcamento, error: erroOrcamento } = await supabase
         .from('orcamentos')
         .insert({
@@ -732,13 +748,21 @@ export default function AcoesComerciais() {
           codigo_empresa: fornecedorSelecionado?.codigo || null,
           subtotal: Number(subtotal) || 0,
           frete: Number(dadosOrcamento.frete) || 0,
-          impostos: Number(calcularValorImpostos()) || 0,
+          frete_tipo: dadosOrcamento.frete_tipo,
+          impostos: Number(valorImpostos) || 0,
+          impostos_percentual: Number(dadosOrcamento.impostos) || 0,
+          desconto: Number(valorDesconto) || 0,
+          desconto_percentual: Number(dadosOrcamento.desconto) || 0,
+          desconto_valor: Number(valorDesconto) || 0,
           total: Number(total) || 0,
           prazo_entrega: dadosOrcamento.prazo_entrega,
           validade_dias: dadosOrcamento.validade_dias,
           data_validade: dataValidade.toISOString(),
+          data_emissao: new Date().toISOString(),
           condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
           observacoes: dadosOrcamento.observacoes,
+          observacoes_gerais: dadosOrcamento.observacoes_gerais,
+          difal_texto: dadosOrcamento.difal_texto,
           termos_3w: termos3w,
           termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
           imagem_marketing_url: imagemMarketingUrl,
@@ -782,9 +806,13 @@ export default function AcoesComerciais() {
         prazo_entrega: '45/60 dias',
         validade_dias: 30,
         frete: 0,
+        frete_tipo: 'CIF (Incluso)',
         impostos: 0,
+        desconto: 0,
         condicoes_pagamento: '',
         observacoes: '',
+        observacoes_gerais: '',
+        difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
@@ -989,7 +1017,7 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
-            {/* IMPOSTOS */}
+            {/* IMPOSTOS, DESCONTO, TIPO DE FRETE */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Impostos (%)</Label>
@@ -1005,6 +1033,33 @@ export default function AcoesComerciais() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Valor: {formatCurrency(calcularValorImpostos())}
                 </p>
+              </div>
+              <div>
+                <Label>Desconto (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="0.00"
+                  value={dadosOrcamento.desconto || ''}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, desconto: parseFloat(e.target.value) || 0 }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor: -{formatCurrency(calcularValorDesconto())}
+                </p>
+              </div>
+              <div>
+                <Label>Tipo de Frete</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={dadosOrcamento.frete_tipo}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete_tipo: e.target.value }))}
+                >
+                  <option value="CIF (Incluso)">CIF (Incluso)</option>
+                  <option value="FOB">FOB</option>
+                  <option value="A calcular">A calcular</option>
+                </select>
               </div>
             </div>
 
@@ -1104,6 +1159,28 @@ export default function AcoesComerciais() {
               />
             </div>
 
+            {/* OBSERVAÇÕES GERAIS */}
+            <div>
+              <Label>Observações Gerais</Label>
+              <Textarea
+                placeholder="Observações adicionais que aparecerão em destaque no orçamento..."
+                value={dadosOrcamento.observacoes_gerais}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, observacoes_gerais: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* DIFAL */}
+            <div>
+              <Label>Texto DIFAL</Label>
+              <Textarea
+                placeholder="Texto sobre DIFAL/tributação..."
+                value={dadosOrcamento.difal_texto}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, difal_texto: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
             {/* IMAGEM DE MARKETING */}
             <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
               <Label className="mb-2 block">Imagem de Marketing</Label>
@@ -1185,15 +1262,27 @@ export default function AcoesComerciais() {
                     Impostos {dadosOrcamento.impostos > 0 && `(${dadosOrcamento.impostos}%)`}:
                   </span>
                   <span className="font-semibold text-amber-700">
-                    {formatCurrency(calcularValorImpostos())}
+                    +{formatCurrency(calcularValorImpostos())}
                   </span>
                 </div>
+                
+                {/* DESCONTO */}
+                {dadosOrcamento.desconto > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700">
+                      Desconto ({dadosOrcamento.desconto}%):
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      -{formatCurrency(calcularValorDesconto())}
+                    </span>
+                  </div>
+                )}
                 
                 {/* FRETE */}
                 <div className="flex justify-between items-center pb-3 border-b-2 border-gray-400">
                   <span className="text-blue-700">Frete:</span>
                   <span className="font-semibold text-blue-700">
-                    {formatCurrency(dadosOrcamento.frete || 0)}
+                    +{formatCurrency(dadosOrcamento.frete || 0)}
                   </span>
                 </div>
                 
