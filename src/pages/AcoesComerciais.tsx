@@ -506,7 +506,7 @@ export default function AcoesComerciais() {
     setClienteCompleto(cliente as ClienteCompleto | null)
 
     // Buscar fornecedores ativos para associação
-    await buscarFornecedoresDisponiveis()
+    const fornecedoresCarregados = await buscarFornecedoresDisponiveis()
 
     setItensOrcamento([{
       id: Date.now(),
@@ -529,9 +529,9 @@ export default function AcoesComerciais() {
       observacoes_gerais: '',
       difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
     })
-    // Auto-select operação from card
+    // Auto-select operação from card (using freshly loaded fornecedores)
     if (cardSelecionado.operacao) {
-      selecionarOperacao(cardSelecionado.operacao)
+      selecionarOperacao(cardSelecionado.operacao, fornecedoresCarregados)
     } else {
       setOperacaoSelecionada('')
       setFornecedorSelecionado(null)
