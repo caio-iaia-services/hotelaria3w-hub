@@ -38,9 +38,21 @@ function getStatusLabel(status: string) {
   return labels[status] || status
 }
 
+function parseNum(value: any): number {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'number') return isNaN(value) ? 0 : value
+  const str = String(value).trim()
+  if (str.includes(',')) {
+    const cleaned = str.replace(/\./g, '').replace(',', '.')
+    const num = parseFloat(cleaned)
+    return isNaN(num) ? 0 : num
+  }
+  const num = parseFloat(str)
+  return isNaN(num) ? 0 : num
+}
+
 function formatCurrency(value: any) {
-  const num = typeof value === 'string' ? parseFloat(value) : Number(value || 0)
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(num) ? 0 : num)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseNum(value))
 }
 
 function formatDate(date: string) {
