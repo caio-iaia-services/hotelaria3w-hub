@@ -140,6 +140,7 @@ export default function Orcamentos() {
 
     if (!error) {
       const rows = (data as Orcamento[]) || []
+      console.log('🔍 DEBUG orcamentos raw data (first 3):', rows.slice(0, 3).map(r => ({ id: r.id, numero: r.numero, cliente_nome: r.cliente_nome, fornecedor_nome: r.fornecedor_nome, operacao: r.operacao, keys: Object.keys(r) })))
       setOrcamentos(rows)
       setTotal(count || 0)
 
