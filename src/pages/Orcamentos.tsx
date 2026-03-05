@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 
@@ -339,6 +339,12 @@ export default function Orcamentos() {
       {/* MODAL VISUALIZAR */}
       <Dialog open={modalVisualizar} onOpenChange={setModalVisualizar}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Visualização do orçamento {orcamentoVisualizar?.numero}</DialogTitle>
+            <DialogDescription>
+              Pré-visualização completa do orçamento com itens, totais e termos comerciais.
+            </DialogDescription>
+          </DialogHeader>
           <div className="bg-gray-100 border-b p-4 flex items-center justify-between">
             <h3 className="font-bold text-lg">
               Orçamento {orcamentoVisualizar?.numero}
