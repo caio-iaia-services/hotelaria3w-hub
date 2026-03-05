@@ -109,23 +109,31 @@ export interface Orcamento {
   fornecedor_nome: string | null
   operacao: string | null
   gestao: string | null
+  codigo_empresa: string | null
   subtotal: number
   frete: number
+  frete_tipo: string | null
   impostos: number
+  impostos_percentual: number
   desconto: number
+  desconto_percentual: number
+  desconto_valor: number
   total: number
   prazo_entrega: string | null
   validade_dias: number
   data_validade: string | null
+  data_emissao: string | null
   condicoes_pagamento: any
   observacoes: string | null
+  observacoes_gerais: string | null
+  difal_texto: string | null
   status: 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado' | 'expirado'
   enviado_em: string | null
   aprovado_em: string | null
   pdf_url: string | null
   html_content: string | null
-  codigo_empresa: string | null
   imagem_marketing_url: string | null
+  imagem_publicidade_url: string | null
   termos_3w: string | null
   termos_fornecedor: string | null
   assinatura_cliente: string | null
