@@ -1,5 +1,6 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
+import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
