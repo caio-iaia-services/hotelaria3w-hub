@@ -145,24 +145,43 @@ export interface Orcamento {
 export interface Fornecedor {
   id: string
   nome_fantasia: string
-  razao_social: string
-  cnpj: string
-  cidade: string | null
-  estado: string | null
-  segmento_id: string | null
-  tipo: string
+  razao_social: string | null
+  cnpj: string | null
+  codigo: string | null
+  status: string
+  tipo: string | null
   email: string | null
   telefone: string | null
-  status: string
-  endereco?: string | null
-  numero?: string | null
-  bairro?: string | null
-  cep?: string | null
-  complemento?: string | null
-  observacoes?: string | null
-  termos_fabricante?: string | null
-  created_at?: string
+  whatsapp: string | null
+  site: string | null
+  site_2: string | null
+  endereco: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+  segmento_id: string | null
+  contatos: any
+  logotipo_url: string | null
+  catalogos: any
+  data_inicio: string | null
+  contrato: string | null
+  condicoes_pagamento: any
+  num_orcamentos: number | null
+  volume_orcamentos: number | null
+  num_vendas: number | null
+  volume_vendas: number | null
+  linhas_produtos: string[] | null
+  gestao: string | null
+  produtos_servicos: string | null
+  comissao_vendas: number | null
+  observacoes: string | null
+  termos_fabricante: string | null
   tipo_layout: 'castor' | 'midea' | 'padrao' | null
+  created_at: string
+  updated_at: string
 }
 
 export interface OrcamentoItem {
