@@ -89,6 +89,7 @@ type FornecedorForm = {
   segmentos_atuacao: string[];
   produtos_servicos: string;
   comissao_vendas: string;
+  tipo_layout: string;
 };
 
 interface Contato {
@@ -275,7 +276,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [] } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -520,6 +521,7 @@ export default function Fornecedores() {
         contatos: contatos.length > 0 ? JSON.parse(JSON.stringify(contatos)) : null,
         catalogos: catalogosUrls.length > 0 ? JSON.parse(JSON.stringify(catalogosUrls)) : null,
         logotipo_url: logotipoUrl,
+        tipo_layout: dados.tipo_layout || 'padrao',
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -631,6 +633,7 @@ export default function Fornecedores() {
           contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
           catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
           logotipo_url: logotipoUrl,
+          tipo_layout: dados.tipo_layout || 'padrao',
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
@@ -789,6 +792,22 @@ export default function Fornecedores() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Tipo de Layout do Orçamento */}
+      <div className="space-y-1.5">
+        <Label>Tipo de Layout do Orçamento</Label>
+        <Select value={reg("tipo_layout").name ? undefined : "padrao"} onValueChange={(v) => set("tipo_layout", v)}>
+          <SelectTrigger><SelectValue placeholder="Selecione o layout" /></SelectTrigger>
+          <SelectContent className="bg-card z-50">
+            <SelectItem value="padrao">Padrão (genérico)</SelectItem>
+            <SelectItem value="castor">Castor (código dividido, sem box extra)</SelectItem>
+            <SelectItem value="midea">Midea (código normal, com box termos)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-1">
+          Define como o orçamento será apresentado visualmente
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
