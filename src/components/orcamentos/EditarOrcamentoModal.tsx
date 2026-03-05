@@ -444,6 +444,70 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
               />
             </div>
 
+            {/* IMAGEM DE MARKETING */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagem de Marketing</Label>
+              <div className="relative">
+                <img
+                  src={imagemPreview || '/placeholder.svg'}
+                  alt="Preview marketing"
+                  className="w-full max-h-48 object-cover rounded-lg bg-muted"
+                />
+                {imagemPreview && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0"
+                    onClick={removerImagemMarketing}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <label className="mt-2 inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Alterar Imagem
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
+              </label>
+            </div>
+
+            {/* IMAGENS ADICIONAIS */}
+            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
+              <Label className="mb-2 block">Imagens Adicionais</Label>
+              {imagensAdicionaisPreview.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  {imagensAdicionaisPreview.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Adicional ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0"
+                        onClick={() => removerImagemAdicional(i)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="inline-flex cursor-pointer">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Adicionar Imagens
+                  </span>
+                </Button>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagensAdicionais} />
+              </label>
+            </div>
+
             {/* RESUMO FINANCEIRO */}
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-6 shadow-lg">
               <h3 className="font-bold text-gray-900 mb-4 text-lg">Resumo Financeiro</h3>
