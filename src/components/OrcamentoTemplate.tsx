@@ -44,14 +44,18 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   }, [orcamento.fornecedor_id])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
-  console.log('==========================================')
-  console.log('🎨 RENDERIZANDO ORÇAMENTO')
-  console.log('==========================================')
-  console.log('Fornecedor:', fornecedor)
-  console.log('Tipo Layout Final:', tipoLayout)
-  console.log('É Castor?', tipoLayout === 'castor')
-  console.log('É Midea?', tipoLayout === 'midea')
-  console.log('==========================================')
+  console.log('📊 VALORES DO ORÇAMENTO NO TEMPLATE:', {
+    numero: orcamento.numero,
+    subtotal: orcamento.subtotal,
+    impostos: orcamento.impostos,
+    impostos_percentual: orcamento.impostos_percentual,
+    desconto: orcamento.desconto,
+    desconto_valor: orcamento.desconto_valor,
+    total: orcamento.total,
+    frete: orcamento.frete,
+    itens_count: itens.length,
+    itens_totais: itens.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total }))
+  })
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
