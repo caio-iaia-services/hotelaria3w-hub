@@ -57,6 +57,9 @@ export default function Orcamentos() {
     todos: 0, rascunho: 0, enviado: 0, aprovado: 0, rejeitado: 0, expirado: 0
   })
   const [filtros, setFiltros] = useState({ busca: '', gestao: '' })
+  const [modalVisualizar, setModalVisualizar] = useState(false)
+  const [orcamentoVisualizar, setOrcamentoVisualizar] = useState<Orcamento | null>(null)
+  const [itensVisualizar, setItensVisualizar] = useState<OrcamentoItem[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const buscarContadores = useCallback(async () => {
