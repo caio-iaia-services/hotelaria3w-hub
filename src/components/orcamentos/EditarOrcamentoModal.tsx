@@ -98,6 +98,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagemFile(null)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
+    }
 
     if (itensDb) {
       setItens((itensDb as any[]).map(i => ({
