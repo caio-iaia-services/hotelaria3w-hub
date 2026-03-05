@@ -406,7 +406,11 @@ export default function AcoesComerciais() {
       .in('estagio', ['lead', 'contato', 'proposta', 'negociacao', 'fechado'])
       .order('created_at', { ascending: false })
 
+    if (error) {
+      console.error('❌ Erro ao buscar leads:', error)
+    }
     if (!error && data) {
+      console.log('✅ Leads encontrados:', data.length)
       const cardsData = data as unknown as CRMCard[]
       setCards(cardsData)
       if (cardsData.length > 0 && !cardSelecionado) {
