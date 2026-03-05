@@ -541,7 +541,7 @@ export default function AcoesComerciais() {
     setModalOrcamento(true)
   }
 
-  async function buscarFornecedoresDisponiveis() {
+  async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
       .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
@@ -550,22 +550,26 @@ export default function AcoesComerciais() {
 
     if (!error && data) {
       setFornecedoresDisponiveis(data as FornecedorLocal[])
+      return data as FornecedorLocal[]
     }
+    return []
   }
 
-  function selecionarOperacao(operacao: string) {
+  function selecionarOperacao(operacao: string, listaFornecedores?: FornecedorLocal[]) {
     setOperacaoSelecionada(operacao)
     if (!operacao) {
       setFornecedorSelecionado(null)
       return
     }
-    // Try to find matching fornecedor by nome_fantasia
-    const fornecedor = fornecedoresDisponiveis.find(
+    // Use provided list (fresh from DB) or fall back to state
+    const lista = listaFornecedores || fornecedoresDisponiveis
+    const fornecedor = lista.find(
       f => f.nome_fantasia.toUpperCase() === operacao.toUpperCase()
     )
     setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
+    }
     }
   }
 
