@@ -90,26 +90,36 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     return codigo.split('').filter(c => c.trim())
   }
 
-  const subtotalCalculado = orcamento.subtotal !== undefined && orcamento.subtotal !== null
-    ? toNumber(orcamento.subtotal)
-    : itens.reduce((sum, item) => sum + toNumber(item.total), 0)
+  const subtotalDireto = toNumber((orcamento as any).subtotal)
+  const subtotalAlt = toNumber((orcamento as any).valor_produtos)
+  const subtotalItens = itens.reduce((sum, item) => sum + toNumber(item.total), 0)
+  const subtotalCalculado = subtotalDireto > 0
+    ? subtotalDireto
+    : (subtotalAlt > 0 ? subtotalAlt : subtotalItens)
 
-  const impostosPercentualCalculado = toNumber(orcamento.impostos_percentual)
-  const impostosCalculado = orcamento.impostos !== undefined && orcamento.impostos !== null
-    ? toNumber(orcamento.impostos)
+  const impostosPercentualCalculado = toNumber((orcamento as any).impostos_percentual)
+  const impostosDireto = toNumber((orcamento as any).impostos)
+  const impostosCalculado = impostosDireto > 0
+    ? impostosDireto
     : subtotalCalculado * (impostosPercentualCalculado / 100)
 
-  const descontoPercentualCalculado = toNumber(orcamento.desconto_percentual)
-  const descontoValorCalculado = orcamento.desconto_valor !== undefined && orcamento.desconto_valor !== null
-    ? toNumber(orcamento.desconto_valor)
-    : (orcamento.desconto !== undefined && orcamento.desconto !== null
-      ? toNumber(orcamento.desconto)
-      : subtotalCalculado * (descontoPercentualCalculado / 100))
+  const descontoPercentualCalculado = toNumber((orcamento as any).desconto_percentual || (orcamento as any).percentual_desconto)
+  const descontoDiretoValor = toNumber((orcamento as any).desconto_valor)
+  const descontoDireto = toNumber((orcamento as any).desconto || (orcamento as any).valor_desconto)
+  const descontoValorCalculado = descontoDiretoValor > 0
+    ? descontoDiretoValor
+    : (descontoDireto > 0 ? descontoDireto : subtotalCalculado * (descontoPercentualCalculado / 100))
 
-  const freteCalculado = toNumber(orcamento.frete)
-  const totalCalculado = orcamento.total !== undefined && orcamento.total !== null
-    ? toNumber(orcamento.total)
-    : subtotalCalculado + impostosCalculado - descontoValorCalculado + freteCalculado
+  const freteDireto = toNumber((orcamento as any).frete)
+  const freteAlt = toNumber((orcamento as any).valor_frete)
+  const freteCalculado = freteDireto > 0 ? freteDireto : freteAlt
+
+  const totalDireto = toNumber((orcamento as any).total)
+  const totalAlt = toNumber((orcamento as any).valor_total)
+  const totalPorFormula = subtotalCalculado + impostosCalculado - descontoValorCalculado + freteCalculado
+  const totalCalculado = totalDireto > 0
+    ? totalDireto
+    : (totalAlt > 0 ? totalAlt : (totalPorFormula > 0 ? totalPorFormula : 0))
 
   console.log('📊 VALORES EFETIVOS USADOS:', {
     subtotalCalculado,
