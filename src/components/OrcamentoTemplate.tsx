@@ -1,5 +1,5 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
-import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign } from 'lucide-react'
+import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 
 interface Props {
   orcamento: Orcamento
@@ -7,6 +7,15 @@ interface Props {
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
+  console.log('📊 ORÇAMENTO RECEBIDO:', {
+    numero: orcamento.numero,
+    subtotal: orcamento.subtotal,
+    impostos: orcamento.impostos,
+    impostos_percentual: orcamento.impostos_percentual,
+    desconto: orcamento.desconto,
+    total: orcamento.total,
+    itens_count: itens.length
+  })
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -45,15 +54,15 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               
               <div className="space-y-1 text-sm">
                 <p className="flex items-center gap-2">
-                  <span className="text-xl">🌐</span>
+                  <Globe className="w-4 h-4 text-white" />
                   <span>www.3whotelaria.com.br</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-4 h-4 text-white" />
                   <span>+55 (11) 5197-5779</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
+                  <Mail className="w-4 h-4 text-white" />
                   <span>comercial1@3whotelaria.com.br</span>
                 </p>
               </div>
@@ -118,32 +127,28 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-start mb-4">
               {/* Dados do Cliente - Esquerda */}
-      <div className="text-sm space-y-1">
-                <p className="font-bold text-lg text-[#1a4168] mb-2">
-                  {orcamento.cliente_cnpj}  {orcamento.cliente_nome}
+      <div className="space-y-1">
+                <p className="font-bold text-base text-[#1a4168] mb-3">
+                  {orcamento.cliente_cnpj || '22.500.917/0001-98'}  {orcamento.cliente_nome || 'Mendes Plaza'}
                 </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[#1a4168]" />
-                  {orcamento.cliente_email || 'mario.quinalha@marriott.com'}
+                <p className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
+                  <span>{orcamento.cliente_email || 'mario.quinalha@marriott.com'}</span>
                 </p>
-                <p className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#1a4168]" />
-                  {orcamento.cliente_endereco?.split(',')[0] || 'Alameda Armenio Mendes, 70'}
+                <p className="flex items-center gap-2 text-sm">
+                  <MapPin className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
+                  <span>{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</span>
                 </p>
-                <p className="ml-7 text-xs">
-                  {orcamento.cliente_endereco?.split(',').slice(1).join(',') || 'Santos  SP  CEP 11035-260'}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-[#1a4168]" />
-                  {orcamento.cliente_telefone || '(13) 99191-7669'}
+                <p className="flex items-center gap-2 text-sm">
+                  <Phone className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
+                  <span>{orcamento.cliente_telefone || '(13) 99191-7669'}</span>
                 </p>
               </div>
               
               {/* Endereço de Entrega - Direita */}
-              <div className="text-sm text-right space-y-1">
-                <p className="font-bold text-lg text-[#1a4168]">Endereço de Entrega</p>
-                <p>{orcamento.cliente_endereco?.split(',')[0] || 'Alameda Armenio Mendes, 70'}</p>
-                <p>{orcamento.cliente_endereco?.split(',').slice(1).join(',') || 'Santos  SP  CEP 11035-260'}</p>
+              <div className="text-right space-y-1">
+                <p className="font-bold text-base text-[#1a4168] mb-3">Endereço de Entrega</p>
+                <p className="text-sm">{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</p>
               </div>
             </div>
             
@@ -253,27 +258,33 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <div className="bg-[#D4AF37] text-white p-4 rounded-t-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Subtotal</span>
-                    <span className="font-bold text-2xl">{formatCurrency(orcamento.subtotal)}</span>
+                    <span className="font-bold text-2xl">
+                      {formatCurrency(Number(orcamento.subtotal) || 0)}
+                    </span>
                   </div>
                 </div>
 
                 <div className="bg-white border-x-2 border-gray-300 p-4">
                   <div className="flex justify-between items-center">
                     <div className="flex-1">Impostos</div>
-                    <div className="w-20 text-center">{orcamento.impostos_percentual?.toFixed(2) || 0}%</div>
+                    <div className="w-20 text-center">
+                      {Number(orcamento.impostos_percentual || 0).toFixed(2)}%
+                    </div>
                     <div className="w-32 text-right font-semibold">
-                      {formatCurrency(orcamento.impostos)}
+                      {formatCurrency(Number(orcamento.impostos) || 0)}
                     </div>
                   </div>
                 </div>
 
-                {orcamento.desconto_valor > 0 && (
+                {Number(orcamento.desconto_valor || 0) > 0 && (
                   <div className="bg-white border-x-2 border-gray-300 p-4">
                     <div className="flex justify-between items-center">
                       <div className="flex-1">Desconto</div>
-                      <div className="w-20 text-center">{orcamento.desconto_percentual?.toFixed(2) || 0}%</div>
+                      <div className="w-20 text-center">
+                        {Number(orcamento.desconto_percentual || 0).toFixed(2)}%
+                      </div>
                       <div className="w-32 text-right font-semibold text-red-600">
-                        -{formatCurrency(orcamento.desconto_valor)}
+                        -{formatCurrency(Number(orcamento.desconto_valor) || 0)}
                       </div>
                     </div>
                   </div>
@@ -282,7 +293,9 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <div className="bg-[#1a4168] text-white p-4 rounded-b-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Valor Final</span>
-                    <span className="font-bold text-3xl">{formatCurrency(orcamento.total)}</span>
+                    <span className="font-bold text-3xl">
+                      {formatCurrency(Number(orcamento.total) || 0)}
+                    </span>
                   </div>
                 </div>
               </div>
