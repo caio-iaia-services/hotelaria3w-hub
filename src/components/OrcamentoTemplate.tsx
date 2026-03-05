@@ -65,6 +65,18 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
       if (encontrado && ativo) {
         setFornecedor(encontrado as FornecedorLayout)
+        return
+      }
+
+      // tenta busca parcial (nome contém o termo buscado)
+      const { data: parciais } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .ilike('nome_fantasia', `%${nomeBusca}%`)
+        .limit(5)
+
+      if (parciais && parciais.length > 0 && ativo) {
+        setFornecedor(parciais[0] as FornecedorLayout)
       }
     }
 
@@ -180,7 +192,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 className="h-24 mb-4"
               />
               
-              <div className="flex flex-col gap-3 text-base ml-2">
+              <div className="flex flex-col gap-3 text-base">
                 <div className="flex items-center gap-3">
                   <Globe className="w-6 h-6 flex-shrink-0" />
                   <span className="text-lg">www.3whotelaria.com.br</span>
