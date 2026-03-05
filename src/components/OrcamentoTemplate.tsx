@@ -161,13 +161,24 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="text-sm font-semibold">Orçamento {orcamento.numero}</p>
               </div>
               
-              {orcamento.fornecedor_nome && (
+              {fornecedor?.logotipo_url ? (
+                <div className="mb-4">
+                  <img 
+                    src={fornecedor.logotipo_url} 
+                    alt={fornecedor.nome_fantasia} 
+                    className="h-16 max-w-[200px] object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              ) : orcamento.fornecedor_nome ? (
                 <div className="mb-4">
                   <p className="text-2xl font-bold text-red-600">
                     {orcamento.fornecedor_nome.split(' ')[0]}
                   </p>
                 </div>
-              )}
+              ) : null}
               
               <div className="space-y-1 text-sm">
                 <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
