@@ -692,7 +692,6 @@ export default function AcoesComerciais() {
 
       // 2. Calcular valores
       const subtotal = calcularSubtotal()
-      const total = calcularTotal()
 
       // 3. Calcular data de validade
       const hoje = new Date()
