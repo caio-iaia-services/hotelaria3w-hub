@@ -58,11 +58,23 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   itens.forEach((i, idx) => console.log(`📊 Item ${idx+1}: qty=${i.quantidade} price=${i.preco_unitario} total=${i.total}`))
   console.log('📊 TODAS AS KEYS:', Object.keys(orcamento).join(', '))
   console.log('📊 JSON COMPLETO:', JSON.stringify(orcamento))
-  const formatCurrency = (value: number) => {
+  const toNumber = (value: unknown) => {
+    if (value === null || value === undefined) return 0
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+
+    const raw = String(value).trim()
+    const normalizado = raw.includes(',')
+      ? raw.replace(/\./g, '').replace(',', '.')
+      : raw
+    const parsed = parseFloat(normalizado)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const formatCurrency = (value: unknown) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value || 0)
+    }).format(toNumber(value))
   }
 
   const formatDate = (date: string) => {
@@ -78,6 +90,37 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     if (!codigo) return []
     return codigo.split('').filter(c => c.trim())
   }
+
+  const subtotalCalculado = orcamento.subtotal !== undefined && orcamento.subtotal !== null
+    ? toNumber(orcamento.subtotal)
+    : itens.reduce((sum, item) => sum + toNumber(item.total), 0)
+
+  const impostosPercentualCalculado = toNumber(orcamento.impostos_percentual)
+  const impostosCalculado = orcamento.impostos !== undefined && orcamento.impostos !== null
+    ? toNumber(orcamento.impostos)
+    : subtotalCalculado * (impostosPercentualCalculado / 100)
+
+  const descontoPercentualCalculado = toNumber(orcamento.desconto_percentual)
+  const descontoValorCalculado = orcamento.desconto_valor !== undefined && orcamento.desconto_valor !== null
+    ? toNumber(orcamento.desconto_valor)
+    : (orcamento.desconto !== undefined && orcamento.desconto !== null
+      ? toNumber(orcamento.desconto)
+      : subtotalCalculado * (descontoPercentualCalculado / 100))
+
+  const freteCalculado = toNumber(orcamento.frete)
+  const totalCalculado = orcamento.total !== undefined && orcamento.total !== null
+    ? toNumber(orcamento.total)
+    : subtotalCalculado + impostosCalculado - descontoValorCalculado + freteCalculado
+
+  console.log('📊 VALORES EFETIVOS USADOS:', {
+    subtotalCalculado,
+    impostosPercentualCalculado,
+    impostosCalculado,
+    descontoPercentualCalculado,
+    descontoValorCalculado,
+    freteCalculado,
+    totalCalculado
+  })
 
   return (
     <div className="bg-white font-sans">
@@ -323,7 +366,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Subtotal</span>
                     <span className="font-bold text-2xl">
-                      {formatCurrency(Number(orcamento.subtotal) || 0)}
+                      {formatCurrency(subtotalCalculado)}
                     </span>
                   </div>
                 </div>
@@ -332,23 +375,23 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   <div className="flex justify-between items-center">
                     <div className="flex-1">Impostos</div>
                     <div className="w-20 text-center">
-                      {Number(orcamento.impostos_percentual || 0).toFixed(2)}%
+                      {impostosPercentualCalculado.toFixed(2)}%
                     </div>
                     <div className="w-32 text-right font-semibold">
-                      {formatCurrency(Number(orcamento.impostos) || 0)}
+                      {formatCurrency(impostosCalculado)}
                     </div>
                   </div>
                 </div>
 
-                {Number(orcamento.desconto_valor || 0) > 0 && (
+                {descontoValorCalculado > 0 && (
                   <div className="bg-white border-x-2 border-gray-300 p-4">
                     <div className="flex justify-between items-center">
                       <div className="flex-1">Desconto</div>
                       <div className="w-20 text-center">
-                        {Number(orcamento.desconto_percentual || 0).toFixed(2)}%
+                        {descontoPercentualCalculado.toFixed(2)}%
                       </div>
                       <div className="w-32 text-right font-semibold text-red-600">
-                        -{formatCurrency(Number(orcamento.desconto_valor) || 0)}
+                        -{formatCurrency(descontoValorCalculado)}
                       </div>
                     </div>
                   </div>
@@ -358,7 +401,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Valor Final</span>
                     <span className="font-bold text-3xl">
-                      {formatCurrency(Number(orcamento.total) || 0)}
+                      {formatCurrency(totalCalculado)}
                     </span>
                   </div>
                 </div>
