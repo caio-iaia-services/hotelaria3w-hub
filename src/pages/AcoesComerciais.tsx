@@ -1017,7 +1017,7 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
-            {/* IMPOSTOS */}
+            {/* IMPOSTOS, DESCONTO, TIPO DE FRETE */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Impostos (%)</Label>
@@ -1033,6 +1033,33 @@ export default function AcoesComerciais() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Valor: {formatCurrency(calcularValorImpostos())}
                 </p>
+              </div>
+              <div>
+                <Label>Desconto (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="0.00"
+                  value={dadosOrcamento.desconto || ''}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, desconto: parseFloat(e.target.value) || 0 }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor: -{formatCurrency(calcularValorDesconto())}
+                </p>
+              </div>
+              <div>
+                <Label>Tipo de Frete</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={dadosOrcamento.frete_tipo}
+                  onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete_tipo: e.target.value }))}
+                >
+                  <option value="CIF (Incluso)">CIF (Incluso)</option>
+                  <option value="FOB">FOB</option>
+                  <option value="A calcular">A calcular</option>
+                </select>
               </div>
             </div>
 
@@ -1128,6 +1155,28 @@ export default function AcoesComerciais() {
                 placeholder="Informações adicionais..."
                 value={dadosOrcamento.observacoes}
                 onChange={(e) => setDadosOrcamento(prev => ({ ...prev, observacoes: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* OBSERVAÇÕES GERAIS */}
+            <div>
+              <Label>Observações Gerais</Label>
+              <Textarea
+                placeholder="Observações adicionais que aparecerão em destaque no orçamento..."
+                value={dadosOrcamento.observacoes_gerais}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, observacoes_gerais: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* DIFAL */}
+            <div>
+              <Label>Texto DIFAL</Label>
+              <Textarea
+                placeholder="Texto sobre DIFAL/tributação..."
+                value={dadosOrcamento.difal_texto}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, difal_texto: e.target.value }))}
                 rows={3}
               />
             </div>
