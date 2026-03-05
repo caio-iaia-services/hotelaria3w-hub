@@ -44,18 +44,20 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   }, [orcamento.fornecedor_id])
 
   const tipoLayout = fornecedor?.tipo_layout || 'padrao'
-  console.log('📊 VALORES DO ORÇAMENTO NO TEMPLATE:', {
-    numero: orcamento.numero,
-    subtotal: orcamento.subtotal,
-    impostos: orcamento.impostos,
-    impostos_percentual: orcamento.impostos_percentual,
-    desconto: orcamento.desconto,
-    desconto_valor: orcamento.desconto_valor,
-    total: orcamento.total,
-    frete: orcamento.frete,
-    itens_count: itens.length,
-    itens_totais: itens.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total }))
-  })
+  console.log('📊 === VALORES DO ORÇAMENTO NO TEMPLATE ===')
+  console.log('📊 numero:', orcamento.numero)
+  console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
+  console.log('📊 impostos:', orcamento.impostos, '| tipo:', typeof orcamento.impostos)
+  console.log('📊 impostos_percentual:', orcamento.impostos_percentual)
+  console.log('📊 desconto:', orcamento.desconto, '| tipo:', typeof orcamento.desconto)
+  console.log('📊 desconto_valor:', orcamento.desconto_valor)
+  console.log('📊 total:', orcamento.total, '| tipo:', typeof orcamento.total)
+  console.log('📊 frete:', orcamento.frete, '| tipo:', typeof orcamento.frete)
+  console.log('📊 fornecedor_id:', orcamento.fornecedor_id)
+  console.log('📊 itens_count:', itens.length)
+  itens.forEach((i, idx) => console.log(`📊 Item ${idx+1}: qty=${i.quantidade} price=${i.preco_unitario} total=${i.total}`))
+  console.log('📊 TODAS AS KEYS:', Object.keys(orcamento).join(', '))
+  console.log('📊 JSON COMPLETO:', JSON.stringify(orcamento))
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
