@@ -425,7 +425,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
               <div className="text-sm space-y-1">
-                <p>🌐 www.3whotelaria.com.br</p>
+                <p className="flex items-center gap-1"><Globe className="w-3 h-3" /> www.3whotelaria.com.br</p>
                 <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> +55 (11) 5197-5779</p>
                 <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> comercial1@3whotelaria.com.br</p>
               </div>
