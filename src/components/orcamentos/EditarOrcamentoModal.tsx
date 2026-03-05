@@ -195,6 +195,18 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         return
       }
 
+      // Upload imagem de marketing se alterada
+      let imagemMarketingUrl = imagemPreview
+      if (imagemFile) {
+        const ext = imagemFile.name.split('.').pop()
+        const path = `orcamentos/${orcamento.id}/marketing.${ext}`
+        const { error: upErr } = await supabase.storage.from('orcamentos').upload(path, imagemFile, { upsert: true })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('orcamentos').getPublicUrl(path)
+          imagemMarketingUrl = urlData.publicUrl
+        }
+      }
+
       // Update orcamento record
       const dataValidade = new Date()
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
@@ -218,6 +230,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           observacoes: dados.observacoes,
           observacoes_gerais: dados.observacoes_gerais,
           difal_texto: dados.difal_texto,
+          imagem_marketing_url: imagemMarketingUrl,
           updated_at: new Date().toISOString(),
         })
         .eq('id', orcamento.id)
