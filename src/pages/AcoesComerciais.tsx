@@ -506,7 +506,7 @@ export default function AcoesComerciais() {
     setClienteCompleto(cliente as ClienteCompleto | null)
 
     // Buscar fornecedores ativos para associação
-    await buscarFornecedoresDisponiveis()
+    const fornecedoresCarregados = await buscarFornecedoresDisponiveis()
 
     setItensOrcamento([{
       id: Date.now(),
@@ -529,9 +529,9 @@ export default function AcoesComerciais() {
       observacoes_gerais: '',
       difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
     })
-    // Auto-select operação from card
+    // Auto-select operação from card (using freshly loaded fornecedores)
     if (cardSelecionado.operacao) {
-      selecionarOperacao(cardSelecionado.operacao)
+      selecionarOperacao(cardSelecionado.operacao, fornecedoresCarregados)
     } else {
       setOperacaoSelecionada('')
       setFornecedorSelecionado(null)
@@ -541,7 +541,7 @@ export default function AcoesComerciais() {
     setModalOrcamento(true)
   }
 
-  async function buscarFornecedoresDisponiveis() {
+  async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
       .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
@@ -550,17 +550,20 @@ export default function AcoesComerciais() {
 
     if (!error && data) {
       setFornecedoresDisponiveis(data as FornecedorLocal[])
+      return data as FornecedorLocal[]
     }
+    return []
   }
 
-  function selecionarOperacao(operacao: string) {
+  function selecionarOperacao(operacao: string, listaFornecedores?: FornecedorLocal[]) {
     setOperacaoSelecionada(operacao)
     if (!operacao) {
       setFornecedorSelecionado(null)
       return
     }
-    // Try to find matching fornecedor by nome_fantasia
-    const fornecedor = fornecedoresDisponiveis.find(
+    // Use provided list (fresh from DB) or fall back to state
+    const lista = listaFornecedores || fornecedoresDisponiveis
+    const fornecedor = lista.find(
       f => f.nome_fantasia.toUpperCase() === operacao.toUpperCase()
     )
     setFornecedorSelecionado(fornecedor || null)
