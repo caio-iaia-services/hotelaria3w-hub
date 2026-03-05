@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase'
-import { Orcamento } from '@/lib/types'
+import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search
+  Trash2, Filter, Search, Printer, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
