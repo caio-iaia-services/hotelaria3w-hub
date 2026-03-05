@@ -65,6 +65,18 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
 
       if (encontrado && ativo) {
         setFornecedor(encontrado as FornecedorLayout)
+        return
+      }
+
+      // tenta busca parcial (nome contém o termo buscado)
+      const { data: parciais } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .ilike('nome_fantasia', `%${nomeBusca}%`)
+        .limit(5)
+
+      if (parciais && parciais.length > 0 && ativo) {
+        setFornecedor(parciais[0] as FornecedorLayout)
       }
     }
 
