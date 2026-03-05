@@ -214,31 +214,48 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       const dataValidade = new Date()
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
 
-      const { error: errOrc } = await supabase
-        .from('orcamentos')
-        .update({
-          prazo_entrega: dados.prazo_entrega,
-          validade_dias: dados.validade_dias,
-          data_validade: dataValidade.toISOString(),
-          frete: parseNum(dados.frete),
-          frete_tipo: dados.frete_tipo,
-          impostos_percentual: parseNum(dados.impostos_percentual),
-          impostos: valorImpostos,
-          desconto_percentual: parseNum(dados.desconto_percentual),
-          desconto: valorDesconto,
-          desconto_valor: valorDesconto,
-          subtotal,
-          total,
-          condicoes_pagamento: { texto: dados.condicoes_pagamento },
-          observacoes: dados.observacoes,
-          observacoes_gerais: dados.observacoes_gerais,
-          difal_texto: dados.difal_texto,
-          imagem_marketing_url: imagemMarketingUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orcamento.id)
+      const updatePayload: Record<string, unknown> = {
+        prazo_entrega: dados.prazo_entrega,
+        validade_dias: dados.validade_dias,
+        data_validade: dataValidade.toISOString(),
+        frete: parseNum(dados.frete),
+        frete_tipo: dados.frete_tipo,
+        impostos_percentual: parseNum(dados.impostos_percentual),
+        impostos: valorImpostos,
+        desconto_percentual: parseNum(dados.desconto_percentual),
+        desconto: valorDesconto,
+        desconto_valor: valorDesconto,
+        subtotal,
+        total,
+        condicoes_pagamento: { texto: dados.condicoes_pagamento },
+        observacoes: dados.observacoes,
+        observacoes_gerais: dados.observacoes_gerais,
+        difal_texto: dados.difal_texto,
+        imagem_marketing_url: imagemMarketingUrl,
+        updated_at: new Date().toISOString(),
+      }
 
-      if (errOrc) throw errOrc
+      // Fallback: remove campos que não existem no schema cache
+      for (let tentativa = 0; tentativa < 20; tentativa++) {
+        const { error: errOrc } = await supabase
+          .from('orcamentos')
+          .update(updatePayload as any)
+          .eq('id', orcamento.id)
+
+        if (!errOrc) break
+
+        const colunaAusente = errOrc.code === 'PGRST204'
+          ? errOrc.message.match(/Could not find the '([^']+)' column/)?.[1]
+          : null
+
+        if (colunaAusente && colunaAusente in updatePayload) {
+          console.warn(`⚠️ Removendo campo ausente no schema: ${colunaAusente}`)
+          delete updatePayload[colunaAusente]
+          continue
+        }
+
+        throw errOrc
+      }
 
       // Delete existing items and re-insert all
       await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcamento.id)
