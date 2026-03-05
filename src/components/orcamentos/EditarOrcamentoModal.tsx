@@ -264,9 +264,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       toast.success('Orçamento atualizado com sucesso!')
       onSaved()
       onOpenChange(false)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar orçamento:', err)
-      toast.error('Erro ao salvar orçamento')
+      console.error('Detalhes:', JSON.stringify(err, null, 2))
+      toast.error(`Erro ao salvar orçamento: ${err?.message || err?.details || 'erro desconhecido'}`)
     } finally {
       setSaving(false)
     }
