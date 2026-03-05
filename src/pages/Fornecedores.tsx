@@ -574,6 +574,7 @@ export default function Fornecedores() {
       segmentos_atuacao: f.segmentos_atuacao || [],
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
+      tipo_layout: (f as any).tipo_layout || "padrao",
     });
     // Load existing contatos
     const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
