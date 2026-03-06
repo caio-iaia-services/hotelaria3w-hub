@@ -692,23 +692,22 @@ export default function AcoesComerciais() {
     }
 
     try {
-      // 1. Gerar número do orçamento (busca o maior número existente para evitar duplicatas)
-      const ano = new Date().getFullYear()
-      const prefixo = `ORC-${ano}-`
+      // 1. Gerar número do orçamento (numérico sequencial a partir de 13001)
       const { data: ultimoOrc } = await supabase
         .from('orcamentos')
         .select('numero')
-        .like('numero', `${prefixo}%`)
         .order('numero', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      let proximoSeq = 1
+      let proximoSeq = 13001
       if (ultimoOrc?.numero) {
-        const seqStr = ultimoOrc.numero.replace(prefixo, '')
-        proximoSeq = (parseInt(seqStr, 10) || 0) + 1
+        const numerico = parseInt(ultimoOrc.numero, 10)
+        if (!isNaN(numerico) && numerico >= 13001) {
+          proximoSeq = numerico + 1
+        }
       }
-      const numero = `${prefixo}${String(proximoSeq).padStart(4, '0')}`
+      const numero = String(proximoSeq)
 
       // 2. Calcular valores ANTES de salvar - garantir parsing numérico
       const subtotal = itensOrcamento.reduce((sum, item) => {
