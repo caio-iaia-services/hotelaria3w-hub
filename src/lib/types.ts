@@ -180,6 +180,10 @@ export interface Fornecedor {
   observacoes: string | null
   termos_fabricante: string | null
   tipo_layout: 'castor' | 'midea' | 'padrao' | null
+  prazo_entrega_padrao: string | null
+  validade_dias_padrao: number | null
+  imagem_template_url: string | null
+  condicoes_pagamento_padrao: string | null
   created_at: string
   updated_at: string
 }
@@ -190,6 +194,7 @@ export interface OrcamentoItem {
   codigo: string | null
   descricao: string
   especificacoes: string | null
+  medidas: string | null
   quantidade: number
   preco_unitario: number
   total: number
