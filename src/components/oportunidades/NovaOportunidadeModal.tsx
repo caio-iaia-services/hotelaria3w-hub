@@ -209,22 +209,21 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
       // Identificar gestões impactadas
       const gestoesImpactadas = [...new Set(operacoesSelecionadas.map(op => operacaoGestaoLabel[op] || "G1"))];
 
-      // Gerar número único baseado no maior número existente
-      const year = new Date().getFullYear();
+      // Gerar número sequencial a partir de 13001
       const { data: lastOpp } = await supabase
         .from("oportunidades")
         .select("numero")
-        .ilike("numero", `OPP-${year}-%`)
         .order("numero", { ascending: false })
         .limit(1);
 
-      let nextSeq = 1;
+      let nextSeq = 13001;
       if (lastOpp && lastOpp.length > 0) {
-        const lastNum = lastOpp[0].numero;
-        const seq = parseInt(lastNum.split("-").pop() || "0", 10);
-        nextSeq = seq + 1;
+        const numerico = parseInt(lastOpp[0].numero, 10);
+        if (!isNaN(numerico) && numerico >= 13001) {
+          nextSeq = numerico + 1;
+        }
       }
-      const numero = `OPP-${year}-${String(nextSeq).padStart(4, "0")}`;
+      const numero = String(nextSeq);
 
       // 1. CRIAR UMA ÚNICA OPORTUNIDADE
       const { data: opp, error: erroOpp } = await supabase
