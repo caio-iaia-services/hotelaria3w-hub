@@ -287,6 +287,7 @@ interface ItemOrcamento {
   id: number
   codigo: string
   descricao: string
+  medidas: string
   especificacoes: string
   quantidade: number
   preco_unitario: number
@@ -301,6 +302,9 @@ interface FornecedorLocal {
   gestao: string | null
   termos_fabricante: string | null
   produtos_servicos: string | null
+  prazo_entrega_padrao: string | null
+  validade_dias_padrao: number | null
+  condicoes_pagamento_padrao: string | null
 }
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
@@ -512,6 +516,7 @@ export default function AcoesComerciais() {
       id: Date.now(),
       codigo: '',
       descricao: '',
+      medidas: '',
       especificacoes: '',
       quantidade: 1,
       preco_unitario: 0,
@@ -544,7 +549,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -568,6 +573,13 @@ export default function AcoesComerciais() {
     )
     setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
+      // Aplicar defaults do fornecedor
+      setDadosOrcamento(prev => ({
+        ...prev,
+        prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
+        validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
+        condicoes_pagamento: fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento,
+      }))
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
   }
@@ -577,6 +589,7 @@ export default function AcoesComerciais() {
       id: Date.now(),
       codigo: '',
       descricao: '',
+      medidas: '',
       especificacoes: '',
       quantidade: 1,
       preco_unitario: 0,
@@ -848,6 +861,7 @@ export default function AcoesComerciais() {
           orcamento_id: orcamento.id,
           codigo: item.codigo || null,
           descricao: item.descricao,
+          medidas: item.medidas || null,
           especificacoes: item.especificacoes || null,
           quantidade: parseFloat(String(item.quantidade).replace(/\./g, '').replace(',', '.')) || 0,
           preco_unitario: parseFloat(String(item.preco_unitario).replace(/\./g, '').replace(',', '.')) || 0,
@@ -1159,7 +1173,7 @@ export default function AcoesComerciais() {
                           onChange={(e) => atualizarItem(item.id, 'codigo', e.target.value)}
                         />
                       </div>
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <Label>Descrição *</Label>
                         <Input
                           placeholder="Descrição do produto"
@@ -1168,6 +1182,14 @@ export default function AcoesComerciais() {
                         />
                       </div>
                       <div className="col-span-2">
+                        <Label>Medidas</Label>
+                        <Input
+                          placeholder="Ex: Queen 158x198x25"
+                          value={item.medidas}
+                          onChange={(e) => atualizarItem(item.id, 'medidas', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-1">
                         <Label>Quantidade *</Label>
                         <Input
                           placeholder="1"

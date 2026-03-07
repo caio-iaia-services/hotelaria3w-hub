@@ -264,6 +264,7 @@ export type Database = {
           comissao_vendas: number | null
           complemento: string | null
           condicoes_pagamento: Json | null
+          condicoes_pagamento_padrao: string | null
           contatos: Json | null
           contrato: string | null
           created_at: string
@@ -273,6 +274,7 @@ export type Database = {
           estado: string | null
           gestao: string | null
           id: string
+          imagem_template_url: string | null
           linhas_produtos: string[] | null
           logotipo_url: string | null
           nome_fantasia: string
@@ -282,6 +284,7 @@ export type Database = {
           observacoes: string | null
           orcamento_medio: number | null
           pendentes: number | null
+          prazo_entrega_padrao: string | null
           produtos_servicos: string | null
           razao_social: string
           segmentos_atuacao: string[] | null
@@ -291,7 +294,9 @@ export type Database = {
           telefone: string | null
           termos_fabricante: string | null
           tipo: string
+          tipo_layout: string | null
           updated_at: string
+          validade_dias_padrao: number | null
           venda_media: number | null
           volume_orcamentos: number | null
           volume_vendas: number | null
@@ -308,6 +313,7 @@ export type Database = {
           comissao_vendas?: number | null
           complemento?: string | null
           condicoes_pagamento?: Json | null
+          condicoes_pagamento_padrao?: string | null
           contatos?: Json | null
           contrato?: string | null
           created_at?: string
@@ -317,6 +323,7 @@ export type Database = {
           estado?: string | null
           gestao?: string | null
           id?: string
+          imagem_template_url?: string | null
           linhas_produtos?: string[] | null
           logotipo_url?: string | null
           nome_fantasia: string
@@ -326,6 +333,7 @@ export type Database = {
           observacoes?: string | null
           orcamento_medio?: number | null
           pendentes?: number | null
+          prazo_entrega_padrao?: string | null
           produtos_servicos?: string | null
           razao_social: string
           segmentos_atuacao?: string[] | null
@@ -335,7 +343,9 @@ export type Database = {
           telefone?: string | null
           termos_fabricante?: string | null
           tipo?: string
+          tipo_layout?: string | null
           updated_at?: string
+          validade_dias_padrao?: number | null
           venda_media?: number | null
           volume_orcamentos?: number | null
           volume_vendas?: number | null
@@ -352,6 +362,7 @@ export type Database = {
           comissao_vendas?: number | null
           complemento?: string | null
           condicoes_pagamento?: Json | null
+          condicoes_pagamento_padrao?: string | null
           contatos?: Json | null
           contrato?: string | null
           created_at?: string
@@ -361,6 +372,7 @@ export type Database = {
           estado?: string | null
           gestao?: string | null
           id?: string
+          imagem_template_url?: string | null
           linhas_produtos?: string[] | null
           logotipo_url?: string | null
           nome_fantasia?: string
@@ -370,6 +382,7 @@ export type Database = {
           observacoes?: string | null
           orcamento_medio?: number | null
           pendentes?: number | null
+          prazo_entrega_padrao?: string | null
           produtos_servicos?: string | null
           razao_social?: string
           segmentos_atuacao?: string[] | null
@@ -379,7 +392,9 @@ export type Database = {
           telefone?: string | null
           termos_fabricante?: string | null
           tipo?: string
+          tipo_layout?: string | null
           updated_at?: string
+          validade_dias_padrao?: number | null
           venda_media?: number | null
           volume_orcamentos?: number | null
           volume_vendas?: number | null
@@ -394,6 +409,7 @@ export type Database = {
           descricao: string
           especificacoes: string | null
           id: string
+          medidas: string | null
           orcamento_id: string
           ordem: number
           preco_unitario: number
@@ -406,6 +422,7 @@ export type Database = {
           descricao: string
           especificacoes?: string | null
           id?: string
+          medidas?: string | null
           orcamento_id: string
           ordem?: number
           preco_unitario?: number
@@ -418,6 +435,7 @@ export type Database = {
           descricao?: string
           especificacoes?: string | null
           id?: string
+          medidas?: string | null
           orcamento_id?: string
           ordem?: number
           preco_unitario?: number
