@@ -323,16 +323,15 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <thead>
                 <tr className="bg-[#1a4168] text-white">
                   <th className="border border-white p-3 text-center">Item</th>
-                  {(() => {
-                    console.log('🔢 Renderizando cabeçalho código. Tipo:', tipoLayout)
-                    return tipoLayout === 'castor' ? (
-                      <th className="border border-white p-3 text-center" colSpan={6}>Código</th>
-                    ) : (
-                      <th className="border border-white p-3 text-center">Código</th>
-                    )
-                  })()}
+                  {tipoLayout === 'castor' ? (
+                    <th className="border border-white p-3 text-center" colSpan={5}>Código</th>
+                  ) : (
+                    <th className="border border-white p-3 text-center">Código</th>
+                  )}
                   <th className="border border-white p-3 text-left">Descrição</th>
-                  <th className="border border-white p-3 text-center">Medidas</th>
+                  {tipoLayout === 'castor' && (
+                    <th className="border border-white p-3 text-center">Medidas</th>
+                  )}
                   <th className="border border-white p-3 text-center">Qtd</th>
                   <th className="border border-white p-3 text-right">Unitário</th>
                   <th className="border border-white p-3 text-right">Total</th>
@@ -348,29 +347,24 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         {index + 1}
                       </td>
                       
-                      {(() => {
-                        console.log(`📝 Item ${index + 1} - Código: ${item.codigo} - Layout: ${tipoLayout}`)
-                        return tipoLayout === 'castor' ? (
-                          <>
-                            {codigoDividido.length > 0 ? (
-                              codigoDividido.slice(0, 6).map((digito, i) => (
-                                <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
-                                  {digito}
-                                </td>
-                              ))
-                            ) : (
-                              <td colSpan={6} className="border border-gray-300 p-2 text-center text-gray-400">-</td>
-                            )}
-                            {Array(Math.max(0, 6 - codigoDividido.length)).fill(null).map((_, i) => (
+                      {tipoLayout === 'castor' ? (
+                        <>
+                          {codigoDividido.slice(0, 5).map((digito, i) => (
+                            <td key={i} className="border border-gray-300 p-2 text-center font-mono bg-blue-50">
+                              {digito}
+                            </td>
+                          ))}
+                          {Array(Math.max(0, 5 - codigoDividido.length))
+                            .fill(null)
+                            .map((_, i) => (
                               <td key={`empty-${i}`} className="border border-gray-300 p-2 bg-gray-100"></td>
                             ))}
-                          </>
-                        ) : (
-                          <td className="border border-gray-300 p-3 text-center font-mono">
-                            {item.codigo || '-'}
-                          </td>
-                        )
-                      })()}
+                        </>
+                      ) : (
+                        <td className="border border-gray-300 p-3 text-center font-mono">
+                          {item.codigo || '-'}
+                        </td>
+                      )}
                       
                       <td className="border border-gray-300 p-3">
                         <p className="font-semibold">{item.descricao}</p>
@@ -379,9 +373,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         )}
                       </td>
                       
-                      <td className="border border-gray-300 p-3 text-center text-sm">
-                        {item.especificacoes?.match(/\d+x\d+/)?.[0] || '-'}
-                      </td>
+                      {tipoLayout === 'castor' && (
+                        <td className="border border-gray-300 p-3 text-center text-sm">
+                          {(item as any).medidas || '-'}
+                        </td>
+                      )}
                       
                       <td className="border border-gray-300 p-3 text-center font-bold">
                         {item.quantidade}
@@ -525,20 +521,14 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   </p>
                 </div>
                 <div className="p-4">
-                  <div className="text-xs space-y-1">
-                    <p className="font-semibold mb-2">ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO</p>
-                    <p>• para 30/60 acréscimo de 2,0%</p>
-                    <p>• para 30/60/90 acréscimo de 2,8%</p>
-                    <p>• para 30/60/90/120 acréscimo de 3,00%</p>
-                    <p>• para 30/60/90/120/150 acréscimo de 3,80%</p>
-                    <p>• para 30/60/90/120/150/180 acréscimo de 4,20%</p>
-                    <p>• para 30/60/90/120/150/180/210 acréscimo de 4,80%</p>
-                    <p>• para 30/60/90/120/150/180/210/240 acréscimo de 5,20%</p>
-                    <p>• para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%</p>
-                    <p>• para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%</p>
-                    <p className="mt-3 text-gray-600 italic">
-                      IMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.
-                    </p>
+                  <div className="text-xs space-y-1 whitespace-pre-wrap">
+                    {typeof orcamento.condicoes_pagamento === 'object' && orcamento.condicoes_pagamento !== null
+                      ? (orcamento.condicoes_pagamento as any).texto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
+                      : (typeof orcamento.condicoes_pagamento === 'string'
+                        ? orcamento.condicoes_pagamento
+                        : 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
+                      )
+                    }
                   </div>
                 </div>
               </div>
