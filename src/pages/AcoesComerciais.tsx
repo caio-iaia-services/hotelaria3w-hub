@@ -861,6 +861,7 @@ export default function AcoesComerciais() {
           orcamento_id: orcamento.id,
           codigo: item.codigo || null,
           descricao: item.descricao,
+          medidas: item.medidas || null,
           especificacoes: item.especificacoes || null,
           quantidade: parseFloat(String(item.quantidade).replace(/\./g, '').replace(',', '.')) || 0,
           preco_unitario: parseFloat(String(item.preco_unitario).replace(/\./g, '').replace(',', '.')) || 0,
@@ -1172,7 +1173,7 @@ export default function AcoesComerciais() {
                           onChange={(e) => atualizarItem(item.id, 'codigo', e.target.value)}
                         />
                       </div>
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <Label>Descrição *</Label>
                         <Input
                           placeholder="Descrição do produto"
@@ -1181,6 +1182,14 @@ export default function AcoesComerciais() {
                         />
                       </div>
                       <div className="col-span-2">
+                        <Label>Medidas</Label>
+                        <Input
+                          placeholder="Ex: Queen 158x198x25"
+                          value={item.medidas}
+                          onChange={(e) => atualizarItem(item.id, 'medidas', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-1">
                         <Label>Quantidade *</Label>
                         <Input
                           placeholder="1"
