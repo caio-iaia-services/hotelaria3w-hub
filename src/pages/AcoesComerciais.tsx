@@ -1305,36 +1305,72 @@ export default function AcoesComerciais() {
               />
             </div>
 
-            {/* IMAGEM DE MARKETING */}
-            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
-              <Label className="mb-2 block">Imagem de Marketing</Label>
-              <div className="relative">
-                <img
-                  src={imagemPreview || '/placeholder.svg'}
-                  alt="Preview marketing"
-                  className="w-full max-h-48 object-cover rounded-lg bg-muted"
-                />
-                {imagemPreview && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 h-8 w-8 p-0"
-                    onClick={removerImagemMarketing}
-                  >
-                    <X className="w-4 h-4" />
+            {/* ÁREA DE MARKETING */}
+            <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 bg-purple-50">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5" />
+                    Área de Marketing
+                  </h3>
+                  <p className="text-sm text-purple-700 mt-1">
+                    Adicione uma campanha visual do fornecedor (hero/banner)
+                  </p>
+                </div>
+                
+                <label className="inline-flex cursor-pointer">
+                  <Button type="button" variant="outline" className="border-purple-400 text-purple-700 hover:bg-purple-100" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      {imagemMarketing ? 'Trocar Imagem' : 'Upload Campanha'}
+                    </span>
                   </Button>
-                )}
+                  <input type="file" accept="image/jpeg,image/jpg,image/png" className="hidden" onChange={handleImagemMarketing} />
+                </label>
               </div>
-              <label className="mt-2 inline-flex cursor-pointer">
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <span>
-                    <Upload className="w-4 h-4 mr-1" />
-                    Alterar Imagem
-                  </span>
-                </Button>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
-              </label>
+              
+              {imagemMarketing ? (
+                <div className="relative">
+                  <img 
+                    src={imagemMarketing.preview} 
+                    alt="Campanha Marketing" 
+                    className="w-full rounded-lg shadow-md"
+                  />
+                  
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    {imagemMarketing.ehPadrao && (
+                      <span className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">
+                        Imagem Padrão
+                      </span>
+                    )}
+                    
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removerImagemMarketing}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-2 text-xs text-gray-600">
+                    <p>Nome: {imagemMarketing.nome}</p>
+                    {imagemMarketing.tamanho > 0 && (
+                      <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-purple-600">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Nenhuma campanha adicionada</p>
+                  <p className="text-xs text-purple-500 mt-1">
+                    JPG, PNG • Máx 5MB • Recomendado: 1200x400px
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* IMAGENS ADICIONAIS */}
