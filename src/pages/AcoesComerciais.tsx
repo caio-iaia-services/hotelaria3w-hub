@@ -287,6 +287,7 @@ interface ItemOrcamento {
   id: number
   codigo: string
   descricao: string
+  medidas: string
   especificacoes: string
   quantidade: number
   preco_unitario: number
@@ -301,6 +302,9 @@ interface FornecedorLocal {
   gestao: string | null
   termos_fabricante: string | null
   produtos_servicos: string | null
+  prazo_entrega_padrao: string | null
+  validade_dias_padrao: number | null
+  condicoes_pagamento_padrao: string | null
 }
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
