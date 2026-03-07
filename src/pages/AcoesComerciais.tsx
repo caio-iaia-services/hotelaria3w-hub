@@ -6,7 +6,7 @@ import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
-  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X,
+  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X, Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -305,6 +305,16 @@ interface FornecedorLocal {
   prazo_entrega_padrao: string | null
   validade_dias_padrao: number | null
   condicoes_pagamento_padrao: string | null
+  imagem_template_url: string | null
+}
+
+// ─── ImagemMarketing type ────────────────────────────────────────────────────
+interface ImagemMarketingState {
+  preview: string
+  nome: string
+  tamanho: number
+  file: File | null
+  ehPadrao: boolean
 }
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
