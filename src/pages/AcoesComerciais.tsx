@@ -6,7 +6,7 @@ import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
-  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X,
+  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X, Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -305,6 +305,16 @@ interface FornecedorLocal {
   prazo_entrega_padrao: string | null
   validade_dias_padrao: number | null
   condicoes_pagamento_padrao: string | null
+  imagem_template_url: string | null
+}
+
+// ─── ImagemMarketing type ────────────────────────────────────────────────────
+interface ImagemMarketingState {
+  preview: string
+  nome: string
+  tamanho: number
+  file: File | null
+  ehPadrao: boolean
 }
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
@@ -350,8 +360,7 @@ export default function AcoesComerciais() {
   const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<FornecedorLocal[]>([])
   const [fornecedoresDb, setFornecedoresDb] = useState<{ nome_fantasia: string; gestao: string }[]>([])
   const [operacaoSelecionada, setOperacaoSelecionada] = useState('')
-  const [imagemMarketing, setImagemMarketing] = useState<File | null>(null)
-  const [imagemPreview, setImagemPreview] = useState<string | null>(null)
+  const [imagemMarketing, setImagemMarketing] = useState<ImagemMarketingState | null>(null)
   const [uploadingImagem, setUploadingImagem] = useState(false)
   const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([])
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
@@ -549,7 +558,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -580,6 +589,16 @@ export default function AcoesComerciais() {
         validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
         condicoes_pagamento: fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento,
       }))
+      // Carregar imagem padrão do fornecedor
+      if (fornecedor.imagem_template_url) {
+        setImagemMarketing({
+          preview: fornecedor.imagem_template_url,
+          nome: 'Imagem padrão ' + fornecedor.nome_fantasia,
+          tamanho: 0,
+          file: null,
+          ehPadrao: true,
+        })
+      }
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
   }
@@ -643,14 +662,20 @@ export default function AcoesComerciais() {
       toast.error('Imagem deve ter no máximo 5MB')
       return
     }
-    setImagemMarketing(file)
-    setImagemPreview(URL.createObjectURL(file))
+    setImagemMarketing({
+      preview: URL.createObjectURL(file),
+      nome: file.name,
+      tamanho: file.size,
+      file,
+      ehPadrao: false,
+    })
   }
 
   function removerImagemMarketing() {
+    if (imagemMarketing && !imagemMarketing.ehPadrao && imagemMarketing.preview) {
+      URL.revokeObjectURL(imagemMarketing.preview)
+    }
     setImagemMarketing(null)
-    if (imagemPreview) URL.revokeObjectURL(imagemPreview)
-    setImagemPreview(null)
   }
 
   function calcularSubtotal() {
@@ -750,21 +775,27 @@ export default function AcoesComerciais() {
       // 5b. Upload imagem marketing (se houver)
       let imagemMarketingUrl: string | null = null
       if (imagemMarketing) {
-        setUploadingImagem(true)
-        const ext = imagemMarketing.name.split('.').pop()
-        const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
-        const { error: uploadError } = await supabaseCloud.storage
-          .from('orcamentos-marketing')
-          .upload(path, imagemMarketing)
-        setUploadingImagem(false)
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          toast.error('Erro ao fazer upload da imagem de marketing')
-        } else {
-          const { data: urlData } = supabaseCloud.storage
+        if (imagemMarketing.ehPadrao) {
+          // Imagem padrão do fornecedor — usar URL direta
+          imagemMarketingUrl = imagemMarketing.preview
+        } else if (imagemMarketing.file) {
+          // Upload de arquivo novo
+          setUploadingImagem(true)
+          const ext = imagemMarketing.nome.split('.').pop()
+          const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
+          const { error: uploadError } = await supabaseCloud.storage
             .from('orcamentos-marketing')
-            .getPublicUrl(path)
-          imagemMarketingUrl = urlData.publicUrl
+            .upload(path, imagemMarketing.file)
+          setUploadingImagem(false)
+          if (uploadError) {
+            console.error('Upload error:', uploadError)
+            toast.error('Erro ao fazer upload da imagem de marketing')
+          } else {
+            const { data: urlData } = supabaseCloud.storage
+              .from('orcamentos-marketing')
+              .getPublicUrl(path)
+            imagemMarketingUrl = urlData.publicUrl
+          }
         }
       }
 
@@ -1274,36 +1305,72 @@ export default function AcoesComerciais() {
               />
             </div>
 
-            {/* IMAGEM DE MARKETING */}
-            <div className="bg-card border-2 border-dashed border-primary/20 rounded-lg p-4">
-              <Label className="mb-2 block">Imagem de Marketing</Label>
-              <div className="relative">
-                <img
-                  src={imagemPreview || '/placeholder.svg'}
-                  alt="Preview marketing"
-                  className="w-full max-h-48 object-cover rounded-lg bg-muted"
-                />
-                {imagemPreview && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 h-8 w-8 p-0"
-                    onClick={removerImagemMarketing}
-                  >
-                    <X className="w-4 h-4" />
+            {/* ÁREA DE MARKETING */}
+            <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 bg-purple-50">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5" />
+                    Área de Marketing
+                  </h3>
+                  <p className="text-sm text-purple-700 mt-1">
+                    Adicione uma campanha visual do fornecedor (hero/banner)
+                  </p>
+                </div>
+                
+                <label className="inline-flex cursor-pointer">
+                  <Button type="button" variant="outline" className="border-purple-400 text-purple-700 hover:bg-purple-100" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      {imagemMarketing ? 'Trocar Imagem' : 'Upload Campanha'}
+                    </span>
                   </Button>
-                )}
+                  <input type="file" accept="image/jpeg,image/jpg,image/png" className="hidden" onChange={handleImagemMarketing} />
+                </label>
               </div>
-              <label className="mt-2 inline-flex cursor-pointer">
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <span>
-                    <Upload className="w-4 h-4 mr-1" />
-                    Alterar Imagem
-                  </span>
-                </Button>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
-              </label>
+              
+              {imagemMarketing ? (
+                <div className="relative">
+                  <img 
+                    src={imagemMarketing.preview} 
+                    alt="Campanha Marketing" 
+                    className="w-full rounded-lg shadow-md"
+                  />
+                  
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    {imagemMarketing.ehPadrao && (
+                      <span className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">
+                        Imagem Padrão
+                      </span>
+                    )}
+                    
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removerImagemMarketing}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-2 text-xs text-gray-600">
+                    <p>Nome: {imagemMarketing.nome}</p>
+                    {imagemMarketing.tamanho > 0 && (
+                      <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-purple-600">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Nenhuma campanha adicionada</p>
+                  <p className="text-xs text-purple-500 mt-1">
+                    JPG, PNG • Máx 5MB • Recomendado: 1200x400px
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* IMAGENS ADICIONAIS */}
