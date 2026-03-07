@@ -558,7 +558,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -589,6 +589,16 @@ export default function AcoesComerciais() {
         validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
         condicoes_pagamento: fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento,
       }))
+      // Carregar imagem padrão do fornecedor
+      if (fornecedor.imagem_template_url) {
+        setImagemMarketing({
+          preview: fornecedor.imagem_template_url,
+          nome: 'Imagem padrão ' + fornecedor.nome_fantasia,
+          tamanho: 0,
+          file: null,
+          ehPadrao: true,
+        })
+      }
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
   }
@@ -652,14 +662,20 @@ export default function AcoesComerciais() {
       toast.error('Imagem deve ter no máximo 5MB')
       return
     }
-    setImagemMarketing(file)
-    setImagemPreview(URL.createObjectURL(file))
+    setImagemMarketing({
+      preview: URL.createObjectURL(file),
+      nome: file.name,
+      tamanho: file.size,
+      file,
+      ehPadrao: false,
+    })
   }
 
   function removerImagemMarketing() {
+    if (imagemMarketing && !imagemMarketing.ehPadrao && imagemMarketing.preview) {
+      URL.revokeObjectURL(imagemMarketing.preview)
+    }
     setImagemMarketing(null)
-    if (imagemPreview) URL.revokeObjectURL(imagemPreview)
-    setImagemPreview(null)
   }
 
   function calcularSubtotal() {
