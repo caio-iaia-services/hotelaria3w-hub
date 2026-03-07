@@ -775,21 +775,27 @@ export default function AcoesComerciais() {
       // 5b. Upload imagem marketing (se houver)
       let imagemMarketingUrl: string | null = null
       if (imagemMarketing) {
-        setUploadingImagem(true)
-        const ext = imagemMarketing.name.split('.').pop()
-        const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
-        const { error: uploadError } = await supabaseCloud.storage
-          .from('orcamentos-marketing')
-          .upload(path, imagemMarketing)
-        setUploadingImagem(false)
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          toast.error('Erro ao fazer upload da imagem de marketing')
-        } else {
-          const { data: urlData } = supabaseCloud.storage
+        if (imagemMarketing.ehPadrao) {
+          // Imagem padrão do fornecedor — usar URL direta
+          imagemMarketingUrl = imagemMarketing.preview
+        } else if (imagemMarketing.file) {
+          // Upload de arquivo novo
+          setUploadingImagem(true)
+          const ext = imagemMarketing.nome.split('.').pop()
+          const path = `${numero.replace(/\s/g, '_')}_${Date.now()}.${ext}`
+          const { error: uploadError } = await supabaseCloud.storage
             .from('orcamentos-marketing')
-            .getPublicUrl(path)
-          imagemMarketingUrl = urlData.publicUrl
+            .upload(path, imagemMarketing.file)
+          setUploadingImagem(false)
+          if (uploadError) {
+            console.error('Upload error:', uploadError)
+            toast.error('Erro ao fazer upload da imagem de marketing')
+          } else {
+            const { data: urlData } = supabaseCloud.storage
+              .from('orcamentos-marketing')
+              .getPublicUrl(path)
+            imagemMarketingUrl = urlData.publicUrl
+          }
         }
       }
 
