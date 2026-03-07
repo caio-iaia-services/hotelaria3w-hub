@@ -516,6 +516,7 @@ export default function AcoesComerciais() {
       id: Date.now(),
       codigo: '',
       descricao: '',
+      medidas: '',
       especificacoes: '',
       quantidade: 1,
       preco_unitario: 0,
@@ -548,7 +549,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -572,6 +573,13 @@ export default function AcoesComerciais() {
     )
     setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
+      // Aplicar defaults do fornecedor
+      setDadosOrcamento(prev => ({
+        ...prev,
+        prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
+        validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
+        condicoes_pagamento: fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento,
+      }))
       toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
     }
   }
@@ -581,6 +589,7 @@ export default function AcoesComerciais() {
       id: Date.now(),
       codigo: '',
       descricao: '',
+      medidas: '',
       especificacoes: '',
       quantidade: 1,
       preco_unitario: 0,
