@@ -86,6 +86,12 @@ export default function Orcamentos() {
   const [modalEditar, setModalEditar] = useState(false)
   const [orcamentoEditarId, setOrcamentoEditarId] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [modalEnviar, setModalEnviar] = useState(false)
+  const [orcamentoEnviar, setOrcamentoEnviar] = useState<Orcamento | null>(null)
+  const [emailDestinatarios, setEmailDestinatarios] = useState('')
+  const [emailAssunto, setEmailAssunto] = useState('')
+  const [emailMensagem, setEmailMensagem] = useState('')
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
 
   const getTotalExibicao = useCallback((orcamento: Orcamento) => {
     const totalDireto = parseNum((orcamento as any).total)
