@@ -479,15 +479,17 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
+        const captureWidth = 794
+
         const canvas = await html2canvas(pagina, {
           scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
           backgroundColor: '#ffffff',
-          width: pagina.scrollWidth,
+          width: captureWidth,
           height: pagina.scrollHeight,
-          windowWidth: pagina.scrollWidth,
+          windowWidth: captureWidth,
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
