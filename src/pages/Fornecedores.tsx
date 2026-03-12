@@ -280,7 +280,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao" } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao", prazo_entrega_padrao: "", validade_dias_padrao: "", condicoes_pagamento_padrao: "", imagem_template_url: "" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
