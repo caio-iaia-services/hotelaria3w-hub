@@ -627,7 +627,10 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
                 <div className="mt-1 bg-gray-200 text-gray-700 px-3 py-1 rounded inline-block text-xs">
                   {orcamento.status.toUpperCase()}
+                </div>
+              </div>
             </div>
+          </div>
 
             {/* TERMOS DO FORNECEDOR - APENAS MIDEA */}
             {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
@@ -646,9 +649,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
               </div>
             )}
-          </div>
-            </div>
-          </div>
           
           <div className="flex-1 flex items-center justify-center bg-gray-100 p-12">
             <div className="text-center max-w-4xl">
