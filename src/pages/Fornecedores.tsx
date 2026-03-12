@@ -90,6 +90,10 @@ type FornecedorForm = {
   produtos_servicos: string;
   comissao_vendas: string;
   tipo_layout: string;
+  prazo_entrega_padrao: string;
+  validade_dias_padrao: string;
+  condicoes_pagamento_padrao: string;
+  imagem_template_url: string;
 };
 
 interface Contato {
