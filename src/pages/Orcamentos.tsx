@@ -419,27 +419,20 @@ export default function Orcamentos() {
 
     const style = document.createElement('style')
     style.textContent = `
+      @page { size: A4; margin: 0; }
       #orcamento-export-clone,
       #orcamento-export-clone * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+      #orcamento-export-clone {
+        width: ${A4_WIDTH_PX}px !important;
+        max-width: ${A4_WIDTH_PX}px !important;
+        margin: 0 auto !important;
+        background: #fff !important;
+      }
       #orcamento-export-clone .max-w-7xl {
         max-width: 100% !important;
-      }
-      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:first-child {
-        min-width: 0 !important;
-        flex: 1 1 auto !important;
-      }
-      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:last-child {
-        flex: 0 0 auto !important;
-      }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] {
-        background-color: #c4942c !important;
-        color: #ffffff !important;
-      }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] * {
-        color: #ffffff !important;
       }
       #orcamento-export-clone .page-break {
         width: ${A4_WIDTH_PX}px !important;
@@ -453,6 +446,49 @@ export default function Orcamentos() {
       #orcamento-export-clone .page-break:last-child {
         break-after: auto;
         page-break-after: auto;
+      }
+      #orcamento-export-clone .bg-\\[\\#1a4168\\] {
+        background-color: #1a4168 !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#c4942c\\] {
+        background-color: #c4942c !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#c4942c\\] * {
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#1E4A7C\\] {
+        background-color: #1E4A7C !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#1E4A7C\\] * {
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .text-\\[\\#1a4168\\] {
+        color: #1a4168 !important;
+      }
+      #orcamento-export-clone .text-\\[\\#c4942c\\] {
+        color: #c4942c !important;
+      }
+      #orcamento-export-clone .bg-gray-200 {
+        background-color: #e5e7eb !important;
+      }
+      #orcamento-export-clone .bg-gray-100 {
+        background-color: #f3f4f6 !important;
+      }
+      #orcamento-export-clone .bg-gray-50 {
+        background-color: #f9fafb !important;
+      }
+      #orcamento-export-clone .bg-blue-50 {
+        background-color: #eff6ff !important;
+      }
+      #orcamento-export-clone table {
+        border-collapse: collapse !important;
+      }
+      #orcamento-export-clone th,
+      #orcamento-export-clone td {
+        border-color: #e5e7eb !important;
       }
     `
 
@@ -524,14 +560,10 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
-        const captureWidth = Math.max(
-          794,
-          Math.ceil(pagina.scrollWidth || 0),
-          Math.ceil(pagina.getBoundingClientRect().width || 0)
-        )
+        const captureWidth = 794
 
         const canvas = await html2canvas(pagina, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           allowTaint: false,
           logging: false,
@@ -542,21 +574,28 @@ export default function Orcamentos() {
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
-          imageTimeout: 10000,
+          imageTimeout: 15000,
+          onclone: (clonedDoc) => {
+            const el = clonedDoc.getElementById('orcamento-export-clone')
+            if (el) {
+              el.style.width = `${captureWidth}px`
+              el.style.maxWidth = `${captureWidth}px`
+            }
+          },
         })
 
         const domToCanvasScale = canvas.width / captureWidth
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
-        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
-        const renderWidth = canvas.width * ratio
+        const ratio = pageWidth / canvas.width
+        const renderWidth = pageWidth
         const renderHeight = canvas.height * ratio
-        const offsetX = (pageWidth - renderWidth) / 2
-        const offsetY = (pageHeight - renderHeight) / 2
-        const imgData = canvas.toDataURL('image/png')
+        const offsetX = 0
+        const offsetY = 0
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
 
         if (index > 0) pdf.addPage()
-        pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
+        pdf.addImage(imgData, 'JPEG', offsetX, offsetY, renderWidth, renderHeight)
         desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
       }
 
