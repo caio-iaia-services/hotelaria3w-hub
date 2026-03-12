@@ -271,6 +271,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           orcamento_id: orcamento.id,
           codigo: item.codigo || null,
           descricao: item.descricao,
+          medidas: item.medidas || null,
           especificacoes: item.especificacoes || null,
           quantidade: parseNum(item.quantidade),
           preco_unitario: parseNum(item.preco_unitario),
