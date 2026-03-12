@@ -424,6 +424,9 @@ export default function Orcamentos() {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+      #orcamento-export-clone .max-w-7xl {
+        max-width: 100% !important;
+      }
       #orcamento-export-clone .page-break {
         width: ${A4_WIDTH_PX}px !important;
         min-height: ${A4_HEIGHT_PX}px !important;
@@ -431,6 +434,7 @@ export default function Orcamentos() {
         break-after: page;
         page-break-after: always;
         overflow: visible;
+        box-sizing: border-box;
       }
       #orcamento-export-clone .page-break:last-child {
         break-after: auto;
@@ -475,15 +479,17 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
+        const captureWidth = 794
+
         const canvas = await html2canvas(pagina, {
           scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
           backgroundColor: '#ffffff',
-          width: pagina.scrollWidth,
+          width: captureWidth,
           height: pagina.scrollHeight,
-          windowWidth: pagina.scrollWidth,
+          windowWidth: captureWidth,
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
