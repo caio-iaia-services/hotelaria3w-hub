@@ -25,7 +25,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             </div>
 
             <div className="text-right">
-              <div className="inline-block bg-[#D4AF37] text-[#1E4A7C] px-6 py-3 rounded-lg">
+              <div className="inline-block bg-[#c4942c] text-white px-6 py-3 rounded-lg">
                 <p className="text-xs font-medium opacity-90">PROPOSTA COMERCIAL</p>
                 <p className="text-3xl font-bold">{orcamento.numero}</p>
               </div>
