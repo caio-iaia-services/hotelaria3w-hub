@@ -525,7 +525,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 <div className="p-4">
                   <div className="text-xs space-y-1 whitespace-pre-wrap">
-                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'}
+                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'}
                   </div>
                 </div>
               </div>
