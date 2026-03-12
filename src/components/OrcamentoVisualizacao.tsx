@@ -101,7 +101,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
       {/* ITENS DO ORÇAMENTO */}
       <div className="max-w-6xl mx-auto px-8 py-8">
         <h3 className="text-xl font-bold text-[#1E4A7C] mb-6 flex items-center gap-2">
-          <div className="w-1 h-6 bg-[#D4AF37] rounded-full"></div>
+          <div className="w-1 h-6 bg-[#c4942c] rounded-full"></div>
           Itens do Orçamento
         </h3>
 
