@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useProdutosCastorBusca, ProdutoCastor, MedidaPreco } from '@/hooks/useProdutosCastor'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,6 +30,8 @@ interface Props {
 }
 
 export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }: Props) {
+  const [precoEditando, setPrecoEditando] = useState(false)
+  const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
   const [descricaoBusca, setDescricaoBusca] = useState('')
   const [showCodigoDropdown, setShowCodigoDropdown] = useState(false)
@@ -192,9 +194,18 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
         <div className="col-span-3">
           <Label>Preço Unitário *</Label>
           <Input
-            placeholder="0,00"
-            value={item.preco_unitario || ''}
-            onChange={(e) => onUpdate(item.id, 'preco_unitario', e.target.value)}
+            placeholder="R$ 0,00"
+            value={precoEditando ? precoTexto : (typeof item.preco_unitario === 'number' && item.preco_unitario > 0 ? formatCurrency(item.preco_unitario) : (item.preco_unitario || ''))}
+            onFocus={() => {
+              setPrecoEditando(true)
+              const val = typeof item.preco_unitario === 'number' ? String(item.preco_unitario).replace('.', ',') : String(item.preco_unitario || '')
+              setPrecoTexto(val)
+            }}
+            onChange={(e) => {
+              setPrecoTexto(e.target.value)
+              onUpdate(item.id, 'preco_unitario', e.target.value)
+            }}
+            onBlur={() => setPrecoEditando(false)}
           />
         </div>
 
