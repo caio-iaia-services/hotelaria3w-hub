@@ -1037,6 +1037,123 @@ comercial1@3whotelaria.com.br`
           buscarContadores()
         }}
       />
+
+      {/* MODAL ENVIAR EMAIL PROFISSIONAL */}
+      <Dialog open={modalEnviar} onOpenChange={setModalEnviar}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Enviar Orçamento por E-mail</DialogTitle>
+            <DialogDescription>
+              Orçamento {orcamentoEnviar?.numero} - {orcamentoEnviar?.cliente_nome}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Para (E-mails) *</Label>
+              <Input
+                type="email"
+                value={emailDestinatarios}
+                onChange={(e) => setEmailDestinatarios(e.target.value)}
+                placeholder="cliente@email.com, gestor@3whotelaria.com.br"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Separe múltiplos e-mails com vírgula
+              </p>
+            </div>
+
+            <div>
+              <Label>Assunto *</Label>
+              <Input
+                value={emailAssunto}
+                onChange={(e) => setEmailAssunto(e.target.value)}
+                placeholder="Orçamento 3W Hotelaria"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Mensagem *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={restaurarMensagemPadrao}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Restaurar padrão
+                </Button>
+              </div>
+              <Textarea
+                value={emailMensagem}
+                onChange={(e) => setEmailMensagem(e.target.value)}
+                rows={12}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Paperclip className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-blue-900">Anexo</p>
+                  <p className="text-sm text-blue-700">
+                    {orcamentoEnviar?.pdf_url
+                      ? '✅ PDF será anexado automaticamente'
+                      : '⚠️ PDF ainda não foi gerado. Será gerado automaticamente ao enviar.'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <details className="border rounded-lg p-4">
+              <summary className="cursor-pointer font-semibold text-muted-foreground">
+                👁️ Pré-visualizar e-mail
+              </summary>
+              <div className="mt-4 bg-muted rounded p-4 text-sm space-y-2 border">
+                <p><strong>Para:</strong> {emailDestinatarios}</p>
+                <p><strong>Assunto:</strong> {emailAssunto}</p>
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">Mensagem:</p>
+                  <div className="whitespace-pre-wrap bg-background p-3 rounded border">
+                    {emailMensagem}
+                  </div>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground">Anexo:</p>
+                  <p className="text-sm">📎 Orcamento_{orcamentoEnviar?.numero}.pdf</p>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setModalEnviar(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={enviarEmailProfissional}
+              disabled={!emailDestinatarios || !emailAssunto || !emailMensagem || enviandoEmail}
+            >
+              {enviandoEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar E-mail
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
