@@ -3,8 +3,10 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search, Printer, X
+  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown
 } from 'lucide-react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
