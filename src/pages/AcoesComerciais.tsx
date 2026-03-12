@@ -1306,20 +1306,20 @@ export default function AcoesComerciais() {
             </div>
 
             {/* ÁREA DE MARKETING */}
-            <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 bg-purple-50">
+            <div className="border-2 border-dashed border-[#c4942c]/40 rounded-lg p-6 bg-[#c4942c]/5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                  <h3 className="font-semibold text-[#c4942c] flex items-center gap-2">
                     <ImageIcon className="w-5 h-5" />
                     Área de Marketing
                   </h3>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <p className="text-sm text-[#c4942c]/70 mt-1">
                     Adicione uma campanha visual do fornecedor (hero/banner)
                   </p>
                 </div>
                 
                 <label className="inline-flex cursor-pointer">
-                  <Button type="button" variant="outline" className="border-purple-400 text-purple-700 hover:bg-purple-100" asChild>
+                  <Button type="button" variant="outline" className="border-[#c4942c]/50 text-[#c4942c] hover:bg-[#c4942c]/10" asChild>
                     <span>
                       <Upload className="w-4 h-4 mr-2" />
                       {imagemMarketing ? 'Trocar Imagem' : 'Upload Campanha'}
