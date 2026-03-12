@@ -587,15 +587,40 @@ export default function Orcamentos() {
               Pré-visualização completa do orçamento com itens, totais e termos comerciais.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-gray-100 border-b p-4 flex items-center justify-between">
+          <div className="bg-muted border-b p-4 flex items-center justify-between">
             <h3 className="font-bold text-lg">
               Orçamento {orcamentoVisualizar?.numero}
             </h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="outline" size="sm" onClick={imprimirOrcamento}>
                 <Printer className="w-4 h-4 mr-2" />
-                Imprimir/PDF
+                Imprimir
               </Button>
+              {orcamentoVisualizar && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => baixarPDF(orcamentoVisualizar)}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar PDF
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Send className="w-4 h-4 mr-2" />
+                        Enviar
+                        <ChevronDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => enviarPorEmail(orcamentoVisualizar)}>
+                        <Mail className="h-4 w-4 mr-2" /> Enviar por E-mail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => enviarPorWhatsApp(orcamentoVisualizar)}>
+                        <MessageCircle className="h-4 w-4 mr-2" /> Enviar por WhatsApp
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={() => setModalVisualizar(false)}>
                 <X className="w-4 h-4 mr-2" />
                 Fechar
