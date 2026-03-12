@@ -633,8 +633,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
               <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
                 <div className="flex items-center gap-3 mb-4">
-                  {fornecedor?.logotipo_url ? (
-                    <img src={fornecedor.logotipo_url} alt={fornecedor.nome_fantasia} className="h-12" />
+                  {logotipoFornecedor ? (
+                    <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} className="h-12" />
                   ) : (
                     <p className="text-2xl font-bold text-blue-600">
                       {orcamento.fornecedor_nome}
