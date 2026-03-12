@@ -835,7 +835,7 @@ export default function AcoesComerciais() {
         validade_dias: dadosOrcamento.validade_dias,
         data_validade: dataValidade.toISOString(),
         data_emissao: new Date().toISOString(),
-        condicoes_pagamento: JSON.stringify({ texto: dadosOrcamento.condicoes_pagamento }),
+        condicoes_pagamento: { texto: dadosOrcamento.condicoes_pagamento },
         observacoes: dadosOrcamento.observacoes,
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
