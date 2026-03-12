@@ -167,7 +167,7 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
               <option value="">Selecione...</option>
               {medidas.map(m => (
                 <option key={m.medida} value={m.medida}>
-                  {m.medida} — {formatCurrency(m.preco)}
+                  {m.medida}
                 </option>
               ))}
             </select>
