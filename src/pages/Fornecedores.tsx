@@ -90,6 +90,10 @@ type FornecedorForm = {
   produtos_servicos: string;
   comissao_vendas: string;
   tipo_layout: string;
+  prazo_entrega_padrao: string;
+  validade_dias_padrao: string;
+  condicoes_pagamento_padrao: string;
+  imagem_template_url: string;
 };
 
 interface Contato {
@@ -276,7 +280,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao" } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao", prazo_entrega_padrao: "", validade_dias_padrao: "", condicoes_pagamento_padrao: "", imagem_template_url: "" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -522,6 +526,10 @@ export default function Fornecedores() {
         catalogos: catalogosUrls.length > 0 ? JSON.parse(JSON.stringify(catalogosUrls)) : null,
         logotipo_url: logotipoUrl,
         tipo_layout: dados.tipo_layout || 'padrao',
+        prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
+        validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+        condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+        imagem_template_url: dados.imagem_template_url || null,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -575,6 +583,10 @@ export default function Fornecedores() {
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
       tipo_layout: (f as any).tipo_layout || "padrao",
+      prazo_entrega_padrao: (f as any).prazo_entrega_padrao || "",
+      validade_dias_padrao: (f as any).validade_dias_padrao?.toString() || "",
+      condicoes_pagamento_padrao: (f as any).condicoes_pagamento_padrao || "",
+      imagem_template_url: (f as any).imagem_template_url || "",
     });
     // Load existing contatos
     const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
@@ -635,6 +647,10 @@ export default function Fornecedores() {
           catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
           logotipo_url: logotipoUrl,
           tipo_layout: dados.tipo_layout || 'padrao',
+          prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
+          validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+          condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+          imagem_template_url: dados.imagem_template_url || null,
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
@@ -809,6 +825,34 @@ export default function Fornecedores() {
         <p className="text-xs text-muted-foreground mt-1">
           Define como o orçamento será apresentado visualmente
         </p>
+      </div>
+
+      {/* Defaults para Orçamento */}
+      <div className="border-t border-border pt-4 mt-2">
+        <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Padrões para Orçamento</Label>
+        <div className="grid grid-cols-2 gap-4 mt-3">
+          <div className="space-y-1.5">
+            <Label>Prazo de Entrega Padrão</Label>
+            <Input {...reg("prazo_entrega_padrao")} placeholder="Ex: 45/60 dias" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Validade da Proposta (dias)</Label>
+            <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />
+          </div>
+        </div>
+        <div className="space-y-1.5 mt-3">
+          <Label>Condições de Pagamento Padrão</Label>
+          <Textarea
+            {...reg("condicoes_pagamento_padrao")}
+            placeholder="Ex: ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO&#10;Em 2x (30/60 dias) com acréscimo de 2,5%..."
+            rows={3}
+          />
+        </div>
+        <div className="space-y-1.5 mt-3">
+          <Label>URL da Imagem Template (Marketing)</Label>
+          <Input {...reg("imagem_template_url")} placeholder="https://..." />
+          <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
