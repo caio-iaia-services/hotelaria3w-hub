@@ -572,7 +572,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <span>Clique aqui para falar com o Vendedor</span>
               </button>
               
-              <button className="bg-[#D4AF37] hover:bg-yellow-600 text-[#1a4168] font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
                 <Package className="w-6 h-6" />
                 <span>Clique aqui para confirmar o pedido</span>
               </button>
