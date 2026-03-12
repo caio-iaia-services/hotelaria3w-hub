@@ -210,7 +210,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             
             {/* LADO DIREITO: Número + Datas + Status */}
             <div className="text-right">
-              <div className="bg-[#D4AF37] text-[#1a4168] px-10 py-4 rounded-lg inline-block mb-4">
+              <div className="bg-[#c4942c] text-white px-10 py-4 rounded-lg inline-block mb-4">
                 <p className="text-xl font-bold">Orçamento {orcamento.numero}</p>
               </div>
               
