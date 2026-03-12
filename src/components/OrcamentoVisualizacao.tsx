@@ -197,9 +197,9 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             </div>
           )}
 
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
-            <h4 className="font-bold text-amber-900 mb-2">⏰ Validade da Proposta</h4>
-            <p className="text-amber-800">
+          <div className="bg-[#c4942c]/10 border-l-4 border-[#c4942c] p-4 rounded-r-lg">
+            <h4 className="font-bold text-[#c4942c] mb-2">⏰ Validade da Proposta</h4>
+            <p className="text-[#1a4168]">
               {orcamento.validade_dias} dias (até {formatDate(orcamento.data_validade)})
             </p>
           </div>
