@@ -240,11 +240,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="text-xl font-bold">Orçamento {orcamento.numero}</p>
               </div>
               
-              {fornecedor?.logotipo_url ? (
+              {logotipoFornecedor ? (
                 <div className="mb-4 flex justify-end">
-                  <img 
-                    src={fornecedor.logotipo_url} 
-                    alt={fornecedor.nome_fantasia} 
+                  <img
+                    src={logotipoFornecedor}
+                    alt={nomeFornecedorExibicao}
                     className="h-16 max-w-[200px] object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none'
