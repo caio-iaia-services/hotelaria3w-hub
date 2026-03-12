@@ -693,7 +693,7 @@ export default function Orcamentos() {
               Orçamento {orcamentoVisualizar?.numero}
             </h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={imprimirOrcamento}>
+              <Button variant="outline" size="sm" onClick={() => imprimirOrcamento()}>
                 <Printer className="w-4 h-4 mr-2" />
                 Imprimir
               </Button>
