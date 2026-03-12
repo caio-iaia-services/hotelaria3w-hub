@@ -282,52 +282,135 @@ export default function Orcamentos() {
     setOrcamentoEditarId(o.id)
     setModalEditar(true)
   }
-  async function gerarPDFBlob(): Promise<Blob | null> {
-    const el = document.getElementById('orcamento-conteudo')
+
+  async function aguardarRenderCompleto(container: HTMLElement) {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    const imagens = Array.from(container.querySelectorAll('img'))
+    await Promise.all(
+      imagens.map((img) => {
+        if (img.complete) return Promise.resolve()
+        return new Promise<void>((resolve) => {
+          let finalizado = false
+          const concluir = () => {
+            if (finalizado) return
+            finalizado = true
+            resolve()
+          }
+          img.addEventListener('load', concluir, { once: true })
+          img.addEventListener('error', concluir, { once: true })
+          setTimeout(concluir, 3000)
+        })
+      })
+    )
+  }
+
+  async function obterConteudoParaExportacao(orcamento?: Orcamento): Promise<HTMLElement | null> {
+    if (orcamento && (!modalVisualizar || orcamentoVisualizar?.id !== orcamento.id)) {
+      await visualizarOrcamento(orcamento)
+    }
+
+    let elemento: HTMLElement | null = null
+    for (let tentativa = 0; tentativa < 20; tentativa++) {
+      elemento = document.getElementById('orcamento-conteudo') as HTMLElement | null
+      if (elemento) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    if (!elemento) {
+      toast.error('Não foi possível renderizar o orçamento para exportação')
+      return null
+    }
+
+    await aguardarRenderCompleto(elemento)
+    return elemento
+  }
+
+  async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
+    const el = await obterConteudoParaExportacao(orcamento)
     if (!el) return null
+
     toast.info('Gerando PDF...')
+
+    const estiloOriginal = {
+      maxHeight: el.style.maxHeight,
+      overflow: el.style.overflow,
+      height: el.style.height,
+    }
+
+    el.style.maxHeight = 'none'
+    el.style.overflow = 'visible'
+    el.style.height = 'auto'
+
     try {
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        windowWidth: 1200,
+        backgroundColor: '#ffffff',
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        windowWidth: el.scrollWidth,
+        windowHeight: el.scrollHeight,
+        scrollX: 0,
+        scrollY: -window.scrollY,
       })
-      const imgData = canvas.toDataURL('image/jpeg', 0.95)
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pdfWidth
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width
-      let heightLeft = imgHeight
-      let position = 0
 
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pdfHeight
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const pxPerMm = canvas.width / pageWidth
+      const pageHeightPx = Math.floor(pageHeight * pxPerMm)
 
-      while (heightLeft > 0) {
-        position -= pdfHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pdfHeight
+      let renderedHeight = 0
+      let primeiraPagina = true
+
+      while (renderedHeight < canvas.height) {
+        const sliceHeight = Math.min(pageHeightPx, canvas.height - renderedHeight)
+        const pageCanvas = document.createElement('canvas')
+        pageCanvas.width = canvas.width
+        pageCanvas.height = sliceHeight
+
+        const ctx = pageCanvas.getContext('2d')
+        if (!ctx) break
+
+        ctx.drawImage(
+          canvas,
+          0,
+          renderedHeight,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight
+        )
+
+        if (!primeiraPagina) pdf.addPage()
+
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.98)
+        const imgHeightMm = sliceHeight / pxPerMm
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeightMm, undefined, 'FAST')
+
+        renderedHeight += sliceHeight
+        primeiraPagina = false
       }
+
       return pdf.output('blob')
     } catch (err) {
       console.error('Erro ao gerar PDF:', err)
       toast.error('Erro ao gerar PDF')
       return null
+    } finally {
+      el.style.maxHeight = estiloOriginal.maxHeight
+      el.style.overflow = estiloOriginal.overflow
+      el.style.height = estiloOriginal.height
     }
   }
 
   async function baixarPDF(o: Orcamento) {
-    // First open visualization if not already open
-    if (!modalVisualizar) {
-      await visualizarOrcamento(o)
-      // Wait for render
-      await new Promise(r => setTimeout(r, 1000))
-    }
-    const blob = await gerarPDFBlob()
+    const blob = await gerarPDFBlob(o)
     if (blob) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -339,8 +422,26 @@ export default function Orcamentos() {
     }
   }
 
-  async function imprimirOrcamento() {
+  async function imprimirOrcamento(o?: Orcamento) {
+    const el = await obterConteudoParaExportacao(o)
+    if (!el) return
+
+    const estiloOriginal = {
+      maxHeight: el.style.maxHeight,
+      overflow: el.style.overflow,
+      height: el.style.height,
+    }
+
+    el.style.maxHeight = 'none'
+    el.style.overflow = 'visible'
+    el.style.height = 'auto'
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
     window.print()
+
+    el.style.maxHeight = estiloOriginal.maxHeight
+    el.style.overflow = estiloOriginal.overflow
+    el.style.height = estiloOriginal.height
   }
 
   function enviarPorEmail(o: Orcamento) {
@@ -380,9 +481,43 @@ export default function Orcamentos() {
     const style = document.createElement('style')
     style.textContent = `
       @media print {
-        body * { visibility: hidden; }
-        #orcamento-conteudo, #orcamento-conteudo * { visibility: visible; }
-        #orcamento-conteudo { position: absolute; left: 0; top: 0; width: 100%; }
+        @page { size: A4; margin: 0; }
+
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+
+        body * {
+          visibility: hidden !important;
+        }
+
+        #orcamento-conteudo,
+        #orcamento-conteudo * {
+          visibility: visible !important;
+        }
+
+        #orcamento-conteudo {
+          position: absolute !important;
+          inset: 0 !important;
+          width: 100% !important;
+          max-height: none !important;
+          height: auto !important;
+          overflow: visible !important;
+          background: #fff !important;
+        }
+
+        #orcamento-conteudo .page-break {
+          break-after: page;
+          page-break-after: always;
+          min-height: auto !important;
+        }
+
+        #orcamento-conteudo .page-break:last-child {
+          break-after: auto;
+          page-break-after: auto;
+        }
       }
     `
     document.head.appendChild(style)
@@ -592,7 +727,7 @@ export default function Orcamentos() {
               Orçamento {orcamentoVisualizar?.numero}
             </h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={imprimirOrcamento}>
+              <Button variant="outline" size="sm" onClick={() => imprimirOrcamento()}>
                 <Printer className="w-4 h-4 mr-2" />
                 Imprimir
               </Button>
