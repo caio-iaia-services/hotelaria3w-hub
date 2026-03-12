@@ -257,7 +257,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
         {orcamento.termos_3w && (
           <div>
             <h3 className="text-lg font-bold text-[#1E4A7C] mb-4 flex items-center gap-2">
-              <div className="w-1 h-6 bg-[#D4AF37] rounded-full"></div>
+              <div className="w-1 h-6 bg-[#c4942c] rounded-full"></div>
               Termos 3W HOTELARIA
             </h3>
             <div className="bg-white rounded-lg p-6 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
