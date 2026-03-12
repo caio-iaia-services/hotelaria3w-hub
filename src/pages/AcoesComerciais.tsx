@@ -1418,10 +1418,10 @@ export default function AcoesComerciais() {
                 
                 {/* IMPOSTOS */}
                 <div className="flex justify-between items-center">
-                  <span className="text-amber-700">
+                  <span className="text-[#c4942c]">
                     Impostos {dadosOrcamento.impostos > 0 && `(${dadosOrcamento.impostos}%)`}:
                   </span>
-                  <span className="font-semibold text-amber-700">
+                  <span className="font-semibold text-[#c4942c]">
                     +{formatCurrency(calcularValorImpostos())}
                   </span>
                 </div>
