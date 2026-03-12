@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 
 interface FornecedorLayout {
   tipo_layout: string | null
@@ -174,6 +175,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     freteCalculado,
     totalCalculado
   })
+
+  const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
 
   return (
     <div className="bg-white font-sans">
@@ -522,13 +525,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 <div className="p-4">
                   <div className="text-xs space-y-1 whitespace-pre-wrap">
-                    {typeof orcamento.condicoes_pagamento === 'object' && orcamento.condicoes_pagamento !== null
-                      ? (orcamento.condicoes_pagamento as any).texto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
-                      : (typeof orcamento.condicoes_pagamento === 'string'
-                        ? orcamento.condicoes_pagamento
-                        : 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
-                      )
-                    }
+                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'}
                   </div>
                 </div>
               </div>

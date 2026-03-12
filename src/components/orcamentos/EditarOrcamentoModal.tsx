@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
+import { extrairTextoCondicoesPagamento, montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { Plus, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,9 +89,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         frete_tipo: o.frete_tipo || 'CIF (Incluso)',
         impostos_percentual: parseNum(o.impostos_percentual),
         desconto_percentual: parseNum(o.desconto_percentual),
-        condicoes_pagamento: typeof o.condicoes_pagamento === 'object'
-          ? (o.condicoes_pagamento?.texto || JSON.stringify(o.condicoes_pagamento))
-          : (o.condicoes_pagamento || ''),
+        condicoes_pagamento: extrairTextoCondicoesPagamento(o.condicoes_pagamento),
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
@@ -214,6 +213,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       const dataValidade = new Date()
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
 
+      const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
+
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
@@ -227,7 +228,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         desconto_valor: valorDesconto,
         subtotal,
         total,
-        condicoes_pagamento: { texto: dados.condicoes_pagamento },
+        condicoes_pagamento: condicoesPagamento,
         observacoes: dados.observacoes,
         observacoes_gerais: dados.observacoes_gerais,
         difal_texto: dados.difal_texto,

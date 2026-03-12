@@ -1,5 +1,6 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 
 interface Props {
   orcamento: Orcamento
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
+  const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+
   return (
     <div className="bg-white">
       {/* HEADER COM GRADIENTE */}
@@ -205,13 +208,11 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           </div>
         </div>
 
-        {orcamento.condicoes_pagamento && (
+        {condicoesPagamentoTexto && (
           <div className="mt-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
             <h4 className="font-bold text-green-900 mb-2">💳 Condições de Pagamento</h4>
             <div className="text-green-800 whitespace-pre-wrap">
-              {typeof orcamento.condicoes_pagamento === 'string'
-                ? orcamento.condicoes_pagamento
-                : orcamento.condicoes_pagamento.texto}
+              {condicoesPagamentoTexto}
             </div>
           </div>
         )}

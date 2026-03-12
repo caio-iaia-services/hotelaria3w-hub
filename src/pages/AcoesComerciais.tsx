@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {
@@ -807,6 +808,8 @@ export default function AcoesComerciais() {
       console.log('total:', total, typeof total)
       console.log('impPerc:', impPerc, 'descPerc:', descPerc)
 
+      const condicoesPagamento = montarCondicoesPagamentoPayload(dadosOrcamento.condicoes_pagamento)
+
       const orcamentoPayload: Record<string, unknown> = {
         numero,
         card_id: cardSelecionado.id,
@@ -835,7 +838,7 @@ export default function AcoesComerciais() {
         validade_dias: dadosOrcamento.validade_dias,
         data_validade: dataValidade.toISOString(),
         data_emissao: new Date().toISOString(),
-        condicoes_pagamento: { texto: dadosOrcamento.condicoes_pagamento },
+        condicoes_pagamento: condicoesPagamento,
         observacoes: dadosOrcamento.observacoes,
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
