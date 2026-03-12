@@ -2,9 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/components/AuthProvider";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
@@ -19,69 +21,44 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function Protected({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <AppLayout>{children}</AppLayout>
+    </ProtectedRoute>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route
-              path="/dashboard"
-              element={<AppLayout><Dashboard /></AppLayout>}
-            />
-            <Route
-              path="/clientes"
-              element={<AppLayout><Clientes /></AppLayout>}
-            />
-            <Route
-              path="/oportunidades"
-              element={<AppLayout><Oportunidades /></AppLayout>}
-            />
-            <Route
-              path="/planejamento"
-              element={<AppLayout><Planejamento /></AppLayout>}
-            />
-            <Route
-              path="/crm/:gestaoId"
-            element={<AppLayout><CrmGestao /></AppLayout>}
-            />
-            <Route
-              path="/acoes-comerciais"
-              element={<AppLayout><AcoesComerciais /></AppLayout>}
-            />
-            <Route
-              path="/fornecedores"
-              element={<AppLayout><Fornecedores /></AppLayout>}
-            />
-            <Route
-              path="/orcamentos"
-              element={<AppLayout><Orcamentos /></AppLayout>}
-            />
-            {[
-              "/atendimento",
-              "/crm",
-              "/clientes/hotelaria",
-              "/clientes/gastronomia",
-              "/clientes/hospitalar",
-              "/buscar",
-              "/marketing",
-              "/financeiro",
-              "/admin",
-            ].map((path) => (
-              <Route
-                key={path}
-                path={path}
-                element={<AppLayout><PlaceholderPage /></AppLayout>}
-              />
-            ))}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+              <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
+              <Route path="/oportunidades" element={<Protected><Oportunidades /></Protected>} />
+              <Route path="/planejamento" element={<Protected><Planejamento /></Protected>} />
+              <Route path="/crm/:gestaoId" element={<Protected><CrmGestao /></Protected>} />
+              <Route path="/acoes-comerciais" element={<Protected><AcoesComerciais /></Protected>} />
+              <Route path="/fornecedores" element={<Protected><Fornecedores /></Protected>} />
+              <Route path="/orcamentos" element={<Protected><Orcamentos /></Protected>} />
+              {[
+                "/atendimento", "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
+                "/clientes/hospitalar", "/buscar", "/marketing", "/financeiro", "/admin",
+              ].map((path) => (
+                <Route key={path} path={path} element={<Protected><PlaceholderPage /></Protected>} />
+              ))}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
