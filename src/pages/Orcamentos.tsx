@@ -237,19 +237,52 @@ export default function Orcamentos() {
     }, 500)
   }
 
-  async function visualizarOrcamento(o: Orcamento) {
-    console.log('👁️ VISUALIZAR ORÇAMENTO - dados da listagem:', {
-      id: o.id,
-      numero: o.numero,
-      subtotal: o.subtotal,
-      total: o.total,
-      impostos: o.impostos,
-      desconto: o.desconto,
-      frete: o.frete,
-      fornecedor_id: o.fornecedor_id,
-    })
+  async function buscarFornecedorLayout(orcamentoBase: Orcamento) {
+    const fornecedorId = (orcamentoBase as any).fornecedor_id
+    const nomeBusca = String((orcamentoBase as any).fornecedor_nome || (orcamentoBase as any).operacao || '').trim()
 
-    // Recarrega o orçamento direto do banco para evitar dados "enriquecidos" incorretos da listagem
+    if (fornecedorId) {
+      const { data } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .eq('id', fornecedorId)
+        .maybeSingle()
+
+      if (data) return data as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    }
+
+    if (!nomeBusca) return null
+
+    const { data: exato } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .eq('nome_fantasia', nomeBusca)
+      .maybeSingle()
+
+    if (exato) return exato as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+
+    const { data: caseInsensitive } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .ilike('nome_fantasia', nomeBusca)
+      .limit(1)
+
+    if (caseInsensitive && caseInsensitive.length > 0) {
+      return caseInsensitive[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    }
+
+    const { data: parcial } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .ilike('nome_fantasia', `%${nomeBusca}%`)
+      .limit(1)
+
+    return parcial && parcial.length > 0
+      ? (parcial[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null })
+      : null
+  }
+
+  async function visualizarOrcamento(o: Orcamento) {
     const { data: orcamentoDb } = await supabase
       .from('orcamentos')
       .select('*')
@@ -267,17 +300,29 @@ export default function Orcamentos() {
         } as Orcamento)
       : o
 
-    setOrcamentoVisualizar(orcamentoBase)
+    const [fornecedor, { data: itens }] = await Promise.all([
+      buscarFornecedorLayout(orcamentoBase),
+      supabase
+        .from('orcamento_itens')
+        .select('*')
+        .eq('orcamento_id', o.id)
+        .order('ordem')
+    ])
 
-    const { data: itens } = await supabase
-      .from('orcamento_itens')
-      .select('*')
-      .eq('orcamento_id', o.id)
-      .order('ordem')
-    console.log('📦 ITENS DO ORÇAMENTO:', itens?.map(i => ({ desc: (i as any).descricao, qty: (i as any).quantidade, price: (i as any).preco_unitario, total: (i as any).total })))
+    const orcamentoComFornecedor = fornecedor
+      ? ({
+          ...orcamentoBase,
+          fornecedor_tipo_layout: fornecedor.tipo_layout,
+          fornecedor_logotipo_url: fornecedor.logotipo_url,
+          fornecedor_nome_fantasia: fornecedor.nome_fantasia,
+        } as Orcamento)
+      : orcamentoBase
+
+    setOrcamentoVisualizar(orcamentoComFornecedor)
     setItensVisualizar((itens as OrcamentoItem[]) || [])
     setModalVisualizar(true)
   }
+
   function editarOrcamento(o: Orcamento) {
     setOrcamentoEditarId(o.id)
     setModalEditar(true)
@@ -299,10 +344,29 @@ export default function Orcamentos() {
           }
           img.addEventListener('load', concluir, { once: true })
           img.addEventListener('error', concluir, { once: true })
-          setTimeout(concluir, 3000)
+          setTimeout(concluir, 3500)
         })
       })
     )
+  }
+
+  async function aguardarConteudoEstavel(container: HTMLElement) {
+    let assinaturaAnterior = ''
+
+    for (let tentativa = 0; tentativa < 14; tentativa++) {
+      await aguardarRenderCompleto(container)
+
+      const imagens = Array.from(container.querySelectorAll('img'))
+      const assinaturaAtual = `${container.querySelectorAll('*').length}-${imagens.length}-${container.textContent?.length || 0}`
+      const imagensCarregadas = imagens.every((img) => img.complete)
+
+      if (assinaturaAtual === assinaturaAnterior && imagensCarregadas) {
+        return
+      }
+
+      assinaturaAnterior = assinaturaAtual
+      await new Promise((resolve) => setTimeout(resolve, 180))
+    }
   }
 
   async function obterConteudoParaExportacao(orcamento?: Orcamento): Promise<HTMLElement | null> {
@@ -322,8 +386,68 @@ export default function Orcamentos() {
       return null
     }
 
-    await aguardarRenderCompleto(elemento)
+    await aguardarConteudoEstavel(elemento)
     return elemento
+  }
+
+  function criarCloneParaExportacao(containerOriginal: HTMLElement) {
+    const A4_WIDTH_PX = 794
+    const A4_HEIGHT_PX = 1123
+
+    const host = document.createElement('div')
+    host.id = 'orcamento-export-host'
+    host.style.position = 'fixed'
+    host.style.left = '0'
+    host.style.top = '0'
+    host.style.width = '100vw'
+    host.style.height = '100vh'
+    host.style.overflow = 'auto'
+    host.style.opacity = '0'
+    host.style.pointerEvents = 'none'
+    host.style.zIndex = '-1'
+    host.style.background = '#ffffff'
+
+    const clone = containerOriginal.cloneNode(true) as HTMLElement
+    clone.id = 'orcamento-export-clone'
+    clone.style.width = `${A4_WIDTH_PX}px`
+    clone.style.maxWidth = `${A4_WIDTH_PX}px`
+    clone.style.minWidth = `${A4_WIDTH_PX}px`
+    clone.style.maxHeight = 'none'
+    clone.style.overflow = 'visible'
+    clone.style.margin = '0 auto'
+    clone.style.background = '#ffffff'
+
+    const style = document.createElement('style')
+    style.textContent = `
+      #orcamento-export-clone,
+      #orcamento-export-clone * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #orcamento-export-clone .page-break {
+        width: ${A4_WIDTH_PX}px !important;
+        min-height: ${A4_HEIGHT_PX}px !important;
+        margin: 0 auto !important;
+        break-after: page;
+        page-break-after: always;
+        overflow: hidden;
+      }
+      #orcamento-export-clone .page-break:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+    `
+
+    host.appendChild(style)
+    host.appendChild(clone)
+    document.body.appendChild(host)
+
+    return {
+      clone,
+      cleanup: () => {
+        host.remove()
+      },
+    }
   }
 
   function obterPaginasExportacao(container: HTMLElement): HTMLElement[] {
@@ -335,13 +459,17 @@ export default function Orcamentos() {
   }
 
   async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
-    const container = await obterConteudoParaExportacao(orcamento)
-    if (!container) return null
+    const containerOriginal = await obterConteudoParaExportacao(orcamento)
+    if (!containerOriginal) return null
 
     toast.info('Gerando PDF...')
 
+    const { clone, cleanup } = criarCloneParaExportacao(containerOriginal)
+
     try {
-      const paginas = obterPaginasExportacao(container)
+      await aguardarConteudoEstavel(clone)
+
+      const paginas = obterPaginasExportacao(clone)
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
 
       for (let index = 0; index < paginas.length; index++) {
@@ -350,7 +478,7 @@ export default function Orcamentos() {
         const canvas = await html2canvas(pagina, {
           scale: 2,
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false,
           logging: false,
           backgroundColor: '#ffffff',
           width: pagina.scrollWidth,
@@ -359,6 +487,7 @@ export default function Orcamentos() {
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
+          imageTimeout: 10000,
         })
 
         const pageWidth = pdf.internal.pageSize.getWidth()
@@ -367,10 +496,11 @@ export default function Orcamentos() {
         const renderWidth = canvas.width * ratio
         const renderHeight = canvas.height * ratio
         const offsetX = (pageWidth - renderWidth) / 2
-        const imgData = canvas.toDataURL('image/jpeg', 0.98)
+        const offsetY = (pageHeight - renderHeight) / 2
+        const imgData = canvas.toDataURL('image/png')
 
         if (index > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', offsetX, 0, renderWidth, renderHeight, undefined, 'FAST')
+        pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
       }
 
       return pdf.output('blob')
@@ -378,6 +508,8 @@ export default function Orcamentos() {
       console.error('Erro ao gerar PDF:', err)
       toast.error('Erro ao gerar PDF')
       return null
+    } finally {
+      cleanup()
     }
   }
 
@@ -395,8 +527,13 @@ export default function Orcamentos() {
   }
 
   async function imprimirOrcamento(o?: Orcamento) {
-    const container = await obterConteudoParaExportacao(o)
-    if (!container) return
+    const containerOriginal = await obterConteudoParaExportacao(o)
+    if (!containerOriginal) return
+
+    const { clone, cleanup } = criarCloneParaExportacao(containerOriginal)
+    await aguardarConteudoEstavel(clone)
+    const conteudo = clone.innerHTML
+    cleanup()
 
     const printWindow = window.open('', '_blank', 'width=1200,height=900')
     if (!printWindow) {
@@ -413,24 +550,51 @@ export default function Orcamentos() {
       <html lang="pt-BR">
         <head>
           <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>Orçamento</title>
           ${estilos}
           <style>
             @page { size: A4; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #fff; }
-            #print-root { width: 100%; }
-            #print-root .page-break { break-after: page; page-break-after: always; }
-            #print-root .page-break:last-child { break-after: auto; page-break-after: auto; }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #fff !important;
+            }
+            body {
+              display: flex;
+              justify-content: center;
+            }
+            #print-root {
+              width: 210mm;
+              max-width: 210mm;
+              margin: 0 auto;
+              background: #fff;
+            }
+            #print-root .page-break {
+              width: 210mm !important;
+              min-height: 297mm !important;
+              break-after: page;
+              page-break-after: always;
+              overflow: hidden;
+            }
+            #print-root .page-break:last-child {
+              break-after: auto;
+              page-break-after: auto;
+            }
           </style>
         </head>
         <body>
-          <div id="print-root">${container.innerHTML}</div>
+          <div id="print-root">${conteudo}</div>
           <script>
             window.addEventListener('load', () => {
               setTimeout(() => {
                 window.print();
                 window.close();
-              }, 250);
+              }, 350);
             });
           </script>
         </body>

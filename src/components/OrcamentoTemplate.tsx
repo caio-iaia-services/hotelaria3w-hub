@@ -16,11 +16,25 @@ interface Props {
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
-  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(null)
+  const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
+  const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
+  const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
+
+  const fornecedorInicial: FornecedorLayout | null =
+    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome
+      ? {
+          tipo_layout: fornecedorInicialTipoLayout,
+          nome_fantasia: fornecedorInicialNome,
+          logotipo_url: fornecedorInicialLogo,
+        }
+      : null
+
+  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(fornecedorInicial)
 
   useEffect(() => {
     let ativo = true
-    setFornecedor(null)
+    setFornecedor(fornecedorInicial)
+
 
     async function buscarFornecedor() {
       // 1) Buscar por ID direto (fonte mais confiável)
@@ -85,10 +99,19 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     return () => {
       ativo = false
     }
-  }, [orcamento.id, orcamento.fornecedor_id, orcamento.fornecedor_nome, orcamento.operacao])
+  }, [
+    orcamento.id,
+    orcamento.fornecedor_id,
+    orcamento.fornecedor_nome,
+    orcamento.operacao,
+    fornecedorInicialTipoLayout,
+    fornecedorInicialNome,
+    fornecedorInicialLogo,
+  ])
 
-  const tipoLayout = fornecedor?.tipo_layout || 'padrao'
-  console.log('📊 === VALORES DO ORÇAMENTO NO TEMPLATE ===')
+  const tipoLayout = fornecedor?.tipo_layout || fornecedorInicialTipoLayout || 'padrao'
+  const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
+  const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
   console.log('📊 numero:', orcamento.numero)
   console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
   console.log('📊 impostos:', orcamento.impostos, '| tipo:', typeof orcamento.impostos)
@@ -217,11 +240,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="text-xl font-bold">Orçamento {orcamento.numero}</p>
               </div>
               
-              {fornecedor?.logotipo_url ? (
+              {logotipoFornecedor ? (
                 <div className="mb-4 flex justify-end">
-                  <img 
-                    src={fornecedor.logotipo_url} 
-                    alt={fornecedor.nome_fantasia} 
+                  <img
+                    src={logotipoFornecedor}
+                    alt={nomeFornecedorExibicao}
                     className="h-16 max-w-[200px] object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none'
@@ -610,8 +633,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
               <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
                 <div className="flex items-center gap-3 mb-4">
-                  {fornecedor?.logotipo_url ? (
-                    <img src={fornecedor.logotipo_url} alt={fornecedor.nome_fantasia} className="h-12" />
+                  {logotipoFornecedor ? (
+                    <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} className="h-12" />
                   ) : (
                     <p className="text-2xl font-bold text-blue-600">
                       {orcamento.fornecedor_nome}
