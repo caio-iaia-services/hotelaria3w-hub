@@ -1092,12 +1092,12 @@ comercial1@3whotelaria.com.br`
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-accent/50 border border-accent rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <Paperclip className="w-5 h-5 text-blue-600 mt-0.5" />
+                <Paperclip className="w-5 h-5 text-primary mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-semibold text-blue-900">Anexo</p>
-                  <p className="text-sm text-blue-700">
+                  <p className="font-semibold text-foreground">Anexo</p>
+                  <p className="text-sm text-muted-foreground">
                     {orcamentoEnviar?.pdf_url
                       ? '✅ PDF será anexado automaticamente'
                       : '⚠️ PDF ainda não foi gerado. Será gerado automaticamente ao enviar.'
