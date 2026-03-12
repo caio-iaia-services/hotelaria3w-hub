@@ -138,6 +138,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       id: `new-${Date.now()}`,
       codigo: '',
       descricao: '',
+      medidas: '',
       especificacoes: '',
       quantidade: 1,
       preco_unitario: 0,
