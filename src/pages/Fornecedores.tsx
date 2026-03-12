@@ -647,6 +647,10 @@ export default function Fornecedores() {
           catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
           logotipo_url: logotipoUrl,
           tipo_layout: dados.tipo_layout || 'padrao',
+          prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
+          validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+          condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+          imagem_template_url: dados.imagem_template_url || null,
         })
         .eq("id", modalEditar.id);
       if (error) throw error;
