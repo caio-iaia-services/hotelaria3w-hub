@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {

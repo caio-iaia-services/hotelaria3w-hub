@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 
 interface FornecedorLayout {
   tipo_layout: string | null

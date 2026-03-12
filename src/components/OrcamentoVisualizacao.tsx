@@ -1,5 +1,6 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 
 interface Props {
   orcamento: Orcamento
