@@ -1306,20 +1306,20 @@ export default function AcoesComerciais() {
             </div>
 
             {/* ÁREA DE MARKETING */}
-            <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 bg-purple-50">
+            <div className="border-2 border-dashed border-[#c4942c]/40 rounded-lg p-6 bg-[#c4942c]/5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                  <h3 className="font-semibold text-[#c4942c] flex items-center gap-2">
                     <ImageIcon className="w-5 h-5" />
                     Área de Marketing
                   </h3>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <p className="text-sm text-[#c4942c]/70 mt-1">
                     Adicione uma campanha visual do fornecedor (hero/banner)
                   </p>
                 </div>
                 
                 <label className="inline-flex cursor-pointer">
-                  <Button type="button" variant="outline" className="border-purple-400 text-purple-700 hover:bg-purple-100" asChild>
+                  <Button type="button" variant="outline" className="border-[#c4942c]/50 text-[#c4942c] hover:bg-[#c4942c]/10" asChild>
                     <span>
                       <Upload className="w-4 h-4 mr-2" />
                       {imagemMarketing ? 'Trocar Imagem' : 'Upload Campanha'}
@@ -1363,10 +1363,10 @@ export default function AcoesComerciais() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-purple-600">
+                <div className="text-center py-8 text-[#c4942c]">
                   <ImageIcon className="w-16 h-16 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">Nenhuma campanha adicionada</p>
-                  <p className="text-xs text-purple-500 mt-1">
+                  <p className="text-xs text-[#c4942c]/60 mt-1">
                     JPG, PNG • Máx 5MB • Recomendado: 1200x400px
                   </p>
                 </div>
@@ -1418,10 +1418,10 @@ export default function AcoesComerciais() {
                 
                 {/* IMPOSTOS */}
                 <div className="flex justify-between items-center">
-                  <span className="text-amber-700">
+                  <span className="text-[#c4942c]">
                     Impostos {dadosOrcamento.impostos > 0 && `(${dadosOrcamento.impostos}%)`}:
                   </span>
-                  <span className="font-semibold text-amber-700">
+                  <span className="font-semibold text-[#c4942c]">
                     +{formatCurrency(calcularValorImpostos())}
                   </span>
                 </div>

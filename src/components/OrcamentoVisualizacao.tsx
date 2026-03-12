@@ -25,7 +25,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             </div>
 
             <div className="text-right">
-              <div className="inline-block bg-[#D4AF37] text-[#1E4A7C] px-6 py-3 rounded-lg">
+              <div className="inline-block bg-[#c4942c] text-white px-6 py-3 rounded-lg">
                 <p className="text-xs font-medium opacity-90">PROPOSTA COMERCIAL</p>
                 <p className="text-3xl font-bold">{orcamento.numero}</p>
               </div>
@@ -37,7 +37,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#D4AF37] via-white to-[#D4AF37]"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#c4942c] via-white to-[#c4942c]"></div>
       </div>
 
       {/* DADOS DO CLIENTE */}
@@ -101,7 +101,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
       {/* ITENS DO ORÇAMENTO */}
       <div className="max-w-6xl mx-auto px-8 py-8">
         <h3 className="text-xl font-bold text-[#1E4A7C] mb-6 flex items-center gap-2">
-          <div className="w-1 h-6 bg-[#D4AF37] rounded-full"></div>
+          <div className="w-1 h-6 bg-[#c4942c] rounded-full"></div>
           Itens do Orçamento
         </h3>
 
@@ -109,7 +109,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           {itens.map((item, index) => (
             <div
               key={item.id}
-              className="border-l-4 border-[#D4AF37] bg-gray-50 rounded-r-lg p-4 hover:shadow-md transition-shadow"
+              className="border-l-4 border-[#c4942c] bg-gray-50 rounded-r-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
@@ -163,7 +163,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           )}
 
           {orcamento.impostos > 0 && (
-            <div className="flex justify-between text-amber-700">
+            <div className="flex justify-between text-[#c4942c]">
               <span>Impostos:</span>
               <span className="font-semibold">{formatCurrency(orcamento.impostos)}</span>
             </div>
@@ -197,9 +197,9 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             </div>
           )}
 
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
-            <h4 className="font-bold text-amber-900 mb-2">⏰ Validade da Proposta</h4>
-            <p className="text-amber-800">
+          <div className="bg-[#c4942c]/10 border-l-4 border-[#c4942c] p-4 rounded-r-lg">
+            <h4 className="font-bold text-[#c4942c] mb-2">⏰ Validade da Proposta</h4>
+            <p className="text-[#1a4168]">
               {orcamento.validade_dias} dias (até {formatDate(orcamento.data_validade)})
             </p>
           </div>
@@ -245,7 +245,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
         {orcamento.termos_fornecedor && (
           <div className="mb-8">
             <h3 className="text-lg font-bold text-[#1E4A7C] mb-4 flex items-center gap-2">
-              <div className="w-1 h-6 bg-[#D4AF37] rounded-full"></div>
+              <div className="w-1 h-6 bg-[#c4942c] rounded-full"></div>
               Termos do Fabricante
             </h3>
             <div className="bg-white rounded-lg p-6 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -257,7 +257,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
         {orcamento.termos_3w && (
           <div>
             <h3 className="text-lg font-bold text-[#1E4A7C] mb-4 flex items-center gap-2">
-              <div className="w-1 h-6 bg-[#D4AF37] rounded-full"></div>
+              <div className="w-1 h-6 bg-[#c4942c] rounded-full"></div>
               Termos 3W HOTELARIA
             </h3>
             <div className="bg-white rounded-lg p-6 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">

@@ -551,10 +551,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                   <span className="font-semibold text-lg">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-amber-700">
+                  <span className="text-[#c4942c]">
                     Impostos {dados.impostos_percentual > 0 && `(${dados.impostos_percentual}%)`}:
                   </span>
-                  <span className="font-semibold text-amber-700">+{formatCurrency(valorImpostos)}</span>
+                  <span className="font-semibold text-[#c4942c]">+{formatCurrency(valorImpostos)}</span>
                 </div>
                 {dados.desconto_percentual > 0 && (
                   <div className="flex justify-between items-center">
