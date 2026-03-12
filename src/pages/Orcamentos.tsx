@@ -3,7 +3,8 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown
+  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown,
+  Paperclip, RotateCcw, Loader2
 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
