@@ -354,18 +354,26 @@ export default function Fornecedores() {
 
   const uploadArquivosStorage = async (arqs: ArquivoUpload[]) => {
     const urls: { nome: string; url: string; tipo: string }[] = [];
+
     for (const arq of arqs) {
-      const nomeArquivo = `${Date.now()}_${arq.nome}`;
+      const nomeSanitizado = arq.nome.replace(/\s+/g, "_");
+      const nomeArquivo = `catalogos/${Date.now()}_${Math.random().toString(36).slice(2)}_${nomeSanitizado}`;
+
       const { error: uploadError } = await cloudSupabase.storage
         .from('fornecedores-documentos')
-        .upload(nomeArquivo, arq.file, { upsert: true });
-      if (!uploadError) {
-        const { data: { publicUrl } } = cloudSupabase.storage
-          .from('fornecedores-documentos')
-          .getPublicUrl(nomeArquivo);
-        urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
+        .upload(nomeArquivo, arq.file, { upsert: true, contentType: arq.file.type || undefined });
+
+      if (uploadError) {
+        throw new Error(`Falha no upload do arquivo ${arq.nome}: ${uploadError.message}`);
       }
+
+      const { data: { publicUrl } } = cloudSupabase.storage
+        .from('fornecedores-documentos')
+        .getPublicUrl(nomeArquivo);
+
+      urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
     }
+
     return urls;
   };
 
@@ -563,38 +571,55 @@ export default function Fornecedores() {
   };
 
   // Abrir editar
-  const abrirEditar = (f: Fornecedor) => {
+  const abrirEditar = async (f: Fornecedor) => {
     setModalVer(null);
+
+    const { data, error } = await supabase
+      .from("fornecedores")
+      .select("*")
+      .eq("id", f.id)
+      .maybeSingle();
+
+    if (error) {
+      toast({ title: "Erro ao carregar fornecedor", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const fornecedorCompleto = (data as Fornecedor) || f;
+
     resetEdit({
-      nome_fantasia: f.nome_fantasia,
-      razao_social: f.razao_social,
-      cnpj: formatCNPJ(f.cnpj),
-      codigo: f.codigo || "",
-      email: f.email || "",
-      telefone: f.telefone || "",
-      whatsapp: f.whatsapp || "",
-      site: f.site || "",
-      cidade: f.cidade || "",
-      estado: f.estado || "",
-      status: f.status || "ativo",
-      observacoes: f.observacoes || "",
-      gestao: f.gestao ? f.gestao.split(", ").filter(Boolean) : [],
-      segmentos_atuacao: f.segmentos_atuacao || [],
-      produtos_servicos: f.produtos_servicos || "",
-      comissao_vendas: f.comissao_vendas?.toString() || "",
-      tipo_layout: (f as any).tipo_layout || "padrao",
-      prazo_entrega_padrao: (f as any).prazo_entrega_padrao || "",
-      validade_dias_padrao: (f as any).validade_dias_padrao?.toString() || "",
-      condicoes_pagamento_padrao: (f as any).condicoes_pagamento_padrao || "",
-      imagem_template_url: (f as any).imagem_template_url || "",
+      nome_fantasia: fornecedorCompleto.nome_fantasia,
+      razao_social: fornecedorCompleto.razao_social,
+      cnpj: formatCNPJ(fornecedorCompleto.cnpj),
+      codigo: fornecedorCompleto.codigo || "",
+      email: fornecedorCompleto.email || "",
+      telefone: fornecedorCompleto.telefone || "",
+      whatsapp: fornecedorCompleto.whatsapp || "",
+      site: fornecedorCompleto.site || "",
+      cidade: fornecedorCompleto.cidade || "",
+      estado: fornecedorCompleto.estado || "",
+      status: fornecedorCompleto.status || "ativo",
+      observacoes: fornecedorCompleto.observacoes || "",
+      gestao: fornecedorCompleto.gestao ? fornecedorCompleto.gestao.split(", ").filter(Boolean) : [],
+      segmentos_atuacao: fornecedorCompleto.segmentos_atuacao || [],
+      produtos_servicos: fornecedorCompleto.produtos_servicos || "",
+      comissao_vendas: fornecedorCompleto.comissao_vendas?.toString() || "",
+      tipo_layout: (fornecedorCompleto as any).tipo_layout || "padrao",
+      prazo_entrega_padrao: (fornecedorCompleto as any).prazo_entrega_padrao || "",
+      validade_dias_padrao: (fornecedorCompleto as any).validade_dias_padrao?.toString() || "",
+      condicoes_pagamento_padrao: (fornecedorCompleto as any).condicoes_pagamento_padrao || "",
+      imagem_template_url: (fornecedorCompleto as any).imagem_template_url || "",
     });
-    // Load existing contatos
-    const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
+
+    const existingContatos = fornecedorCompleto.contatos
+      ? (typeof fornecedorCompleto.contatos === 'string' ? JSON.parse(fornecedorCompleto.contatos) : fornecedorCompleto.contatos)
+      : [];
+
     setContatosEdit(existingContatos);
     setArquivosEdit([]);
     setLogoFileEdit(null);
-    setLogoPreviewEdit(f.logotipo_url || null);
-    setModalEditar(f);
+    setLogoPreviewEdit(fornecedorCompleto.logotipo_url || null);
+    setModalEditar(fornecedorCompleto);
   };
 
   // Salvar edição
