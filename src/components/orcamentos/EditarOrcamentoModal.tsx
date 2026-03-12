@@ -89,9 +89,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         frete_tipo: o.frete_tipo || 'CIF (Incluso)',
         impostos_percentual: parseNum(o.impostos_percentual),
         desconto_percentual: parseNum(o.desconto_percentual),
-        condicoes_pagamento: typeof o.condicoes_pagamento === 'object'
-          ? (o.condicoes_pagamento?.texto || JSON.stringify(o.condicoes_pagamento))
-          : (o.condicoes_pagamento || ''),
+        condicoes_pagamento: extrairTextoCondicoesPagamento(o.condicoes_pagamento),
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
