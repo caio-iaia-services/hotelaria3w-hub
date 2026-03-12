@@ -486,7 +486,11 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
-        const captureWidth = 794
+        const captureWidth = Math.max(
+          794,
+          Math.ceil(pagina.scrollWidth || 0),
+          Math.ceil(pagina.getBoundingClientRect().width || 0)
+        )
 
         const canvas = await html2canvas(pagina, {
           scale: 2,
