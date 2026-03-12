@@ -8,6 +8,8 @@ interface Props {
 }
 
 export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
+  const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+
   return (
     <div className="bg-white">
       {/* HEADER COM GRADIENTE */}
