@@ -43,6 +43,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
         }
 
         const { data, error } = await query.limit(10)
+        console.log(`[ProdutosCastor] busca "${trimmed}" por ${campo}:`, { data, error })
         if (error) {
           console.warn('Erro busca produtos_castor_view:', error)
           setResultados([])
