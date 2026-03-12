@@ -419,27 +419,20 @@ export default function Orcamentos() {
 
     const style = document.createElement('style')
     style.textContent = `
+      @page { size: A4; margin: 0; }
       #orcamento-export-clone,
       #orcamento-export-clone * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+      #orcamento-export-clone {
+        width: ${A4_WIDTH_PX}px !important;
+        max-width: ${A4_WIDTH_PX}px !important;
+        margin: 0 auto !important;
+        background: #fff !important;
+      }
       #orcamento-export-clone .max-w-7xl {
         max-width: 100% !important;
-      }
-      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:first-child {
-        min-width: 0 !important;
-        flex: 1 1 auto !important;
-      }
-      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:last-child {
-        flex: 0 0 auto !important;
-      }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] {
-        background-color: #c4942c !important;
-        color: #ffffff !important;
-      }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] * {
-        color: #ffffff !important;
       }
       #orcamento-export-clone .page-break {
         width: ${A4_WIDTH_PX}px !important;
@@ -453,6 +446,49 @@ export default function Orcamentos() {
       #orcamento-export-clone .page-break:last-child {
         break-after: auto;
         page-break-after: auto;
+      }
+      #orcamento-export-clone .bg-\\[\\#1a4168\\] {
+        background-color: #1a4168 !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#c4942c\\] {
+        background-color: #c4942c !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#c4942c\\] * {
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#1E4A7C\\] {
+        background-color: #1E4A7C !important;
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .bg-\\[\\#1E4A7C\\] * {
+        color: #ffffff !important;
+      }
+      #orcamento-export-clone .text-\\[\\#1a4168\\] {
+        color: #1a4168 !important;
+      }
+      #orcamento-export-clone .text-\\[\\#c4942c\\] {
+        color: #c4942c !important;
+      }
+      #orcamento-export-clone .bg-gray-200 {
+        background-color: #e5e7eb !important;
+      }
+      #orcamento-export-clone .bg-gray-100 {
+        background-color: #f3f4f6 !important;
+      }
+      #orcamento-export-clone .bg-gray-50 {
+        background-color: #f9fafb !important;
+      }
+      #orcamento-export-clone .bg-blue-50 {
+        background-color: #eff6ff !important;
+      }
+      #orcamento-export-clone table {
+        border-collapse: collapse !important;
+      }
+      #orcamento-export-clone th,
+      #orcamento-export-clone td {
+        border-color: #e5e7eb !important;
       }
     `
 
