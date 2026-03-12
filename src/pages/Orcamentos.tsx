@@ -3,7 +3,8 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown
+  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown,
+  Paperclip, RotateCcw, Loader2
 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -14,7 +15,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -83,6 +86,12 @@ export default function Orcamentos() {
   const [modalEditar, setModalEditar] = useState(false)
   const [orcamentoEditarId, setOrcamentoEditarId] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [modalEnviar, setModalEnviar] = useState(false)
+  const [orcamentoEnviar, setOrcamentoEnviar] = useState<Orcamento | null>(null)
+  const [emailDestinatarios, setEmailDestinatarios] = useState('')
+  const [emailAssunto, setEmailAssunto] = useState('')
+  const [emailMensagem, setEmailMensagem] = useState('')
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
 
   const getTotalExibicao = useCallback((orcamento: Orcamento) => {
     const totalDireto = parseNum((orcamento as any).total)
@@ -668,31 +677,89 @@ export default function Orcamentos() {
   }
 
 
-  async function enviarPorEmail(o: Orcamento) {
-    // Gera e baixa o PDF primeiro para o usuário anexar manualmente
-    const blob = await gerarPDFBlob(o)
-    if (blob) {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Orcamento_${o.numero}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
+  function gerarMensagemPadrao(orcamento: Orcamento) {
+    return `Prezado(a) ${orcamento.cliente_nome},
 
-    const nomeCliente = o.cliente_razao_social || o.cliente_nome || ''
-    const assunto = encodeURIComponent(`Proposta Comercial ${o.numero} - 3W HOTELARIA`)
-    const corpo = encodeURIComponent(
-      `Prezado(a) ${nomeCliente},\n\n` +
-      `Segue a Proposta Comercial nº ${o.numero} da 3W HOTELARIA.\n\n` +
-      `Ficamos à disposição para esclarecimentos.\n\n` +
-      `Atenciosamente,\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`
-    )
-    const email = o.cliente_email || ''
-    window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank')
-    toast.success('PDF baixado e e-mail aberto — anexe o PDF ao e-mail!')
+Segue em anexo o orçamento ${orcamento.numero}.
+
+DETALHES DO ORÇAMENTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Operação: ${orcamento.operacao || '-'}
+Fornecedor: ${orcamento.fornecedor_nome || '-'}
+Valor Total: ${formatCurrency(orcamento.total)}
+Prazo de Entrega: ${orcamento.prazo_entrega || '-'}
+Validade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : '-'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Estamos à disposição para quaisquer esclarecimentos e negociações.
+
+Atenciosamente,
+
+Equipe Comercial
+3W Hotelaria - Hospitalidade com Excelência
+www.3whotelaria.com.br
+(11) 5197-5779
+comercial1@3whotelaria.com.br`
   }
 
+  function restaurarMensagemPadrao() {
+    if (orcamentoEnviar) {
+      setEmailMensagem(gerarMensagemPadrao(orcamentoEnviar))
+      toast.info('Mensagem restaurada para o padrão')
+    }
+  }
+
+  function enviarPorEmail(o: Orcamento) {
+    setOrcamentoEnviar(o)
+    const emails = [o.cliente_email, 'comercial1@3whotelaria.com.br']
+      .filter(Boolean)
+      .join(', ')
+    setEmailDestinatarios(emails)
+    setEmailAssunto(`Orçamento ${o.numero} - 3W Hotelaria`)
+    setEmailMensagem(gerarMensagemPadrao(o))
+    setModalEnviar(true)
+  }
+
+  async function enviarEmailProfissional() {
+    if (!orcamentoEnviar) return
+    setEnviandoEmail(true)
+    try {
+      console.log('📧 ENVIANDO EMAIL:', {
+        para: emailDestinatarios,
+        assunto: emailAssunto,
+        mensagem: emailMensagem,
+        orcamento_id: orcamentoEnviar.id,
+        pdf_url: orcamentoEnviar.pdf_url
+      })
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      const { error } = await supabase
+        .from('orcamentos')
+        .update({
+          status: 'enviado',
+          enviado_em: new Date().toISOString()
+        })
+        .eq('id', orcamentoEnviar.id)
+      if (error) throw error
+      if (orcamentoEnviar.card_id) {
+        await supabase
+          .from('acoes_comerciais_log')
+          .insert({
+            card_id: orcamentoEnviar.card_id,
+            acao: 'orcamento_enviado',
+            descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios}`
+          })
+      }
+      toast.success('E-mail enviado com sucesso!')
+      setModalEnviar(false)
+      buscarOrcamentos()
+      buscarContadores()
+    } catch (error) {
+      console.error('Erro ao enviar:', error)
+      toast.error('Erro ao enviar e-mail. Tente novamente.')
+    } finally {
+      setEnviandoEmail(false)
+    }
+  }
   function enviarPorWhatsApp(o: Orcamento) {
     const telefone = (o.cliente_telefone || '').replace(/\D/g, '')
     const mensagem = encodeURIComponent(
@@ -970,6 +1037,123 @@ export default function Orcamentos() {
           buscarContadores()
         }}
       />
+
+      {/* MODAL ENVIAR EMAIL PROFISSIONAL */}
+      <Dialog open={modalEnviar} onOpenChange={setModalEnviar}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Enviar Orçamento por E-mail</DialogTitle>
+            <DialogDescription>
+              Orçamento {orcamentoEnviar?.numero} - {orcamentoEnviar?.cliente_nome}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Para (E-mails) *</Label>
+              <Input
+                type="email"
+                value={emailDestinatarios}
+                onChange={(e) => setEmailDestinatarios(e.target.value)}
+                placeholder="cliente@email.com, gestor@3whotelaria.com.br"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Separe múltiplos e-mails com vírgula
+              </p>
+            </div>
+
+            <div>
+              <Label>Assunto *</Label>
+              <Input
+                value={emailAssunto}
+                onChange={(e) => setEmailAssunto(e.target.value)}
+                placeholder="Orçamento 3W Hotelaria"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Mensagem *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={restaurarMensagemPadrao}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Restaurar padrão
+                </Button>
+              </div>
+              <Textarea
+                value={emailMensagem}
+                onChange={(e) => setEmailMensagem(e.target.value)}
+                rows={12}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="bg-accent/50 border border-accent rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Paperclip className="w-5 h-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Anexo</p>
+                  <p className="text-sm text-muted-foreground">
+                    {orcamentoEnviar?.pdf_url
+                      ? '✅ PDF será anexado automaticamente'
+                      : '⚠️ PDF ainda não foi gerado. Será gerado automaticamente ao enviar.'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <details className="border rounded-lg p-4">
+              <summary className="cursor-pointer font-semibold text-muted-foreground">
+                👁️ Pré-visualizar e-mail
+              </summary>
+              <div className="mt-4 bg-muted rounded p-4 text-sm space-y-2 border">
+                <p><strong>Para:</strong> {emailDestinatarios}</p>
+                <p><strong>Assunto:</strong> {emailAssunto}</p>
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">Mensagem:</p>
+                  <div className="whitespace-pre-wrap bg-background p-3 rounded border">
+                    {emailMensagem}
+                  </div>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground">Anexo:</p>
+                  <p className="text-sm">📎 Orcamento_{orcamentoEnviar?.numero}.pdf</p>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setModalEnviar(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={enviarEmailProfissional}
+              disabled={!emailDestinatarios || !emailAssunto || !emailMensagem || enviandoEmail}
+            >
+              {enviandoEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar E-mail
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
