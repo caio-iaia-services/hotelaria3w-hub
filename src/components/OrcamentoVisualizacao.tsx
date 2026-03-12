@@ -109,7 +109,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           {itens.map((item, index) => (
             <div
               key={item.id}
-              className="border-l-4 border-[#D4AF37] bg-gray-50 rounded-r-lg p-4 hover:shadow-md transition-shadow"
+              className="border-l-4 border-[#c4942c] bg-gray-50 rounded-r-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
