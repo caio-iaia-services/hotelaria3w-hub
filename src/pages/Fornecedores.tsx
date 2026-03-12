@@ -354,18 +354,26 @@ export default function Fornecedores() {
 
   const uploadArquivosStorage = async (arqs: ArquivoUpload[]) => {
     const urls: { nome: string; url: string; tipo: string }[] = [];
+
     for (const arq of arqs) {
-      const nomeArquivo = `${Date.now()}_${arq.nome}`;
+      const nomeSanitizado = arq.nome.replace(/\s+/g, "_");
+      const nomeArquivo = `catalogos/${Date.now()}_${Math.random().toString(36).slice(2)}_${nomeSanitizado}`;
+
       const { error: uploadError } = await cloudSupabase.storage
         .from('fornecedores-documentos')
-        .upload(nomeArquivo, arq.file, { upsert: true });
-      if (!uploadError) {
-        const { data: { publicUrl } } = cloudSupabase.storage
-          .from('fornecedores-documentos')
-          .getPublicUrl(nomeArquivo);
-        urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
+        .upload(nomeArquivo, arq.file, { upsert: true, contentType: arq.file.type || undefined });
+
+      if (uploadError) {
+        throw new Error(`Falha no upload do arquivo ${arq.nome}: ${uploadError.message}`);
       }
+
+      const { data: { publicUrl } } = cloudSupabase.storage
+        .from('fornecedores-documentos')
+        .getPublicUrl(nomeArquivo);
+
+      urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
     }
+
     return urls;
   };
 
