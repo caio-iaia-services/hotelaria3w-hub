@@ -528,10 +528,14 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
-        const captureWidth = 794
+        const captureWidth = Math.max(
+          794,
+          Math.ceil(pagina.scrollWidth || 0),
+          Math.ceil(pagina.getBoundingClientRect().width || 0)
+        )
 
         const canvas = await html2canvas(pagina, {
-          scale: 3,
+          scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
@@ -542,41 +546,22 @@ export default function Orcamentos() {
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
-          imageTimeout: 15000,
-          onclone: (clonedDoc) => {
-            const el = clonedDoc.getElementById('orcamento-export-clone')
-            if (el) {
-              el.style.width = `${captureWidth}px`
-              el.style.maxWidth = `${captureWidth}px`
-            }
-          },
+          imageTimeout: 10000,
         })
 
         const domToCanvasScale = canvas.width / captureWidth
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
-        const ratio = pageWidth / canvas.width
-        const renderWidth = pageWidth
-        const totalRenderHeight = canvas.height * ratio
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
+        const renderWidth = canvas.width * ratio
+        const renderHeight = canvas.height * ratio
+        const offsetX = (pageWidth - renderWidth) / 2
+        const offsetY = (pageHeight - renderHeight) / 2
+        const imgData = canvas.toDataURL('image/png')
 
-        // If content fits in one page, render normally
-        if (totalRenderHeight <= pageHeight) {
-          if (index > 0) pdf.addPage()
-          pdf.addImage(imgData, 'JPEG', 0, 0, renderWidth, totalRenderHeight)
-          desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale)
-        } else {
-          // Content is taller than one page - split across multiple PDF pages
-          const totalPages = Math.ceil(totalRenderHeight / pageHeight)
-          for (let p = 0; p < totalPages; p++) {
-            if (index > 0 || p > 0) pdf.addPage()
-            const yOffset = -(p * pageHeight)
-            pdf.addImage(imgData, 'JPEG', 0, yOffset, renderWidth, totalRenderHeight)
-            if (p === 0) {
-              desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale)
-            }
-          }
-        }
+        if (index > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
+        desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
       }
 
       return pdf.output('blob')
