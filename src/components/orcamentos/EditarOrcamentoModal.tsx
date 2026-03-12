@@ -18,6 +18,7 @@ interface ItemLocal {
   id: string
   codigo: string
   descricao: string
+  medidas?: string
   especificacoes: string
   quantidade: number | string
   preco_unitario: number | string
