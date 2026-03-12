@@ -677,36 +677,89 @@ export default function Orcamentos() {
   }
 
 
-  async function enviarPorEmail(o: Orcamento) {
-    // Gera e baixa o PDF primeiro para o usuário anexar manualmente
-    const blob = await gerarPDFBlob(o)
-    if (blob) {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Orcamento_${o.numero}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
+  function gerarMensagemPadrao(orcamento: Orcamento) {
+    return `Prezado(a) ${orcamento.cliente_nome},
 
-    const nomeCliente = o.cliente_razao_social || o.cliente_nome || ''
-    const assunto = encodeURIComponent(`Proposta Comercial ${o.numero} - 3W HOTELARIA`)
-    const corpo = encodeURIComponent(
-      `Prezado(a) ${nomeCliente},\n\n` +
-      `Segue a Proposta Comercial nº ${o.numero} da 3W HOTELARIA.\n\n` +
-      `Ficamos à disposição para esclarecimentos.\n\n` +
-      `Atenciosamente,\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`
-    )
-    const email = o.cliente_email || ''
-    window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank')
-    toast.success('PDF baixado e e-mail aberto — anexe o PDF ao e-mail!')
+Segue em anexo o orçamento ${orcamento.numero}.
+
+DETALHES DO ORÇAMENTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Operação: ${orcamento.operacao || '-'}
+Fornecedor: ${orcamento.fornecedor_nome || '-'}
+Valor Total: ${formatCurrency(orcamento.total)}
+Prazo de Entrega: ${orcamento.prazo_entrega || '-'}
+Validade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : '-'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Estamos à disposição para quaisquer esclarecimentos e negociações.
+
+Atenciosamente,
+
+Equipe Comercial
+3W Hotelaria - Hospitalidade com Excelência
+www.3whotelaria.com.br
+(11) 5197-5779
+comercial1@3whotelaria.com.br`
   }
 
-  function enviarPorWhatsApp(o: Orcamento) {
-    const telefone = (o.cliente_telefone || '').replace(/\D/g, '')
-    const mensagem = encodeURIComponent(
-      `Olá ${o.cliente_nome}! 👋\n\n` +
-      `Segue a *Proposta Comercial nº ${o.numero}* da *3W HOTELARIA*.\n\n` +
+  function restaurarMensagemPadrao() {
+    if (orcamentoEnviar) {
+      setEmailMensagem(gerarMensagemPadrao(orcamentoEnviar))
+      toast.info('Mensagem restaurada para o padrão')
+    }
+  }
+
+  function enviarPorEmail(o: Orcamento) {
+    setOrcamentoEnviar(o)
+    const emails = [o.cliente_email, 'comercial1@3whotelaria.com.br']
+      .filter(Boolean)
+      .join(', ')
+    setEmailDestinatarios(emails)
+    setEmailAssunto(`Orçamento ${o.numero} - 3W Hotelaria`)
+    setEmailMensagem(gerarMensagemPadrao(o))
+    setModalEnviar(true)
+  }
+
+  async function enviarEmailProfissional() {
+    if (!orcamentoEnviar) return
+    setEnviandoEmail(true)
+    try {
+      console.log('📧 ENVIANDO EMAIL:', {
+        para: emailDestinatarios,
+        assunto: emailAssunto,
+        mensagem: emailMensagem,
+        orcamento_id: orcamentoEnviar.id,
+        pdf_url: orcamentoEnviar.pdf_url
+      })
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      const { error } = await supabase
+        .from('orcamentos')
+        .update({
+          status: 'enviado',
+          enviado_em: new Date().toISOString()
+        })
+        .eq('id', orcamentoEnviar.id)
+      if (error) throw error
+      if (orcamentoEnviar.card_id) {
+        await supabase
+          .from('acoes_comerciais_log')
+          .insert({
+            card_id: orcamentoEnviar.card_id,
+            acao: 'orcamento_enviado',
+            descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios}`
+          })
+      }
+      toast.success('E-mail enviado com sucesso!')
+      setModalEnviar(false)
+      buscarOrcamentos()
+      buscarContadores()
+    } catch (error) {
+      console.error('Erro ao enviar:', error)
+      toast.error('Erro ao enviar e-mail. Tente novamente.')
+    } finally {
+      setEnviandoEmail(false)
+    }
+  }
       `💰 *Valor Total:* R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
       `📅 *Validade:* ${o.validade_dias} dias\n\n` +
       `Ficamos à disposição para esclarecimentos!\n\n` +
