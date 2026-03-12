@@ -552,7 +552,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <div className="bg-[#1a4168] p-2 rounded">
                   <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-[#D4AF37]">TERMOS LEGAIS DA 3W HOTELARIA</h3>
+                <h3 className="text-lg font-bold text-[#c4942c]">TERMOS LEGAIS DA 3W HOTELARIA</h3>
               </div>
               
               <div className="text-xs text-gray-700 space-y-2">
