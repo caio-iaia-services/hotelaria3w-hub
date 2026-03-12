@@ -424,6 +424,9 @@ export default function Orcamentos() {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+      #orcamento-export-clone .max-w-7xl {
+        max-width: 100% !important;
+      }
       #orcamento-export-clone .page-break {
         width: ${A4_WIDTH_PX}px !important;
         min-height: ${A4_HEIGHT_PX}px !important;
@@ -431,6 +434,7 @@ export default function Orcamentos() {
         break-after: page;
         page-break-after: always;
         overflow: visible;
+        box-sizing: border-box;
       }
       #orcamento-export-clone .page-break:last-child {
         break-after: auto;
