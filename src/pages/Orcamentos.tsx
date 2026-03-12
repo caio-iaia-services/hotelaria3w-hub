@@ -560,14 +560,10 @@ export default function Orcamentos() {
       for (let index = 0; index < paginas.length; index++) {
         const pagina = paginas[index]
 
-        const captureWidth = Math.max(
-          794,
-          Math.ceil(pagina.scrollWidth || 0),
-          Math.ceil(pagina.getBoundingClientRect().width || 0)
-        )
+        const captureWidth = 794
 
         const canvas = await html2canvas(pagina, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           allowTaint: false,
           logging: false,
@@ -578,7 +574,14 @@ export default function Orcamentos() {
           windowHeight: pagina.scrollHeight,
           scrollX: 0,
           scrollY: 0,
-          imageTimeout: 10000,
+          imageTimeout: 15000,
+          onclone: (clonedDoc) => {
+            const el = clonedDoc.getElementById('orcamento-export-clone')
+            if (el) {
+              el.style.width = `${captureWidth}px`
+              el.style.maxWidth = `${captureWidth}px`
+            }
+          },
         })
 
         const domToCanvasScale = canvas.width / captureWidth
