@@ -356,11 +356,11 @@ export default function Fornecedores() {
     const urls: { nome: string; url: string; tipo: string }[] = [];
     for (const arq of arqs) {
       const nomeArquivo = `${Date.now()}_${arq.nome}`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await cloudSupabase.storage
         .from('fornecedores-documentos')
-        .upload(nomeArquivo, arq.file);
+        .upload(nomeArquivo, arq.file, { upsert: true });
       if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = cloudSupabase.storage
           .from('fornecedores-documentos')
           .getPublicUrl(nomeArquivo);
         urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
