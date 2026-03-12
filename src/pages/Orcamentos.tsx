@@ -3,8 +3,10 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   FileText, Eye, Send, Edit, Download,
-  Trash2, Filter, Search, Printer, X
+  Trash2, Filter, Search, Printer, X, Mail, MessageCircle, ChevronDown
 } from 'lucide-react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +15,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 import { EditarOrcamentoModal } from '@/components/orcamentos/EditarOrcamentoModal'
@@ -277,8 +282,98 @@ export default function Orcamentos() {
     setOrcamentoEditarId(o.id)
     setModalEditar(true)
   }
-  function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
-  function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
+  async function gerarPDFBlob(): Promise<Blob | null> {
+    const el = document.getElementById('orcamento-conteudo')
+    if (!el) return null
+    toast.info('Gerando PDF...')
+    try {
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: 1200,
+      })
+      const imgData = canvas.toDataURL('image/jpeg', 0.95)
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const imgWidth = pdfWidth
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pdfHeight
+
+      while (heightLeft > 0) {
+        position -= pdfHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pdfHeight
+      }
+      return pdf.output('blob')
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+      toast.error('Erro ao gerar PDF')
+      return null
+    }
+  }
+
+  async function baixarPDF(o: Orcamento) {
+    // First open visualization if not already open
+    if (!modalVisualizar) {
+      await visualizarOrcamento(o)
+      // Wait for render
+      await new Promise(r => setTimeout(r, 1000))
+    }
+    const blob = await gerarPDFBlob()
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Orcamento_${o.numero}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('PDF baixado com sucesso!')
+    }
+  }
+
+  async function imprimirOrcamento() {
+    window.print()
+  }
+
+  function enviarPorEmail(o: Orcamento) {
+    const assunto = encodeURIComponent(`Proposta Comercial ${o.numero} - 3W HOTELARIA`)
+    const corpo = encodeURIComponent(
+      `Prezado(a) ${o.cliente_nome},\n\n` +
+      `Segue a Proposta Comercial nº ${o.numero} da 3W HOTELARIA.\n\n` +
+      `Valor Total: R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+      `Validade: ${o.validade_dias} dias\n\n` +
+      `Ficamos à disposição para esclarecimentos.\n\n` +
+      `Atenciosamente,\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`
+    )
+    const email = o.cliente_email || ''
+    window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank')
+    toast.success('Cliente de e-mail aberto!')
+  }
+
+  function enviarPorWhatsApp(o: Orcamento) {
+    const telefone = (o.cliente_telefone || '').replace(/\D/g, '')
+    const mensagem = encodeURIComponent(
+      `Olá ${o.cliente_nome}! 👋\n\n` +
+      `Segue a *Proposta Comercial nº ${o.numero}* da *3W HOTELARIA*.\n\n` +
+      `💰 *Valor Total:* R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+      `📅 *Validade:* ${o.validade_dias} dias\n\n` +
+      `Ficamos à disposição para esclarecimentos!\n\n` +
+      `Equipe Comercial\n3W HOTELARIA\n📧 comercial1@3whotelaria.com.br\n📞 +55 11 5197-5779`
+    )
+    const url = telefone
+      ? `https://wa.me/55${telefone}?text=${mensagem}`
+      : `https://wa.me/?text=${mensagem}`
+    window.open(url, '_blank')
+    toast.success('WhatsApp aberto!')
+  }
 
   // Estilo de impressão
   useEffect(() => {
@@ -446,7 +541,19 @@ export default function Orcamentos() {
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}><Eye className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editarOrcamento(orcamento)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => enviarOrcamento(orcamento)} disabled={orcamento.status !== 'rascunho'}><Send className="h-4 w-4" /></Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><Send className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => enviarPorEmail(orcamento)}>
+                            <Mail className="h-4 w-4 mr-2" /> Enviar por E-mail
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => enviarPorWhatsApp(orcamento)}>
+                            <MessageCircle className="h-4 w-4 mr-2" /> Enviar por WhatsApp
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => baixarPDF(orcamento)}><Download className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deletarOrcamento(orcamento.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
@@ -480,15 +587,40 @@ export default function Orcamentos() {
               Pré-visualização completa do orçamento com itens, totais e termos comerciais.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-gray-100 border-b p-4 flex items-center justify-between">
+          <div className="bg-muted border-b p-4 flex items-center justify-between">
             <h3 className="font-bold text-lg">
               Orçamento {orcamentoVisualizar?.numero}
             </h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="outline" size="sm" onClick={imprimirOrcamento}>
                 <Printer className="w-4 h-4 mr-2" />
-                Imprimir/PDF
+                Imprimir
               </Button>
+              {orcamentoVisualizar && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => baixarPDF(orcamentoVisualizar)}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar PDF
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Send className="w-4 h-4 mr-2" />
+                        Enviar
+                        <ChevronDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => enviarPorEmail(orcamentoVisualizar)}>
+                        <Mail className="h-4 w-4 mr-2" /> Enviar por E-mail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => enviarPorWhatsApp(orcamentoVisualizar)}>
+                        <MessageCircle className="h-4 w-4 mr-2" /> Enviar por WhatsApp
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={() => setModalVisualizar(false)}>
                 <X className="w-4 h-4 mr-2" />
                 Fechar
