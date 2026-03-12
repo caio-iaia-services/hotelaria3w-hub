@@ -583,6 +583,10 @@ export default function Fornecedores() {
       produtos_servicos: f.produtos_servicos || "",
       comissao_vendas: f.comissao_vendas?.toString() || "",
       tipo_layout: (f as any).tipo_layout || "padrao",
+      prazo_entrega_padrao: (f as any).prazo_entrega_padrao || "",
+      validade_dias_padrao: (f as any).validade_dias_padrao?.toString() || "",
+      condicoes_pagamento_padrao: (f as any).condicoes_pagamento_padrao || "",
+      imagem_template_url: (f as any).imagem_template_url || "",
     });
     // Load existing contatos
     const existingContatos = f.contatos ? (typeof f.contatos === 'string' ? JSON.parse(f.contatos) : f.contatos) : [];
