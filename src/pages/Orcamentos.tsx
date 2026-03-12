@@ -664,19 +664,29 @@ export default function Orcamentos() {
   }
 
 
-  function enviarPorEmail(o: Orcamento) {
+  async function enviarPorEmail(o: Orcamento) {
+    // Gera e baixa o PDF primeiro para o usuário anexar manualmente
+    const blob = await gerarPDFBlob(o)
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Orcamento_${o.numero}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    const nomeCliente = o.cliente_razao_social || o.cliente_nome || ''
     const assunto = encodeURIComponent(`Proposta Comercial ${o.numero} - 3W HOTELARIA`)
     const corpo = encodeURIComponent(
-      `Prezado(a) ${o.cliente_nome},\n\n` +
+      `Prezado(a) ${nomeCliente},\n\n` +
       `Segue a Proposta Comercial nº ${o.numero} da 3W HOTELARIA.\n\n` +
-      `Valor Total: R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
-      `Validade: ${o.validade_dias} dias\n\n` +
       `Ficamos à disposição para esclarecimentos.\n\n` +
       `Atenciosamente,\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`
     )
     const email = o.cliente_email || ''
     window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank')
-    toast.success('Cliente de e-mail aberto!')
+    toast.success('PDF baixado e e-mail aberto — anexe o PDF ao e-mail!')
   }
 
   function enviarPorWhatsApp(o: Orcamento) {
