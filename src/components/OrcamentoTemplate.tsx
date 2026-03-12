@@ -275,7 +275,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         )}
         
         {/* RODAPÉ - DADOS DO CLIENTE */}
-        <div className="bg-[#D4AF37] p-6">
+        <div className="bg-[#c4942c] p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-start mb-4">
               {/* Dados do Cliente - Esquerda */}
