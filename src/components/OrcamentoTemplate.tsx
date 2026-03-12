@@ -237,7 +237,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             {/* LADO DIREITO: Número + Datas + Status */}
             <div className="text-right">
               <div className="bg-[#c4942c] text-white px-10 py-4 rounded-lg inline-block mb-4">
-                <p className="text-xl font-bold">Orçamento {orcamento.numero}</p>
+                <p className="text-xl font-bold" data-pdf-orcamento-numero>Orçamento {orcamento.numero}</p>
               </div>
               
               {logotipoFornecedor ? (
@@ -612,7 +612,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> +55 (11) 5197-5779</p>
                 <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> comercial1@3whotelaria.com.br</p>
               </div>
-              <div className="bg-[#c4942c] text-white px-6 py-2 rounded font-bold">
+              <div className="bg-[#c4942c] text-white px-6 py-2 rounded font-bold" data-pdf-orcamento-numero>
                 Orçamento {orcamento.numero}
               </div>
               {orcamento.fornecedor_nome && (

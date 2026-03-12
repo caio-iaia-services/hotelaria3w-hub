@@ -476,6 +476,37 @@ export default function Orcamentos() {
     return primeiroElemento ? [primeiroElemento] : [container]
   }
 
+  function desenharNumeroOrcamentoNoPdf(
+    pagina: HTMLElement,
+    pdf: jsPDF,
+    ratio: number,
+    offsetX: number,
+    offsetY: number,
+    domToCanvasScale: number
+  ) {
+    const marcadores = Array.from(pagina.querySelectorAll<HTMLElement>('[data-pdf-orcamento-numero]'))
+    if (marcadores.length === 0) return
+
+    const pageRect = pagina.getBoundingClientRect()
+
+    marcadores.forEach((marcador) => {
+      const texto = marcador.textContent?.trim()
+      if (!texto) return
+
+      const markerRect = marcador.getBoundingClientRect()
+      const estilo = window.getComputedStyle(marcador)
+      const fontPx = parseFloat(estilo.fontSize || '16')
+
+      const xMm = offsetX + (markerRect.left - pageRect.left + 6) * domToCanvasScale * ratio
+      const yMm = offsetY + (markerRect.top - pageRect.top + markerRect.height * 0.72) * domToCanvasScale * ratio
+
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(Math.max(9, fontPx * 0.75))
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(texto, xMm, yMm)
+    })
+  }
+
   async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
     const containerOriginal = await obterConteudoParaExportacao(orcamento)
     if (!containerOriginal) return null
@@ -514,6 +545,7 @@ export default function Orcamentos() {
           imageTimeout: 10000,
         })
 
+        const domToCanvasScale = canvas.width / captureWidth
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
         const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
@@ -525,6 +557,7 @@ export default function Orcamentos() {
 
         if (index > 0) pdf.addPage()
         pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
+        desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
       }
 
       return pdf.output('blob')
