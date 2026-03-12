@@ -427,6 +427,13 @@ export default function Orcamentos() {
       #orcamento-export-clone .max-w-7xl {
         max-width: 100% !important;
       }
+      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:first-child {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+      }
+      #orcamento-export-clone .page-break:first-child .max-w-7xl > div:last-child {
+        flex: 0 0 auto !important;
+      }
       #orcamento-export-clone .page-break {
         width: ${A4_WIDTH_PX}px !important;
         min-height: ${A4_HEIGHT_PX}px !important;
