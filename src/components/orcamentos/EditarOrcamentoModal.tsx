@@ -213,6 +213,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       const dataValidade = new Date()
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
 
+      const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
+
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
@@ -226,7 +228,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         desconto_valor: valorDesconto,
         subtotal,
         total,
-        condicoes_pagamento: { texto: dados.condicoes_pagamento },
+        condicoes_pagamento: condicoesPagamento,
         observacoes: dados.observacoes,
         observacoes_gerais: dados.observacoes_gerais,
         difal_texto: dados.difal_texto,

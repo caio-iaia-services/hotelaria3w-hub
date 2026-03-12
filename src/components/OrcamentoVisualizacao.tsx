@@ -208,7 +208,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           </div>
         </div>
 
-        {orcamento.condicoes_pagamento && (
+        {condicoesPagamentoTexto && (
           <div className="mt-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
             <h4 className="font-bold text-green-900 mb-2">💳 Condições de Pagamento</h4>
             <div className="text-green-800 whitespace-pre-wrap">

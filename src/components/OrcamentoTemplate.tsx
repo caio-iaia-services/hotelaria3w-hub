@@ -525,13 +525,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 <div className="p-4">
                   <div className="text-xs space-y-1 whitespace-pre-wrap">
-                    {typeof orcamento.condicoes_pagamento === 'object' && orcamento.condicoes_pagamento !== null
-                      ? (orcamento.condicoes_pagamento as any).texto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
-                      : (typeof orcamento.condicoes_pagamento === 'string'
-                        ? orcamento.condicoes_pagamento
-                        : 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'
-                      )
-                    }
+                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO'}
                   </div>
                 </div>
               </div>
