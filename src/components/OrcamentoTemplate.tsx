@@ -16,11 +16,25 @@ interface Props {
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
-  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(null)
+  const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
+  const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
+  const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
+
+  const fornecedorInicial: FornecedorLayout | null =
+    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome
+      ? {
+          tipo_layout: fornecedorInicialTipoLayout,
+          nome_fantasia: fornecedorInicialNome,
+          logotipo_url: fornecedorInicialLogo,
+        }
+      : null
+
+  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(fornecedorInicial)
 
   useEffect(() => {
     let ativo = true
-    setFornecedor(null)
+    setFornecedor(fornecedorInicial)
+
 
     async function buscarFornecedor() {
       // 1) Buscar por ID direto (fonte mais confiável)
