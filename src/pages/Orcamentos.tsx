@@ -589,14 +589,26 @@ export default function Orcamentos() {
         const pageHeight = pdf.internal.pageSize.getHeight()
         const ratio = pageWidth / canvas.width
         const renderWidth = pageWidth
-        const renderHeight = canvas.height * ratio
-        const offsetX = 0
-        const offsetY = 0
+        const totalRenderHeight = canvas.height * ratio
         const imgData = canvas.toDataURL('image/jpeg', 0.95)
 
-        if (index > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', offsetX, offsetY, renderWidth, renderHeight)
-        desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
+        // If content fits in one page, render normally
+        if (totalRenderHeight <= pageHeight) {
+          if (index > 0) pdf.addPage()
+          pdf.addImage(imgData, 'JPEG', 0, 0, renderWidth, totalRenderHeight)
+          desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale)
+        } else {
+          // Content is taller than one page - split across multiple PDF pages
+          const totalPages = Math.ceil(totalRenderHeight / pageHeight)
+          for (let p = 0; p < totalPages; p++) {
+            if (index > 0 || p > 0) pdf.addPage()
+            const yOffset = -(p * pageHeight)
+            pdf.addImage(imgData, 'JPEG', 0, yOffset, renderWidth, totalRenderHeight)
+            if (p === 0) {
+              desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale)
+            }
+          }
+        }
       }
 
       return pdf.output('blob')

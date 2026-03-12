@@ -264,8 +264,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
               
-              <div className="mt-6 bg-gray-200 text-gray-700 px-4 h-10 rounded inline-grid place-items-center text-sm font-semibold leading-none text-center">
-                {orcamento.status.toUpperCase()}
+              <div className="mt-6 bg-gray-200 text-gray-700 px-6 py-2.5 rounded text-sm font-semibold" style={{ display: 'inline-block', lineHeight: '1', verticalAlign: 'middle' }}>
+                <span style={{ display: 'inline-block', transform: 'translateY(0px)' }}>{orcamento.status.toUpperCase()}</span>
               </div>
             </div>
           </div>
