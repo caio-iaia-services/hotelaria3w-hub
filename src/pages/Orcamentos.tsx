@@ -282,8 +282,98 @@ export default function Orcamentos() {
     setOrcamentoEditarId(o.id)
     setModalEditar(true)
   }
-  function enviarOrcamento(_o: Orcamento) { toast.info('Envio em desenvolvimento') }
-  function baixarPDF(_o: Orcamento) { toast.info('Download em desenvolvimento') }
+  async function gerarPDFBlob(): Promise<Blob | null> {
+    const el = document.getElementById('orcamento-conteudo')
+    if (!el) return null
+    toast.info('Gerando PDF...')
+    try {
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: 1200,
+      })
+      const imgData = canvas.toDataURL('image/jpeg', 0.95)
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const imgWidth = pdfWidth
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pdfHeight
+
+      while (heightLeft > 0) {
+        position -= pdfHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pdfHeight
+      }
+      return pdf.output('blob')
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+      toast.error('Erro ao gerar PDF')
+      return null
+    }
+  }
+
+  async function baixarPDF(o: Orcamento) {
+    // First open visualization if not already open
+    if (!modalVisualizar) {
+      await visualizarOrcamento(o)
+      // Wait for render
+      await new Promise(r => setTimeout(r, 1000))
+    }
+    const blob = await gerarPDFBlob()
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Orcamento_${o.numero}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('PDF baixado com sucesso!')
+    }
+  }
+
+  async function imprimirOrcamento() {
+    window.print()
+  }
+
+  function enviarPorEmail(o: Orcamento) {
+    const assunto = encodeURIComponent(`Proposta Comercial ${o.numero} - 3W HOTELARIA`)
+    const corpo = encodeURIComponent(
+      `Prezado(a) ${o.cliente_nome},\n\n` +
+      `Segue a Proposta Comercial nº ${o.numero} da 3W HOTELARIA.\n\n` +
+      `Valor Total: R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+      `Validade: ${o.validade_dias} dias\n\n` +
+      `Ficamos à disposição para esclarecimentos.\n\n` +
+      `Atenciosamente,\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`
+    )
+    const email = o.cliente_email || ''
+    window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank')
+    toast.success('Cliente de e-mail aberto!')
+  }
+
+  function enviarPorWhatsApp(o: Orcamento) {
+    const telefone = (o.cliente_telefone || '').replace(/\D/g, '')
+    const mensagem = encodeURIComponent(
+      `Olá ${o.cliente_nome}! 👋\n\n` +
+      `Segue a *Proposta Comercial nº ${o.numero}* da *3W HOTELARIA*.\n\n` +
+      `💰 *Valor Total:* R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+      `📅 *Validade:* ${o.validade_dias} dias\n\n` +
+      `Ficamos à disposição para esclarecimentos!\n\n` +
+      `Equipe Comercial\n3W HOTELARIA\n📧 comercial1@3whotelaria.com.br\n📞 +55 11 5197-5779`
+    )
+    const url = telefone
+      ? `https://wa.me/55${telefone}?text=${mensagem}`
+      : `https://wa.me/?text=${mensagem}`
+    window.open(url, '_blank')
+    toast.success('WhatsApp aberto!')
+  }
 
   // Estilo de impressão
   useEffect(() => {
