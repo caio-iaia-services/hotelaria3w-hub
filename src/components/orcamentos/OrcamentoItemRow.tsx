@@ -30,6 +30,8 @@ interface Props {
 }
 
 export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }: Props) {
+  const [precoEditando, setPrecoEditando] = useState(false)
+  const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
   const [descricaoBusca, setDescricaoBusca] = useState('')
   const [showCodigoDropdown, setShowCodigoDropdown] = useState(false)
