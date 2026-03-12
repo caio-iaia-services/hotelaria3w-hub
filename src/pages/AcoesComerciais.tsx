@@ -1189,73 +1189,14 @@ export default function AcoesComerciais() {
 
               <div className="space-y-3">
                 {itensOrcamento.map((item, index) => (
-                  <div key={item.id} className="border rounded-lg p-4 bg-muted/30">
-                    <div className="flex items-start justify-between mb-3">
-                      <p className="font-medium text-sm">Item {index + 1}</p>
-                      {itensOrcamento.length > 1 && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removerItem(item.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-12 gap-3">
-                      <div className="col-span-2">
-                        <Label>Código</Label>
-                        <Input
-                          placeholder="Ex: MRC06B2"
-                          value={item.codigo}
-                          onChange={(e) => atualizarItem(item.id, 'codigo', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <Label>Descrição *</Label>
-                        <Input
-                          placeholder="Descrição do produto"
-                          value={item.descricao}
-                          onChange={(e) => atualizarItem(item.id, 'descricao', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Label>Medidas</Label>
-                        <Input
-                          placeholder="Ex: Queen 158x198x25"
-                          value={item.medidas}
-                          onChange={(e) => atualizarItem(item.id, 'medidas', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <Label>Quantidade *</Label>
-                        <Input
-                          placeholder="1"
-                          value={item.quantidade || ''}
-                          onChange={(e) => atualizarItem(item.id, 'quantidade', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label>Preço Unitário *</Label>
-                        <Input
-                          placeholder="0,00"
-                          value={item.preco_unitario || ''}
-                          onChange={(e) => atualizarItem(item.id, 'preco_unitario', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-12">
-                        <Label>Especificações</Label>
-                        <Textarea
-                          placeholder="Detalhes técnicos, cor, tamanho, etc."
-                          value={item.especificacoes}
-                          onChange={(e) => atualizarItem(item.id, 'especificacoes', e.target.value)}
-                          rows={2}
-                        />
-                      </div>
-                      <div className="col-span-12 flex justify-end">
-                        <p className="text-sm font-medium">
-                          Total: {formatCurrency(item.total)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <OrcamentoItemRow
+                    key={item.id}
+                    item={{ ...item, id: String(item.id) }}
+                    index={index}
+                    canRemove={itensOrcamento.length > 1}
+                    onUpdate={(id, campo, valor) => atualizarItem(Number(id), campo, valor)}
+                    onRemove={(id) => removerItem(Number(id))}
+                  />
                 ))}
               </div>
 
