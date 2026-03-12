@@ -481,9 +481,43 @@ export default function Orcamentos() {
     const style = document.createElement('style')
     style.textContent = `
       @media print {
-        body * { visibility: hidden; }
-        #orcamento-conteudo, #orcamento-conteudo * { visibility: visible; }
-        #orcamento-conteudo { position: absolute; left: 0; top: 0; width: 100%; }
+        @page { size: A4; margin: 0; }
+
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+
+        body * {
+          visibility: hidden !important;
+        }
+
+        #orcamento-conteudo,
+        #orcamento-conteudo * {
+          visibility: visible !important;
+        }
+
+        #orcamento-conteudo {
+          position: absolute !important;
+          inset: 0 !important;
+          width: 100% !important;
+          max-height: none !important;
+          height: auto !important;
+          overflow: visible !important;
+          background: #fff !important;
+        }
+
+        #orcamento-conteudo .page-break {
+          break-after: page;
+          page-break-after: always;
+          min-height: auto !important;
+        }
+
+        #orcamento-conteudo .page-break:last-child {
+          break-after: auto;
+          page-break-after: auto;
+        }
       }
     `
     document.head.appendChild(style)
