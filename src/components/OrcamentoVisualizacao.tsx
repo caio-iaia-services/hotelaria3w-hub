@@ -37,7 +37,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#D4AF37] via-white to-[#D4AF37]"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#c4942c] via-white to-[#c4942c]"></div>
       </div>
 
       {/* DADOS DO CLIENTE */}
