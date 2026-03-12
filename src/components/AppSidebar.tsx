@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Home,
   Headphones,
@@ -101,6 +102,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleSubmenu = (title: string) => {
@@ -283,7 +286,10 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                 <User size={14} className="mr-2" />
                 Perfil
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-destructive">
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive"
+                onClick={async () => { await signOut(); navigate('/'); }}
+              >
                 <LogOut size={14} className="mr-2" />
                 Sair
               </DropdownMenuItem>

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,12 +16,30 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !senha) {
+      toast.error("Preencha e-mail e senha");
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1000);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha,
+      });
+      if (error) {
+        toast.error(error.message === "Invalid login credentials"
+          ? "E-mail ou senha incorretos"
+          : error.message);
+      } else {
+        navigate("/dashboard");
+      }
+    } catch {
+      toast.error("Erro ao fazer login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,7 +73,6 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-700">E-mail</Label>
               <div className="relative">
@@ -69,7 +88,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Senha */}
             <div className="space-y-2">
               <Label htmlFor="senha" className="text-gray-700">Senha</Label>
               <div className="relative">
@@ -92,7 +110,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Remember */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="remember"
@@ -104,7 +121,6 @@ export default function Login() {
               </Label>
             </div>
 
-            {/* Submit */}
             <Button
               type="submit"
               className="w-full h-11 text-base font-semibold text-white hover:opacity-90 transition-opacity"
