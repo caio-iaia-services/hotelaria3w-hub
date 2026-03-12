@@ -6,7 +6,7 @@ import { gestaoOperacoes as gestaoOperacoesBase } from '@/data/mockOportunidades
 import {
   FileText, DollarSign, FileSignature,
   Send, CreditCard, FolderOpen, Zap,
-  TrendingUp, Clock, MapPin, Eye, Download, Plus, Trash2, Upload, X, Image as ImageIcon,
+  TrendingUp, Clock, MapPin, Eye, Download, Plus, Upload, X, Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
