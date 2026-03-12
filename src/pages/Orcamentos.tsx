@@ -430,7 +430,7 @@ export default function Orcamentos() {
         margin: 0 auto !important;
         break-after: page;
         page-break-after: always;
-        overflow: hidden;
+        overflow: visible;
       }
       #orcamento-export-clone .page-break:last-child {
         break-after: auto;
