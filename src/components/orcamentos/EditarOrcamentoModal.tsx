@@ -396,45 +396,14 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
               <Label className="mb-3 block">Itens do Orçamento</Label>
               <div className="space-y-3">
                 {itens.map((item, index) => (
-                  <div key={item.id} className="border rounded-lg p-4 bg-muted/30">
-                    <div className="flex items-start justify-between mb-3">
-                      <p className="font-medium text-sm">Item {index + 1}</p>
-                      {itens.length > 1 && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removerItem(item.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-12 gap-3">
-                      <div className="col-span-2">
-                        <Label>Código</Label>
-                        <Input value={item.codigo} onChange={(e) => atualizarItem(item.id, 'codigo', e.target.value)} />
-                      </div>
-                      <div className="col-span-5">
-                        <Label>Descrição *</Label>
-                        <Input value={item.descricao} onChange={(e) => atualizarItem(item.id, 'descricao', e.target.value)} />
-                      </div>
-                      <div className="col-span-2">
-                        <Label>Quantidade *</Label>
-                        <Input value={item.quantidade || ''} onChange={(e) => atualizarItem(item.id, 'quantidade', e.target.value)} />
-                      </div>
-                      <div className="col-span-3">
-                        <Label>Preço Unitário *</Label>
-                        <Input value={item.preco_unitario || ''} onChange={(e) => atualizarItem(item.id, 'preco_unitario', e.target.value)} />
-                      </div>
-                      <div className="col-span-12">
-                        <Label>Especificações</Label>
-                        <Textarea
-                          value={item.especificacoes}
-                          onChange={(e) => atualizarItem(item.id, 'especificacoes', e.target.value)}
-                          rows={2}
-                        />
-                      </div>
-                      <div className="col-span-12 flex justify-end">
-                        <p className="text-sm font-medium">Total: {formatCurrency(item.total)}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <OrcamentoItemRow
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    canRemove={itens.length > 1}
+                    onUpdate={atualizarItem}
+                    onRemove={removerItem}
+                  />
                 ))}
               </div>
               <Button type="button" variant="outline" size="sm" className="mt-3" onClick={adicionarItem}>
