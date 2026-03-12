@@ -855,6 +855,7 @@ export default function Fornecedores() {
         </div>
       </div>
 
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>E-mail</Label>
           <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />
