@@ -587,15 +587,15 @@ export default function Orcamentos() {
         const domToCanvasScale = canvas.width / captureWidth
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
-        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
-        const renderWidth = canvas.width * ratio
+        const ratio = pageWidth / canvas.width
+        const renderWidth = pageWidth
         const renderHeight = canvas.height * ratio
-        const offsetX = (pageWidth - renderWidth) / 2
-        const offsetY = (pageHeight - renderHeight) / 2
-        const imgData = canvas.toDataURL('image/png')
+        const offsetX = 0
+        const offsetY = 0
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
 
         if (index > 0) pdf.addPage()
-        pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
+        pdf.addImage(imgData, 'JPEG', offsetX, offsetY, renderWidth, renderHeight)
         desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
       }
 
