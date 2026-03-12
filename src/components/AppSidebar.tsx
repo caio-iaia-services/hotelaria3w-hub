@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Home,
   Headphones,
