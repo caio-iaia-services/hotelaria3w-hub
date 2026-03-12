@@ -760,6 +760,11 @@ comercial1@3whotelaria.com.br`
       setEnviandoEmail(false)
     }
   }
+  function enviarPorWhatsApp(o: Orcamento) {
+    const telefone = (o.cliente_telefone || '').replace(/\D/g, '')
+    const mensagem = encodeURIComponent(
+      `Olá ${o.cliente_nome}! 👋\n\n` +
+      `Segue a *Proposta Comercial nº ${o.numero}* da *3W HOTELARIA*.\n\n` +
       `💰 *Valor Total:* R$ ${parseNum(o.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
       `📅 *Validade:* ${o.validade_dias} dias\n\n` +
       `Ficamos à disposição para esclarecimentos!\n\n` +
