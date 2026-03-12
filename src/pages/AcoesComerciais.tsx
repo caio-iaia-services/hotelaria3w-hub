@@ -1363,10 +1363,10 @@ export default function AcoesComerciais() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-purple-600">
+                <div className="text-center py-8 text-[#c4942c]">
                   <ImageIcon className="w-16 h-16 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">Nenhuma campanha adicionada</p>
-                  <p className="text-xs text-purple-500 mt-1">
+                  <p className="text-xs text-[#c4942c]/60 mt-1">
                     JPG, PNG • Máx 5MB • Recomendado: 1200x400px
                   </p>
                 </div>
