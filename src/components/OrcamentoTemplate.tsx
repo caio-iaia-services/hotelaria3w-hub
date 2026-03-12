@@ -422,7 +422,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               
               {/* RESUMO FINANCEIRO */}
               <div>
-                <div className="bg-[#D4AF37] text-white p-4 rounded-t-lg">
+                <div className="bg-[#c4942c] text-white p-4 rounded-t-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Subtotal</span>
                     <span className="font-bold text-2xl">
