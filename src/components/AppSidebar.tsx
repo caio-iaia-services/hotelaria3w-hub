@@ -286,7 +286,10 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                 <User size={14} className="mr-2" />
                 Perfil
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-destructive">
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive"
+                onClick={async () => { await signOut(); navigate('/'); }}
+              >
                 <LogOut size={14} className="mr-2" />
                 Sair
               </DropdownMenuItem>
