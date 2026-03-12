@@ -237,19 +237,52 @@ export default function Orcamentos() {
     }, 500)
   }
 
-  async function visualizarOrcamento(o: Orcamento) {
-    console.log('👁️ VISUALIZAR ORÇAMENTO - dados da listagem:', {
-      id: o.id,
-      numero: o.numero,
-      subtotal: o.subtotal,
-      total: o.total,
-      impostos: o.impostos,
-      desconto: o.desconto,
-      frete: o.frete,
-      fornecedor_id: o.fornecedor_id,
-    })
+  async function buscarFornecedorLayout(orcamentoBase: Orcamento) {
+    const fornecedorId = (orcamentoBase as any).fornecedor_id
+    const nomeBusca = String((orcamentoBase as any).fornecedor_nome || (orcamentoBase as any).operacao || '').trim()
 
-    // Recarrega o orçamento direto do banco para evitar dados "enriquecidos" incorretos da listagem
+    if (fornecedorId) {
+      const { data } = await supabase
+        .from('fornecedores')
+        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .eq('id', fornecedorId)
+        .maybeSingle()
+
+      if (data) return data as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    }
+
+    if (!nomeBusca) return null
+
+    const { data: exato } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .eq('nome_fantasia', nomeBusca)
+      .maybeSingle()
+
+    if (exato) return exato as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+
+    const { data: caseInsensitive } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .ilike('nome_fantasia', nomeBusca)
+      .limit(1)
+
+    if (caseInsensitive && caseInsensitive.length > 0) {
+      return caseInsensitive[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    }
+
+    const { data: parcial } = await supabase
+      .from('fornecedores')
+      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .ilike('nome_fantasia', `%${nomeBusca}%`)
+      .limit(1)
+
+    return parcial && parcial.length > 0
+      ? (parcial[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null })
+      : null
+  }
+
+  async function visualizarOrcamento(o: Orcamento) {
     const { data: orcamentoDb } = await supabase
       .from('orcamentos')
       .select('*')
@@ -267,17 +300,29 @@ export default function Orcamentos() {
         } as Orcamento)
       : o
 
-    setOrcamentoVisualizar(orcamentoBase)
+    const [fornecedor, { data: itens }] = await Promise.all([
+      buscarFornecedorLayout(orcamentoBase),
+      supabase
+        .from('orcamento_itens')
+        .select('*')
+        .eq('orcamento_id', o.id)
+        .order('ordem')
+    ])
 
-    const { data: itens } = await supabase
-      .from('orcamento_itens')
-      .select('*')
-      .eq('orcamento_id', o.id)
-      .order('ordem')
-    console.log('📦 ITENS DO ORÇAMENTO:', itens?.map(i => ({ desc: (i as any).descricao, qty: (i as any).quantidade, price: (i as any).preco_unitario, total: (i as any).total })))
+    const orcamentoComFornecedor = fornecedor
+      ? ({
+          ...orcamentoBase,
+          fornecedor_tipo_layout: fornecedor.tipo_layout,
+          fornecedor_logotipo_url: fornecedor.logotipo_url,
+          fornecedor_nome_fantasia: fornecedor.nome_fantasia,
+        } as Orcamento)
+      : orcamentoBase
+
+    setOrcamentoVisualizar(orcamentoComFornecedor)
     setItensVisualizar((itens as OrcamentoItem[]) || [])
     setModalVisualizar(true)
   }
+
   function editarOrcamento(o: Orcamento) {
     setOrcamentoEditarId(o.id)
     setModalEditar(true)
