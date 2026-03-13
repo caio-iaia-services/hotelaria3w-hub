@@ -65,7 +65,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       if (orcamento.fornecedor_id) {
         const { data } = await supabase
           .from('fornecedores')
-          .select('tipo_layout, nome_fantasia, logotipo_url')
+          .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
           .eq('id', orcamento.fornecedor_id)
           .maybeSingle()
 
@@ -82,7 +82,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta igualdade exata
       const { data: exato } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .eq('nome_fantasia', nomeBusca)
         .maybeSingle()
 
@@ -94,7 +94,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta case-insensitive, ainda com match exato (sem %)
       const { data: candidatos } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .ilike('nome_fantasia', nomeBusca)
         .limit(10)
 
@@ -110,7 +110,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta busca parcial (nome contém o termo buscado)
       const { data: parciais } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .ilike('nome_fantasia', `%${nomeBusca}%`)
         .limit(5)
 
@@ -131,6 +131,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     fornecedorInicialTipoLayout,
     fornecedorInicialNome,
     fornecedorInicialLogo,
+    fornecedorInicialImagemTemplate,
   ])
 
   const tipoLayout = fornecedor?.tipo_layout || fornecedorInicialTipoLayout || 'padrao'
