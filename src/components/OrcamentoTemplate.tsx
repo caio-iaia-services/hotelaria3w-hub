@@ -3,12 +3,13 @@ import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSig
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
-import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
+import { resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 interface FornecedorLayout {
   tipo_layout: string | null
   nome_fantasia: string
   logotipo_url: string | null
+  imagem_template_url: string | null
 }
 
 interface Props {
@@ -40,13 +41,15 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
   const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
+  const fornecedorInicialImagemTemplate = ((orcamento as any).fornecedor_imagem_template_url ?? null) as string | null
 
   const fornecedorInicial: FornecedorLayout | null =
-    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome
+    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome || fornecedorInicialImagemTemplate
       ? {
           tipo_layout: fornecedorInicialTipoLayout,
           nome_fantasia: fornecedorInicialNome,
           logotipo_url: fornecedorInicialLogo,
+          imagem_template_url: fornecedorInicialImagemTemplate,
         }
       : null
 
@@ -62,7 +65,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       if (orcamento.fornecedor_id) {
         const { data } = await supabase
           .from('fornecedores')
-          .select('tipo_layout, nome_fantasia, logotipo_url')
+          .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
           .eq('id', orcamento.fornecedor_id)
           .maybeSingle()
 
@@ -79,7 +82,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta igualdade exata
       const { data: exato } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .eq('nome_fantasia', nomeBusca)
         .maybeSingle()
 
@@ -91,7 +94,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta case-insensitive, ainda com match exato (sem %)
       const { data: candidatos } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .ilike('nome_fantasia', nomeBusca)
         .limit(10)
 
@@ -107,7 +110,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
       // tenta busca parcial (nome contém o termo buscado)
       const { data: parciais } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .ilike('nome_fantasia', `%${nomeBusca}%`)
         .limit(5)
 
@@ -128,12 +131,18 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     fornecedorInicialTipoLayout,
     fornecedorInicialNome,
     fornecedorInicialLogo,
+    fornecedorInicialImagemTemplate,
   ])
 
   const tipoLayout = fornecedor?.tipo_layout || fornecedorInicialTipoLayout || 'padrao'
   const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
   const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
   const layoutMidea = isMideaLayout(tipoLayout, nomeFornecedorExibicao)
+  const imagemMarketingExibicao = resolverImagemMarketing(
+    orcamento.imagem_marketing_url,
+    fornecedor?.imagem_template_url || fornecedorInicialImagemTemplate,
+    layoutMidea
+  )
   const termosFornecedorExibicao = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea) || ''
   console.log('📊 numero:', orcamento.numero)
   console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
@@ -295,11 +304,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         </div>
         
         {/* HERO MARKETING */}
-        {orcamento.imagem_marketing_url ? (
+        {imagemMarketingExibicao ? (
           <div className="flex-1 bg-gradient-to-br from-gray-100 to-gray-200 p-8">
             <div className="max-w-7xl mx-auto">
               <img 
-                src={orcamento.imagem_marketing_url} 
+                src={imagemMarketingExibicao} 
                 alt="Marketing" 
                 className="w-full h-auto rounded-2xl shadow-2xl"
                 onError={(e) => {
