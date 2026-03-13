@@ -725,14 +725,53 @@ comercial1@3whotelaria.com.br`
     if (!orcamentoEnviar) return
     setEnviandoEmail(true)
     try {
-      console.log('📧 ENVIANDO EMAIL:', {
-        para: emailDestinatarios,
+      // 1. Buscar configuração de email do usuário
+      const { data: { user } } = await cloudSupabase.auth.getUser()
+
+      const { data: configEmail, error: errorConfig } = await cloudSupabase
+        .from('usuarios_email_config' as any)
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('ativo', true)
+        .single()
+
+      if (!configEmail || errorConfig) {
+        toast.error('Configure suas credenciais de e-mail', {
+          description: 'Acesse Admin → Config. E-mail para configurar',
+          action: {
+            label: 'Ir para Configurações',
+            onClick: () => window.location.href = '/admin/email'
+          }
+        })
+        return
+      }
+
+      const config = configEmail as any
+
+      console.log('📧 Enviando email...')
+      console.log('👤 Remetente:', config.email)
+      console.log('📨 Destinatários:', emailDestinatarios)
+
+      // 2. Placeholder para integração com n8n/webhook
+      // TODO: Substituir URL pelo webhook real
+      console.log('📧 DADOS DO EMAIL:', {
+        orcamento_id: orcamentoEnviar.id,
+        smtp_config: {
+          email: config.email,
+          host: config.host,
+          port: config.port,
+          secure: config.secure
+        },
+        destinatarios: emailDestinatarios,
         assunto: emailAssunto,
         mensagem: emailMensagem,
-        orcamento_id: orcamentoEnviar.id,
         pdf_url: orcamentoEnviar.pdf_url
       })
+
+      // Simular envio por enquanto
       await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // 3. Atualizar status do orçamento
       const { error } = await supabase
         .from('orcamentos')
         .update({
@@ -741,22 +780,28 @@ comercial1@3whotelaria.com.br`
         })
         .eq('id', orcamentoEnviar.id)
       if (error) throw error
+
       if (orcamentoEnviar.card_id) {
         await supabase
           .from('acoes_comerciais_log')
           .insert({
             card_id: orcamentoEnviar.card_id,
             acao: 'orcamento_enviado',
-            descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios}`
+            descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios} via ${config.email}`
           })
       }
-      toast.success('E-mail enviado com sucesso!')
+
+      toast.success('E-mail enviado com sucesso!', {
+        description: `Enviado de ${config.email}`
+      })
       setModalEnviar(false)
       buscarOrcamentos()
       buscarContadores()
-    } catch (error) {
-      console.error('Erro ao enviar:', error)
-      toast.error('Erro ao enviar e-mail. Tente novamente.')
+    } catch (error: any) {
+      console.error('❌ Erro ao enviar:', error)
+      toast.error('Erro ao enviar e-mail', {
+        description: error?.message || 'Tente novamente.'
+      })
     } finally {
       setEnviandoEmail(false)
     }
