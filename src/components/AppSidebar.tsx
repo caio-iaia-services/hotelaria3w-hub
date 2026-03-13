@@ -131,7 +131,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                 : "hover:bg-[rgba(255,255,255,0.1)]"
             )}
           >
-            <item.icon size={18} className="shrink-0" />
+            <item.icon size={16} className="shrink-0" />
             <span className="flex-1 text-left">{item.title}</span>
             {expandedMenus.includes(item.title) ? (
               <ChevronDown size={14} className="text-sidebar-foreground/60" />
