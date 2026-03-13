@@ -13,7 +13,7 @@ export default function ConfiguracoesEmail() {
   const [config, setConfig] = useState({
     email: 'comercial1@3whotelaria.com.br',
     senha_smtp: '',
-    host: 'smtp.hostinger.com',
+    host: 'email-ssl.com.br',
     port: 465,
     secure: true,
     ativo: true,
@@ -45,7 +45,7 @@ export default function ConfiguracoesEmail() {
         setConfig({
           email: d.email || '',
           senha_smtp: d.senha_smtp || '',
-          host: d.host || 'smtp.hostinger.com',
+          host: d.host || 'email-ssl.com.br',
           port: d.port || 465,
           secure: d.secure ?? true,
           ativo: d.ativo ?? true,
@@ -237,7 +237,7 @@ export default function ConfiguracoesEmail() {
               id="host"
               value={config.host}
               onChange={(e) => handleChange('host', e.target.value)}
-              placeholder="smtp.hostinger.com"
+              placeholder="email-ssl.com.br"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
