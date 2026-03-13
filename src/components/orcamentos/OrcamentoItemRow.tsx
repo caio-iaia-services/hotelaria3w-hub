@@ -122,7 +122,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* DESCRIÇÃO com autocomplete */}
-        <div className="col-span-4 relative" ref={descricaoRef}>
+        <div className={tipoLayout === 'castor' ? 'col-span-4 relative' : 'col-span-5 relative'} ref={descricaoRef}>
           <Label>Descrição *</Label>
           <Input
             placeholder="Descrição do produto"
