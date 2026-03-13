@@ -748,11 +748,25 @@ comercial1@3whotelaria.com.br`
 
       const config = configEmail as any
 
-      console.log('📧 Enviando email...')
+      console.log('📧 Gerando PDF e enviando email...')
       console.log('👤 Remetente:', config.email)
       console.log('📨 Destinatários:', emailDestinatarios)
 
-      // 2. Enviar via webhook n8n
+      // 2. Gerar PDF em base64
+      const pdfBlob = await gerarPDFBlob(orcamentoEnviar)
+      if (!pdfBlob) {
+        toast.error('Não foi possível gerar o PDF do orçamento')
+        return
+      }
+
+      const pdfBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(pdfBlob)
+      })
+
+      // 3. Enviar via webhook n8n com PDF anexado
       const response = await fetch(
         'https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento',
         {
@@ -760,6 +774,8 @@ comercial1@3whotelaria.com.br`
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orcamento_id: orcamentoEnviar.id,
+            numero: orcamentoEnviar.numero,
+            pdf_base64: pdfBase64,
             destinatarios: emailDestinatarios,
             assunto: emailAssunto,
             mensagem: emailMensagem,
