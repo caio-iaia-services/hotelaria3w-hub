@@ -308,6 +308,7 @@ interface FornecedorLocal {
   validade_dias_padrao: number | null
   condicoes_pagamento_padrao: string | null
   imagem_template_url: string | null
+  tipo_layout: string | null
 }
 
 // ─── ImagemMarketing type ────────────────────────────────────────────────────
@@ -561,7 +562,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url, tipo_layout')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -1195,6 +1196,7 @@ export default function AcoesComerciais() {
                     item={{ ...item, id: String(item.id) }}
                     index={index}
                     canRemove={itensOrcamento.length > 1}
+                    tipoLayout={fornecedorSelecionado?.tipo_layout}
                     onUpdate={(id, campo, valor) => atualizarItem(Number(id), campo, valor)}
                     onRemove={(id) => removerItem(Number(id))}
                   />

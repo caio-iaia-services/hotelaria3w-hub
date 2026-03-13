@@ -25,11 +25,12 @@ interface Props {
   item: ItemData
   index: number
   canRemove: boolean
+  tipoLayout?: string | null
   onUpdate: (id: string, campo: string, valor: string | number) => void
   onRemove: (id: string) => void
 }
 
-export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }: Props) {
+export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate, onRemove }: Props) {
   const [precoEditando, setPrecoEditando] = useState(false)
   const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
@@ -85,7 +86,7 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-12 gap-3">
+      <div className={`grid gap-3 ${tipoLayout === 'castor' ? 'grid-cols-12' : 'grid-cols-10'}`}>
         {/* CÓDIGO com autocomplete */}
         <div className="col-span-2 relative" ref={codigoRef}>
           <Label>Código</Label>
@@ -121,7 +122,7 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
         </div>
 
         {/* DESCRIÇÃO com autocomplete */}
-        <div className="col-span-4 relative" ref={descricaoRef}>
+        <div className={tipoLayout === 'castor' ? 'col-span-4 relative' : 'col-span-5 relative'} ref={descricaoRef}>
           <Label>Descrição *</Label>
           <Input
             placeholder="Descrição do produto"
@@ -155,30 +156,32 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
           )}
         </div>
 
-        {/* MEDIDAS dropdown */}
-        <div className="col-span-2">
-          <Label>Medidas</Label>
-          {medidas.length > 0 ? (
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-              value={item.medidas || ''}
-              onChange={(e) => handleMedidaChange(e.target.value)}
-            >
-              <option value="">Selecione...</option>
-              {medidas.map(m => (
-                <option key={m.medida} value={m.medida}>
-                  {m.medida}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <Input
-              placeholder="Ex: Queen 158x198"
-              value={item.medidas || ''}
-              onChange={(e) => onUpdate(item.id, 'medidas', e.target.value)}
-            />
-          )}
-        </div>
+        {/* MEDIDAS dropdown - apenas Castor */}
+        {tipoLayout === 'castor' && (
+          <div className="col-span-2">
+            <Label>Medidas</Label>
+            {medidas.length > 0 ? (
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                value={item.medidas || ''}
+                onChange={(e) => handleMedidaChange(e.target.value)}
+              >
+                <option value="">Selecione...</option>
+                {medidas.map(m => (
+                  <option key={m.medida} value={m.medida}>
+                    {m.medida}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                placeholder="Ex: Queen 158x198"
+                value={item.medidas || ''}
+                onChange={(e) => onUpdate(item.id, 'medidas', e.target.value)}
+              />
+            )}
+          </div>
+        )}
 
         {/* QUANTIDADE */}
         <div className="col-span-1">
@@ -210,7 +213,7 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
         </div>
 
         {/* ESPECIFICAÇÕES */}
-        <div className="col-span-12">
+        <div className={tipoLayout === 'castor' ? 'col-span-12' : 'col-span-10'}>
           <Label>Especificações</Label>
           <Textarea
             placeholder="Detalhes técnicos, cor, tamanho, etc."
@@ -220,7 +223,7 @@ export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }:
           />
         </div>
 
-        <div className="col-span-12 flex justify-end">
+        <div className={`${tipoLayout === 'castor' ? 'col-span-12' : 'col-span-10'} flex justify-end`}>
           <p className="text-sm font-medium">Total: {formatCurrency(item.total)}</p>
         </div>
       </div>

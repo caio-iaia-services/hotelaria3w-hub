@@ -55,6 +55,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [saving, setSaving] = useState(false)
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null)
   const [itens, setItens] = useState<ItemLocal[]>([])
+  const [tipoLayout, setTipoLayout] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const [imagemFile, setImagemFile] = useState<File | null>(null)
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
@@ -100,6 +101,14 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagemFile(null)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
+
+      // Fetch fornecedor tipo_layout
+      if (o.fornecedor_id) {
+        const { data: forn } = await supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
+        setTipoLayout((forn as any)?.tipo_layout || null)
+      } else {
+        setTipoLayout(null)
+      }
     }
 
     if (itensDb) {
@@ -405,6 +414,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                     item={item}
                     index={index}
                     canRemove={itens.length > 1}
+                    tipoLayout={tipoLayout}
                     onUpdate={atualizarItem}
                     onRemove={removerItem}
                   />
