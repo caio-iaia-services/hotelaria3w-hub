@@ -352,18 +352,30 @@ export default function Fornecedores() {
     setter(list.filter((_, i) => i !== index));
   };
 
+  function limparNomeArquivo(nomeOriginal: string): string {
+    return nomeOriginal
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
   const uploadArquivosStorage = async (arqs: ArquivoUpload[]) => {
     const urls: { nome: string; url: string; tipo: string }[] = [];
 
     for (const arq of arqs) {
-      const nomeSanitizado = arq.nome.replace(/\s+/g, "_");
-      const nomeArquivo = `catalogos/${Date.now()}_${Math.random().toString(36).slice(2)}_${nomeSanitizado}`;
+      const nomeLimpo = limparNomeArquivo(arq.nome);
+      const nomeArquivo = `catalogos/${Date.now()}_${Math.random().toString(36).slice(2)}_${nomeLimpo}`;
 
       const { error: uploadError } = await cloudSupabase.storage
         .from('fornecedores-documentos')
         .upload(nomeArquivo, arq.file, { upsert: true, contentType: arq.file.type || undefined });
 
       if (uploadError) {
+        console.error('❌ Erro upload:', uploadError);
+        console.error('Nome arquivo tentado:', nomeArquivo);
+        toast({ title: `Erro ao fazer upload: ${uploadError.message}`, variant: "destructive" });
         throw new Error(`Falha no upload do arquivo ${arq.nome}: ${uploadError.message}`);
       }
 
