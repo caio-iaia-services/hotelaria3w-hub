@@ -12,6 +12,7 @@ import {
   Mail,
   DollarSign,
   Settings,
+  Mail as MailIcon,
   ChevronDown,
   ChevronRight,
   LogOut,
