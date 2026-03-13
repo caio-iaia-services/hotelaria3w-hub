@@ -15,6 +15,21 @@ interface Props {
   itens: OrcamentoItem[]
 }
 
+const TERMOS_MIDEA_PADRAO = 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
+
+function normalizarNomeFornecedor(nome: string | null | undefined) {
+  return String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: string) {
+  if (tipoLayout === 'midea') return true
+  return normalizarNomeFornecedor(nomeFornecedor).includes('MIDEA')
+}
+
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
