@@ -296,8 +296,14 @@ function normalizarNomeFornecedor(nome: string | null | undefined) {
 function isFornecedorMidea(fornecedor: Pick<FornecedorLocal, 'tipo_layout' | 'nome_fantasia'> | null | undefined) {
   if (!fornecedor) return false
   if (fornecedor.tipo_layout === 'midea') return true
+
   const nomeNormalizado = normalizarNomeFornecedor(fornecedor.nome_fantasia)
-  return nomeNormalizado.includes('MIDEA')
+  return (
+    nomeNormalizado.includes('MIDEA') ||
+    nomeNormalizado.includes('SPRINGER') ||
+    nomeNormalizado.includes('CLIMAZON') ||
+    nomeNormalizado.includes('CARRIER')
+  )
 }
 
 // ─── Item type ────────────────────────────────────────────────────────────────
