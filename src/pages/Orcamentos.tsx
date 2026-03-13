@@ -781,7 +781,7 @@ comercial1@3whotelaria.com.br`
             destinatarios: emailDestinatarios,
             assunto: emailAssunto,
             mensagem: emailMensagem,
-            from_email: user?.email || '',
+            from_email: config.email,
           }),
         }
       )
