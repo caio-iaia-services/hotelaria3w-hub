@@ -749,7 +749,9 @@ comercial1@3whotelaria.com.br`
       const config = configEmail as any
 
       console.log('📧 Gerando PDF e enviando email...')
-      console.log('👤 Remetente:', config.email)
+      console.log('👤 Remetente SMTP (config):', config.email)
+      console.log('👤 Usuário logado (auth):', user?.email)
+      console.log('📨 from_email enviado:', config.email)
       console.log('📨 Destinatários:', emailDestinatarios)
 
       // 2. Gerar PDF em base64
@@ -779,7 +781,7 @@ comercial1@3whotelaria.com.br`
             destinatarios: emailDestinatarios,
             assunto: emailAssunto,
             mensagem: emailMensagem,
-            from_email: user?.email || '',
+            from_email: config.email,
           }),
         }
       )
