@@ -10,6 +10,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function parsePrice(value: string | number | null | undefined): number {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+
+  const raw = String(value).trim()
+  if (!raw) return 0
+
+  const normalized = raw.includes(',')
+    ? raw.replace(/\./g, '').replace(',', '.')
+    : raw
+
+  const parsed = parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 interface ItemData {
   id: string
   codigo: string
