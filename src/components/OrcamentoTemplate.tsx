@@ -304,11 +304,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
         </div>
         
         {/* HERO MARKETING */}
-        {orcamento.imagem_marketing_url ? (
+        {imagemMarketingExibicao ? (
           <div className="flex-1 bg-gradient-to-br from-gray-100 to-gray-200 p-8">
             <div className="max-w-7xl mx-auto">
               <img 
-                src={orcamento.imagem_marketing_url} 
+                src={imagemMarketingExibicao} 
                 alt="Marketing" 
                 className="w-full h-auto rounded-2xl shadow-2xl"
                 onError={(e) => {
