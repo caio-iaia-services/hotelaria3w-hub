@@ -45,7 +45,7 @@ export default function ConfiguracoesEmail() {
         setConfig({
           email: d.email || '',
           senha_smtp: d.senha_smtp || '',
-          host: d.host || 'smtp.hostinger.com',
+          host: d.host || 'email-ssl.com.br',
           port: d.port || 465,
           secure: d.secure ?? true,
           ativo: d.ativo ?? true,
