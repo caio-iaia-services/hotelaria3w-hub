@@ -48,7 +48,7 @@ const App = () => (
               <Route path="/acoes-comerciais" element={<Protected><AcoesComerciais /></Protected>} />
               <Route path="/fornecedores" element={<Protected><Fornecedores /></Protected>} />
               <Route path="/orcamentos" element={<Protected><Orcamentos /></Protected>} />
-              <Route path="/configuracoes/email" element={<Protected><ConfiguracoesEmail /></Protected>} />
+              <Route path="/admin/email" element={<Protected><ConfiguracoesEmail /></Protected>} />
               {[
                 "/atendimento", "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
                 "/clientes/hospitalar", "/buscar", "/marketing", "/financeiro", "/admin",
