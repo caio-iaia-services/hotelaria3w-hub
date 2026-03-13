@@ -602,14 +602,14 @@ export default function AcoesComerciais() {
     setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
       // Aplicar defaults do fornecedor
-      // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback
-      const isMidea = fornecedor.tipo_layout === 'midea'
+      // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
+      const isMidea = isFornecedorMidea(fornecedor)
       setDadosOrcamento(prev => ({
         ...prev,
         prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
         validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
-        condicoes_pagamento: isMidea 
-          ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)' 
+        condicoes_pagamento: isMidea
+          ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
           : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
       }))
       // Carregar imagem padrão do fornecedor
