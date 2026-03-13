@@ -551,6 +551,7 @@ export default function Fornecedores() {
         prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
         validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+        termos_fabricante: dados.termos_fabricante || null,
         imagem_template_url: dados.imagem_template_url || null,
       });
       if (error) throw error;
