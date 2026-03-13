@@ -25,11 +25,12 @@ interface Props {
   item: ItemData
   index: number
   canRemove: boolean
+  tipoLayout?: string | null
   onUpdate: (id: string, campo: string, valor: string | number) => void
   onRemove: (id: string) => void
 }
 
-export function OrcamentoItemRow({ item, index, canRemove, onUpdate, onRemove }: Props) {
+export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate, onRemove }: Props) {
   const [precoEditando, setPrecoEditando] = useState(false)
   const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
