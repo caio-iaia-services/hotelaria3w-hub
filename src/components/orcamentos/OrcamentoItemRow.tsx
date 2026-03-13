@@ -86,7 +86,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-12 gap-3">
+      <div className={`grid gap-3 ${tipoLayout === 'castor' ? 'grid-cols-12' : 'grid-cols-10'}`}>
         {/* CÓDIGO com autocomplete */}
         <div className="col-span-2 relative" ref={codigoRef}>
           <Label>Código</Label>
