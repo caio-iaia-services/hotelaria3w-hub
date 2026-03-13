@@ -617,14 +617,13 @@ export default function AcoesComerciais() {
     }
 
     // Aplicar defaults do fornecedor
-    // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
     const isMidea = isFornecedorMidea(fornecedor)
     setDadosOrcamento(prev => ({
       ...prev,
       prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
       validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
       condicoes_pagamento: isMidea
-        ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
+        ? resolverCondicoesPagamentoMidea(fornecedor.condicoes_pagamento_padrao)
         : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
     }))
 
