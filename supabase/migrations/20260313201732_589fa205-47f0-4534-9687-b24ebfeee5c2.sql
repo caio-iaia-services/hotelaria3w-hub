@@ -1,0 +1,1 @@
+UPDATE fornecedores SET imagem_template_url = 'https://jlkamiqxmpbzcjopvevb.supabase.co/storage/v1/object/public/orcamentos-marketing/midea%2Fimagem_midea_padrao.jpeg' WHERE UPPER(nome_fantasia) LIKE '%MIDEA%';
