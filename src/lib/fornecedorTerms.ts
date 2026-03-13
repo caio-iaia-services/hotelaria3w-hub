@@ -4,14 +4,14 @@ export const TERMOS_MIDEA_FALLBACK_ANTIGO =
 export const CONDICOES_MIDEA_PLACEHOLDER_ANTIGO =
   'Condições dinâmicas conforme valor do pedido (ver orçamento)'
 
-export const CONDICOES_MIDEA_TEXTO_PADRAO = `Para compras abaixo de R$ 50.000,00 pagamento:
-- no PIX
-- cartão de crédito 3x sem juros
-- boleto em 3x com 2,5% de acréscimo
+export const CONDICOES_MIDEA_TEXTO_PADRAO = `Para compras abaixo de 50 mil pagamento:
+ - no pix 
+ - cartão de crédito 3x sem juros
+ - boleto em 3 x com 2.5% de acréscimo
 
-Compras acima de R$ 50.000,00 pagamento:
-- no cartão até 10x sem juros
-- 3x no boleto ou PIX
+Compras acima de 50 mil pagamento:
+  - no cartão ate 10x sem juros 
+  - 3 x no boleto ou pix
 
 Outras formas de pagamento podem ser avaliadas.`
 
@@ -23,14 +23,30 @@ Sendo assim, o fabricante somente será responsável por eventuais danos materia
 
 export const IMAGEM_MIDEA_PADRAO_URL = '/imagem_midea_padrao.jpeg'
 
+function normalizarTextoPagamento(valor: string): string {
+  return valor
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function resolverCondicoesPagamentoMidea(condicoesPagamento: string | null | undefined): string {
   const texto = String(condicoesPagamento || '').trim()
+  if (!texto) return CONDICOES_MIDEA_TEXTO_PADRAO
 
-  if (texto && texto !== CONDICOES_MIDEA_PLACEHOLDER_ANTIGO) {
-    return texto
+  const textoNormalizado = normalizarTextoPagamento(texto)
+
+  if (
+    textoNormalizado.includes(normalizarTextoPagamento(CONDICOES_MIDEA_PLACEHOLDER_ANTIGO)) ||
+    textoNormalizado.includes('este valor e para pagamento a vista antecipado') ||
+    (textoNormalizado.includes('para compras abaixo de') && textoNormalizado.includes('compras acima de'))
+  ) {
+    return CONDICOES_MIDEA_TEXTO_PADRAO
   }
 
-  return CONDICOES_MIDEA_TEXTO_PADRAO
+  return texto
 }
 
 export function resolverTermosFornecedor(

@@ -3,7 +3,7 @@ import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSig
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
-import { resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
+import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 interface FornecedorLayout {
   tipo_layout: string | null
@@ -232,6 +232,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   })
 
   const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+  const condicoesPagamentoMidea = resolverCondicoesPagamentoMidea(condicoesPagamentoTexto)
 
   return (
     <div className="bg-white font-sans">
@@ -580,37 +581,13 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
               <div className="p-4">
                   {layoutMidea ? (
-                    <div className="space-y-4">
-                      <div className="text-sm font-semibold text-gray-700 mb-2">
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold text-gray-700">
                         CONDIÇÕES DE PAGAMENTO:
                       </div>
-                      
-                      {totalCalculado < 50000 ? (
-                        <div className="space-y-2 text-sm">
-                          <p className="font-semibold text-blue-800">
-                            Para compras ABAIXO de R$ 50.000,00:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>No PIX</li>
-                            <li>Cartão de crédito em 3x sem juros</li>
-                            <li>Boleto em 3x com 2,5% de acréscimo</li>
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 text-sm">
-                          <p className="font-semibold text-green-800">
-                            Para compras ACIMA de R$ 50.000,00:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>No cartão até 10x sem juros</li>
-                            <li>3x no boleto ou PIX</li>
-                          </ul>
-                        </div>
-                      )}
-                      
-                      <p className="text-xs text-gray-600 mt-3 italic">
-                        Outras formas de pagamento podem ser avaliadas.
-                      </p>
+                      <div className="text-xs space-y-1 whitespace-pre-wrap">
+                        {condicoesPagamentoMidea}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-xs space-y-1 whitespace-pre-wrap">
