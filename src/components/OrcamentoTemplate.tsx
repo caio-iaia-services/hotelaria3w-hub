@@ -546,10 +546,46 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                     <CreditCard className="w-5 h-5" /> Condições e Forma de Pagamento
                   </p>
                 </div>
-                <div className="p-4">
-                  <div className="text-xs space-y-1 whitespace-pre-wrap">
-                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'}
-                  </div>
+              <div className="p-4">
+                  {tipoLayout === 'midea' ? (
+                    <div className="space-y-4">
+                      <div className="text-sm font-semibold text-gray-700 mb-2">
+                        CONDIÇÕES DE PAGAMENTO:
+                      </div>
+                      
+                      {orcamento.total < 50000 ? (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-blue-800">
+                            Para compras ABAIXO de R$ 50.000,00:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>No PIX</li>
+                            <li>Cartão de crédito em 3x sem juros</li>
+                            <li>Boleto em 3x com 2,5% de acréscimo</li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-green-800">
+                            Para compras ACIMA de R$ 50.000,00:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>No PIX</li>
+                            <li>Cartão de crédito em 10x sem juros</li>
+                            <li>Boleto em 3x com 2,5% de acréscimo</li>
+                          </ul>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-600 mt-3 italic">
+                        Outras formas de pagamento podem ser estudadas.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-xs space-y-1 whitespace-pre-wrap">
+                      {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
