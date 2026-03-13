@@ -55,6 +55,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [saving, setSaving] = useState(false)
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null)
   const [itens, setItens] = useState<ItemLocal[]>([])
+  const [tipoLayout, setTipoLayout] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const [imagemFile, setImagemFile] = useState<File | null>(null)
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
