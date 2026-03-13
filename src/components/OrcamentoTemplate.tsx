@@ -232,6 +232,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   })
 
   const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+  const condicoesPagamentoMidea = resolverCondicoesPagamentoMidea(condicoesPagamentoTexto)
 
   return (
     <div className="bg-white font-sans">
