@@ -623,6 +623,7 @@ export default function Fornecedores() {
       prazo_entrega_padrao: (fornecedorCompleto as any).prazo_entrega_padrao || "",
       validade_dias_padrao: (fornecedorCompleto as any).validade_dias_padrao?.toString() || "",
       condicoes_pagamento_padrao: (fornecedorCompleto as any).condicoes_pagamento_padrao || "",
+      termos_fabricante: (fornecedorCompleto as any).termos_fabricante || "",
       imagem_template_url: (fornecedorCompleto as any).imagem_template_url || "",
     });
 
