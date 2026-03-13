@@ -237,7 +237,7 @@ export default function ConfiguracoesEmail() {
               id="host"
               value={config.host}
               onChange={(e) => handleChange('host', e.target.value)}
-              placeholder="smtp.hostinger.com"
+              placeholder="email-ssl.com.br"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
