@@ -215,10 +215,12 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
           <Label>Preço Unitário *</Label>
           <Input
             placeholder="R$ 0,00"
-            value={precoEditando ? precoTexto : (typeof item.preco_unitario === 'number' && item.preco_unitario > 0 ? formatCurrency(item.preco_unitario) : (item.preco_unitario || ''))}
+            value={precoEditando ? precoTexto : (precoNumerico > 0 ? formatCurrency(precoNumerico) : (item.preco_unitario || ''))}
             onFocus={() => {
               setPrecoEditando(true)
-              const val = typeof item.preco_unitario === 'number' ? String(item.preco_unitario).replace('.', ',') : String(item.preco_unitario || '')
+              const val = precoNumerico > 0
+                ? String(precoNumerico).replace('.', ',')
+                : String(item.preco_unitario || '')
               setPrecoTexto(val)
             }}
             onChange={(e) => {
