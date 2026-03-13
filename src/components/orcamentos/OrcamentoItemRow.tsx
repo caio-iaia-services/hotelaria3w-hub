@@ -156,30 +156,32 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
           )}
         </div>
 
-        {/* MEDIDAS dropdown */}
-        <div className="col-span-2">
-          <Label>Medidas</Label>
-          {medidas.length > 0 ? (
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-              value={item.medidas || ''}
-              onChange={(e) => handleMedidaChange(e.target.value)}
-            >
-              <option value="">Selecione...</option>
-              {medidas.map(m => (
-                <option key={m.medida} value={m.medida}>
-                  {m.medida}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <Input
-              placeholder="Ex: Queen 158x198"
-              value={item.medidas || ''}
-              onChange={(e) => onUpdate(item.id, 'medidas', e.target.value)}
-            />
-          )}
-        </div>
+        {/* MEDIDAS dropdown - apenas Castor */}
+        {tipoLayout === 'castor' && (
+          <div className="col-span-2">
+            <Label>Medidas</Label>
+            {medidas.length > 0 ? (
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                value={item.medidas || ''}
+                onChange={(e) => handleMedidaChange(e.target.value)}
+              >
+                <option value="">Selecione...</option>
+                {medidas.map(m => (
+                  <option key={m.medida} value={m.medida}>
+                    {m.medida}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                placeholder="Ex: Queen 158x198"
+                value={item.medidas || ''}
+                onChange={(e) => onUpdate(item.id, 'medidas', e.target.value)}
+              />
+            )}
+          </div>
+        )}
 
         {/* QUANTIDADE */}
         <div className="col-span-1">
