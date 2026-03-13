@@ -9,6 +9,7 @@ interface FornecedorLayout {
   tipo_layout: string | null
   nome_fantasia: string
   logotipo_url: string | null
+  imagem_template_url: string | null
 }
 
 interface Props {
@@ -40,13 +41,15 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
   const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
+  const fornecedorInicialImagemTemplate = ((orcamento as any).fornecedor_imagem_template_url ?? null) as string | null
 
   const fornecedorInicial: FornecedorLayout | null =
-    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome
+    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome || fornecedorInicialImagemTemplate
       ? {
           tipo_layout: fornecedorInicialTipoLayout,
           nome_fantasia: fornecedorInicialNome,
           logotipo_url: fornecedorInicialLogo,
+          imagem_template_url: fornecedorInicialImagemTemplate,
         }
       : null
 
