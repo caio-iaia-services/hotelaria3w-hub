@@ -94,6 +94,12 @@ const menuSections: MenuSection[] = [
       { title: "Buscar Empresas", url: "/buscar", icon: Search },
     ],
   },
+  {
+    label: "CONFIGURAÇÕES",
+    items: [
+      { title: "E-mail", url: "/configuracoes/email", icon: MailIcon },
+    ],
+  },
 ];
 
 interface AppSidebarProps {
