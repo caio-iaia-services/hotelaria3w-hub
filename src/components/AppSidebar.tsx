@@ -204,11 +204,11 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         )}
       >
         {/* Header with Logo */}
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="px-4 py-1 flex items-center justify-between">
           <img
             src="/logo_3Whotelaria_transp.png"
             alt="3W Hotelaria"
-            className="h-[48px] w-auto"
+            className="h-[40px] w-auto"
           />
           <button
             onClick={onClose}
@@ -221,8 +221,8 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         {/* Divider */}
         <div className="mx-4 h-px bg-sidebar-foreground/10" />
 
-        {/* Menu - no scroll */}
-        <nav className="flex-1 py-2 px-3 overflow-y-auto">
+        {/* Menu */}
+        <nav className="flex-1 py-1 px-3">
           {menuSections.map((section, idx) => (
             <div key={section.label} className={cn(idx > 0 && "mt-2")}>
               {section.label && (
