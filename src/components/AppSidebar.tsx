@@ -124,14 +124,14 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
           <button
             onClick={() => toggleSubmenu(item.title)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
+              "w-full flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200",
               "text-sidebar-foreground/90",
               isParentActive(item)
                 ? "border-l-[3px] border-gold bg-[rgba(212,175,55,0.15)] text-sidebar-foreground"
                 : "hover:bg-[rgba(255,255,255,0.1)]"
             )}
           >
-            <item.icon size={18} className="shrink-0" />
+            <item.icon size={16} className="shrink-0" />
             <span className="flex-1 text-left">{item.title}</span>
             {expandedMenus.includes(item.title) ? (
               <ChevronDown size={14} className="text-sidebar-foreground/60" />
@@ -147,7 +147,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                   to={sub.url}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                    "flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200",
                     "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                     isActive(sub.url)
                       ? "border-l-[3px] border-gold bg-[rgba(212,175,55,0.15)] text-sidebar-foreground"
@@ -173,14 +173,14 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
           to={item.url}
           onClick={onClose}
           className={cn(
-            "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
+            "flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200",
             "text-sidebar-foreground/90",
             isActive(item.url)
               ? "border-l-[3px] border-gold bg-[rgba(212,175,55,0.15)] text-sidebar-foreground"
               : "hover:bg-[rgba(255,255,255,0.1)]"
           )}
         >
-          <item.icon size={18} className="shrink-0" />
+          <item.icon size={16} className="shrink-0" />
           <span>{item.title}</span>
         </Link>
       )}
@@ -204,11 +204,11 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         )}
       >
         {/* Header with Logo */}
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="px-4 py-1 flex items-center justify-between">
           <img
             src="/logo_3Whotelaria_transp.png"
             alt="3W Hotelaria"
-            className="h-[48px] w-auto"
+            className="h-[40px] w-auto"
           />
           <button
             onClick={onClose}
@@ -221,12 +221,12 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         {/* Divider */}
         <div className="mx-4 h-px bg-sidebar-foreground/10" />
 
-        {/* Menu - no scroll */}
-        <nav className="flex-1 py-2 px-3 overflow-y-auto">
+        {/* Menu */}
+        <nav className="flex-1 py-1 px-3">
           {menuSections.map((section, idx) => (
-            <div key={section.label} className={cn(idx > 0 && "mt-2")}>
+            <div key={section.label} className={cn(idx > 0 && "mt-1")}>
               {section.label && (
-                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                <p className="px-3 mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
                   {section.label}
                 </p>
               )}
@@ -237,7 +237,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
           ))}
 
           {/* Separator */}
-          <div className="mx-1 my-2 h-px bg-sidebar-foreground/20" />
+          <div className="mx-1 my-1 h-px bg-sidebar-foreground/20" />
 
           {/* Admin with submenu */}
           {(() => {
