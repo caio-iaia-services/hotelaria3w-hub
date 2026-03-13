@@ -147,7 +147,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                   to={sub.url}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                    "flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200",
                     "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                     isActive(sub.url)
                       ? "border-l-[3px] border-gold bg-[rgba(212,175,55,0.15)] text-sidebar-foreground"
