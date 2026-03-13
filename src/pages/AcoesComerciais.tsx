@@ -284,6 +284,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function normalizarNomeFornecedor(nome: string | null | undefined) {
+  return String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+function isFornecedorMidea(fornecedor: Pick<FornecedorLocal, 'tipo_layout' | 'nome_fantasia'> | null | undefined) {
+  if (!fornecedor) return false
+  if (fornecedor.tipo_layout === 'midea') return true
+  const nomeNormalizado = normalizarNomeFornecedor(fornecedor.nome_fantasia)
+  return nomeNormalizado.includes('MIDEA')
+}
+
 // ─── Item type ────────────────────────────────────────────────────────────────
 interface ItemOrcamento {
   id: number
