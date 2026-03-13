@@ -284,6 +284,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function normalizarNomeFornecedor(nome: string | null | undefined) {
+  return String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+function isFornecedorMidea(fornecedor: Pick<FornecedorLocal, 'tipo_layout' | 'nome_fantasia'> | null | undefined) {
+  if (!fornecedor) return false
+  if (fornecedor.tipo_layout === 'midea') return true
+  const nomeNormalizado = normalizarNomeFornecedor(fornecedor.nome_fantasia)
+  return nomeNormalizado.includes('MIDEA')
+}
+
 // ─── Item type ────────────────────────────────────────────────────────────────
 interface ItemOrcamento {
   id: number
@@ -587,14 +602,14 @@ export default function AcoesComerciais() {
     setFornecedorSelecionado(fornecedor || null)
     if (fornecedor) {
       // Aplicar defaults do fornecedor
-      // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback
-      const isMidea = fornecedor.tipo_layout === 'midea'
+      // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
+      const isMidea = isFornecedorMidea(fornecedor)
       setDadosOrcamento(prev => ({
         ...prev,
         prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
         validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
-        condicoes_pagamento: isMidea 
-          ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)' 
+        condicoes_pagamento: isMidea
+          ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
           : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
       }))
       // Carregar imagem padrão do fornecedor
@@ -850,7 +865,11 @@ export default function AcoesComerciais() {
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
         termos_3w: termos3w,
-        termos_fornecedor: fornecedorSelecionado?.termos_fabricante || null,
+        termos_fornecedor: fornecedorSelecionado
+          ? (fornecedorSelecionado.termos_fabricante || (isFornecedorMidea(fornecedorSelecionado)
+              ? 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
+              : null))
+          : null,
         imagem_marketing_url: imagemMarketingUrl,
         status: 'rascunho',
       }

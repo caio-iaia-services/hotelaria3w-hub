@@ -15,6 +15,21 @@ interface Props {
   itens: OrcamentoItem[]
 }
 
+const TERMOS_MIDEA_PADRAO = 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
+
+function normalizarNomeFornecedor(nome: string | null | undefined) {
+  return String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: string) {
+  if (tipoLayout === 'midea') return true
+  return normalizarNomeFornecedor(nomeFornecedor).includes('MIDEA')
+}
+
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
@@ -112,6 +127,9 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const tipoLayout = fornecedor?.tipo_layout || fornecedorInicialTipoLayout || 'padrao'
   const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
   const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
+  const layoutMidea = isMideaLayout(tipoLayout, nomeFornecedorExibicao)
+  const termosFornecedorTexto = String(orcamento.termos_fornecedor || '').trim()
+  const termosFornecedorExibicao = termosFornecedorTexto || (layoutMidea ? TERMOS_MIDEA_PADRAO : '')
   console.log('📊 numero:', orcamento.numero)
   console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
   console.log('📊 impostos:', orcamento.impostos, '| tipo:', typeof orcamento.impostos)
@@ -547,7 +565,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   </p>
                 </div>
               <div className="p-4">
-                  {tipoLayout === 'midea' ? (
+                  {layoutMidea ? (
                     <div className="space-y-4">
                       <div className="text-sm font-semibold text-gray-700 mb-2">
                         CONDIÇÕES DE PAGAMENTO:
@@ -616,7 +634,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
 
             {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
-            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
+            {layoutMidea && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
                   {fornecedor?.logotipo_url && (
@@ -632,7 +650,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 
                 <div className="text-sm text-gray-800 leading-relaxed space-y-3 whitespace-pre-wrap">
-                  {orcamento.termos_fornecedor}
+                  {termosFornecedorExibicao}
                 </div>
               </div>
             )}

@@ -67,6 +67,7 @@ interface Fornecedor {
   observacoes?: string | null;
   gestao?: string | null;
   produtos_servicos?: string | null;
+  termos_fabricante?: string | null;
   comissao_vendas?: number | null;
   created_at?: string;
   updated_at?: string;
@@ -93,6 +94,7 @@ type FornecedorForm = {
   prazo_entrega_padrao: string;
   validade_dias_padrao: string;
   condicoes_pagamento_padrao: string;
+  termos_fabricante: string;
   imagem_template_url: string;
 };
 
@@ -280,7 +282,7 @@ export default function Fornecedores() {
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao", prazo_entrega_padrao: "", validade_dias_padrao: "", condicoes_pagamento_padrao: "", imagem_template_url: "" } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao", prazo_entrega_padrao: "", validade_dias_padrao: "", condicoes_pagamento_padrao: "", termos_fabricante: "", imagem_template_url: "" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -549,6 +551,7 @@ export default function Fornecedores() {
         prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
         validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+        termos_fabricante: dados.termos_fabricante || null,
         imagem_template_url: dados.imagem_template_url || null,
       });
       if (error) throw error;
@@ -620,6 +623,7 @@ export default function Fornecedores() {
       prazo_entrega_padrao: (fornecedorCompleto as any).prazo_entrega_padrao || "",
       validade_dias_padrao: (fornecedorCompleto as any).validade_dias_padrao?.toString() || "",
       condicoes_pagamento_padrao: (fornecedorCompleto as any).condicoes_pagamento_padrao || "",
+      termos_fabricante: (fornecedorCompleto as any).termos_fabricante || "",
       imagem_template_url: (fornecedorCompleto as any).imagem_template_url || "",
     });
 
@@ -687,6 +691,7 @@ export default function Fornecedores() {
           prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
           validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
           condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+          termos_fabricante: dados.termos_fabricante || null,
           imagem_template_url: dados.imagem_template_url || null,
         })
         .eq("id", modalEditar.id);
@@ -883,6 +888,14 @@ export default function Fornecedores() {
             {...reg("condicoes_pagamento_padrao")}
             placeholder="Ex: ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO&#10;Em 2x (30/60 dias) com acréscimo de 2,5%..."
             rows={3}
+          />
+        </div>
+        <div className="space-y-1.5 mt-3">
+          <Label>Termos do Fabricante (Orçamento)</Label>
+          <Textarea
+            {...reg("termos_fabricante")}
+            placeholder="Termos legais/comerciais do fornecedor que devem aparecer no orçamento"
+            rows={4}
           />
         </div>
         <div className="space-y-1.5 mt-3">

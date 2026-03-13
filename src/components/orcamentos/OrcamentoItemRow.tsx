@@ -10,6 +10,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function parsePrice(value: string | number | null | undefined): number {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+
+  const raw = String(value).trim()
+  if (!raw) return 0
+
+  const normalized = raw.includes(',')
+    ? raw.replace(/\./g, '').replace(',', '.')
+    : raw
+
+  const parsed = parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 interface ItemData {
   id: string
   codigo: string
@@ -75,6 +90,8 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
       onUpdate(item.id, 'preco_unitario', found.preco)
     }
   }
+
+  const precoNumerico = parsePrice(item.preco_unitario)
 
   return (
     <div className="border rounded-lg p-4 bg-muted/30">
@@ -198,10 +215,12 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
           <Label>Preço Unitário *</Label>
           <Input
             placeholder="R$ 0,00"
-            value={precoEditando ? precoTexto : (typeof item.preco_unitario === 'number' && item.preco_unitario > 0 ? formatCurrency(item.preco_unitario) : (item.preco_unitario || ''))}
+            value={precoEditando ? precoTexto : (precoNumerico > 0 ? formatCurrency(precoNumerico) : (item.preco_unitario || ''))}
             onFocus={() => {
               setPrecoEditando(true)
-              const val = typeof item.preco_unitario === 'number' ? String(item.preco_unitario).replace('.', ',') : String(item.preco_unitario || '')
+              const val = precoNumerico > 0
+                ? String(precoNumerico).replace('.', ',')
+                : String(item.preco_unitario || '')
               setPrecoTexto(val)
             }}
             onChange={(e) => {
