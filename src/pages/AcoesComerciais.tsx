@@ -866,11 +866,10 @@ export default function AcoesComerciais() {
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
         termos_3w: termos3w,
-        termos_fornecedor: fornecedorSelecionado
-          ? (fornecedorSelecionado.termos_fabricante || (isFornecedorMidea(fornecedorSelecionado)
-              ? 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
-              : null))
-          : null,
+        termos_fornecedor: resolverTermosFornecedor(
+          fornecedorSelecionado?.termos_fabricante,
+          isFornecedorMidea(fornecedorSelecionado)
+        ),
         imagem_marketing_url: imagemMarketingUrl,
         status: 'rascunho',
       }
