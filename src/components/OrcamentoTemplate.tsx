@@ -602,15 +602,14 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                             Para compras ACIMA de R$ 50.000,00:
                           </p>
                           <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>No PIX</li>
-                            <li>Cartão de crédito em 10x sem juros</li>
-                            <li>Boleto em 3x com 2,5% de acréscimo</li>
+                            <li>No cartão até 10x sem juros</li>
+                            <li>3x no boleto ou PIX</li>
                           </ul>
                         </div>
                       )}
                       
                       <p className="text-xs text-gray-600 mt-3 italic">
-                        Outras formas de pagamento podem ser estudadas.
+                        Outras formas de pagamento podem ser avaliadas.
                       </p>
                     </div>
                   ) : (
