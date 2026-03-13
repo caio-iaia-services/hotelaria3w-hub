@@ -891,6 +891,14 @@ export default function Fornecedores() {
           />
         </div>
         <div className="space-y-1.5 mt-3">
+          <Label>Termos do Fabricante (Orçamento)</Label>
+          <Textarea
+            {...reg("termos_fabricante")}
+            placeholder="Termos legais/comerciais do fornecedor que devem aparecer no orçamento"
+            rows={4}
+          />
+        </div>
+        <div className="space-y-1.5 mt-3">
           <Label>URL da Imagem Template (Marketing)</Label>
           <Input {...reg("imagem_template_url")} placeholder="https://..." />
           <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
