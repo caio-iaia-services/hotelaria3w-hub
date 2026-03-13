@@ -631,19 +631,19 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </button>
             </div>
 
-            {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
-            {layoutMidea && (
+            {/* TERMOS DO FABRICANTE */}
+            {termosFornecedorExibicao && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
                   {fornecedor?.logotipo_url && (
-                    <img 
-                      src={fornecedor.logotipo_url} 
-                      alt="Midea Carrier" 
+                    <img
+                      src={fornecedor.logotipo_url}
+                      alt={nomeFornecedorExibicao || 'Fornecedor'}
                       className="h-16"
                     />
                   )}
                   <h3 className="text-xl font-bold text-[#1a4168]">
-                    Termos Legais Midea Carrier
+                    {layoutMidea ? 'Termos Legais Midea Carrier' : 'Termos do Fabricante'}
                   </h3>
                 </div>
                 
