@@ -752,24 +752,26 @@ comercial1@3whotelaria.com.br`
       console.log('👤 Remetente:', config.email)
       console.log('📨 Destinatários:', emailDestinatarios)
 
-      // 2. Placeholder para integração com n8n/webhook
-      // TODO: Substituir URL pelo webhook real
-      console.log('📧 DADOS DO EMAIL:', {
-        orcamento_id: orcamentoEnviar.id,
-        smtp_config: {
-          email: config.email,
-          host: config.host,
-          port: config.port,
-          secure: config.secure
-        },
-        destinatarios: emailDestinatarios,
-        assunto: emailAssunto,
-        mensagem: emailMensagem,
-        pdf_url: orcamentoEnviar.pdf_url
-      })
+      // 2. Enviar via webhook n8n
+      const response = await fetch(
+        'https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orcamento_id: orcamentoEnviar.id,
+            destinatarios: emailDestinatarios,
+            assunto: emailAssunto,
+            mensagem: emailMensagem,
+          }),
+        }
+      )
 
-      // Simular envio por enquanto
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const resultado = await response.json()
+
+      if (!response.ok || !resultado.success) {
+        throw new Error(resultado.error || `Erro HTTP ${response.status}`)
+      }
 
       // 3. Atualizar status do orçamento
       const { error } = await supabase
