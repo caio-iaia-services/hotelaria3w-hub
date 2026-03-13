@@ -414,6 +414,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                     item={item}
                     index={index}
                     canRemove={itens.length > 1}
+                    tipoLayout={tipoLayout}
                     onUpdate={atualizarItem}
                     onRemove={removerItem}
                   />
