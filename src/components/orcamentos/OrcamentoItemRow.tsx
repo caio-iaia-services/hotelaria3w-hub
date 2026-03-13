@@ -91,6 +91,8 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
     }
   }
 
+  const precoNumerico = parsePrice(item.preco_unitario)
+
   return (
     <div className="border rounded-lg p-4 bg-muted/30">
       <div className="flex items-start justify-between mb-3">
