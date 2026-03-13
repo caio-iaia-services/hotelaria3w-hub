@@ -546,10 +546,46 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                     <CreditCard className="w-5 h-5" /> Condições e Forma de Pagamento
                   </p>
                 </div>
-                <div className="p-4">
-                  <div className="text-xs space-y-1 whitespace-pre-wrap">
-                    {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'}
-                  </div>
+              <div className="p-4">
+                  {tipoLayout === 'midea' ? (
+                    <div className="space-y-4">
+                      <div className="text-sm font-semibold text-gray-700 mb-2">
+                        CONDIÇÕES DE PAGAMENTO:
+                      </div>
+                      
+                      {orcamento.total < 50000 ? (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-blue-800">
+                            Para compras ABAIXO de R$ 50.000,00:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>No PIX</li>
+                            <li>Cartão de crédito em 3x sem juros</li>
+                            <li>Boleto em 3x com 2,5% de acréscimo</li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-green-800">
+                            Para compras ACIMA de R$ 50.000,00:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>No PIX</li>
+                            <li>Cartão de crédito em 10x sem juros</li>
+                            <li>Boleto em 3x com 2,5% de acréscimo</li>
+                          </ul>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-600 mt-3 italic">
+                        Outras formas de pagamento podem ser estudadas.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-xs space-y-1 whitespace-pre-wrap">
+                      {condicoesPagamentoTexto || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -566,6 +602,41 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
             )}
             
+            {/* BOTÕES DE AÇÃO */}
+            <div className="mt-6 grid md:grid-cols-2 gap-4">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+                <Phone className="w-6 h-6" />
+                <span>Clique aqui para falar com o Vendedor</span>
+              </button>
+              
+              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+                <Package className="w-6 h-6" />
+                <span>Clique aqui para confirmar o pedido</span>
+              </button>
+            </div>
+
+            {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
+            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
+              <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
+                <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
+                  {fornecedor?.logotipo_url && (
+                    <img 
+                      src={fornecedor.logotipo_url} 
+                      alt="Midea Carrier" 
+                      className="h-16"
+                    />
+                  )}
+                  <h3 className="text-xl font-bold text-[#1a4168]">
+                    Termos Legais Midea Carrier
+                  </h3>
+                </div>
+                
+                <div className="text-sm text-gray-800 leading-relaxed space-y-3 whitespace-pre-wrap">
+                  {orcamento.termos_fornecedor}
+                </div>
+              </div>
+            )}
+
             {/* TERMOS LEGAIS 3W */}
             <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -583,19 +654,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p>• Embora o sistema atribua automaticamente a validade do Orçamento conforme política de expiração vigente, a 3W não se responsabiliza por eventuais mudanças de tabela de preços do Fabricante/Fornecedor, ainda que isto ocorra no período de validade do orçamento.</p>
                 <p>• Para eventuais questões pós-venda, o cliente deverá fazer contato diretamente com o SAC da {orcamento.fornecedor_nome || 'Fabricante'}.</p>
               </div>
-            </div>
-            
-            {/* BOTÕES DE AÇÃO - últimos elementos */}
-            <div className="mt-6 grid md:grid-cols-2 gap-4">
-              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Phone className="w-6 h-6" />
-                <span>Clique aqui para falar com o Vendedor</span>
-              </button>
-              
-              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Package className="w-6 h-6" />
-                <span>Clique aqui para confirmar o pedido</span>
-              </button>
             </div>
           </div>
         </div>
@@ -632,23 +690,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
           </div>
 
-            {/* TERMOS DO FORNECEDOR - APENAS MIDEA */}
-            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
-              <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  {logotipoFornecedor ? (
-                    <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} className="h-12" />
-                  ) : (
-                    <p className="text-2xl font-bold text-blue-600">
-                      {orcamento.fornecedor_nome}
-                    </p>
-                  )}
-                </div>
-                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {orcamento.termos_fornecedor}
-                </div>
-              </div>
-            )}
+
           
           <div className="flex-1 flex items-center justify-center bg-gray-100 p-12">
             <div className="text-center max-w-4xl">
