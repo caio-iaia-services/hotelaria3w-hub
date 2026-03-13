@@ -223,7 +223,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
           />
         </div>
 
-        <div className="col-span-12 flex justify-end">
+        <div className={`${tipoLayout === 'castor' ? 'col-span-12' : 'col-span-10'} flex justify-end`}>
           <p className="text-sm font-medium">Total: {formatCurrency(item.total)}</p>
         </div>
       </div>
