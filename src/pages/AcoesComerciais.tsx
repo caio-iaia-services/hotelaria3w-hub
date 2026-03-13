@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
+import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
@@ -295,8 +296,14 @@ function normalizarNomeFornecedor(nome: string | null | undefined) {
 function isFornecedorMidea(fornecedor: Pick<FornecedorLocal, 'tipo_layout' | 'nome_fantasia'> | null | undefined) {
   if (!fornecedor) return false
   if (fornecedor.tipo_layout === 'midea') return true
+
   const nomeNormalizado = normalizarNomeFornecedor(fornecedor.nome_fantasia)
-  return nomeNormalizado.includes('MIDEA')
+  return (
+    nomeNormalizado.includes('MIDEA') ||
+    nomeNormalizado.includes('SPRINGER') ||
+    nomeNormalizado.includes('CLIMAZON') ||
+    nomeNormalizado.includes('CARRIER')
+  )
 }
 
 // ─── Item type ────────────────────────────────────────────────────────────────
@@ -865,11 +872,10 @@ export default function AcoesComerciais() {
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
         termos_3w: termos3w,
-        termos_fornecedor: fornecedorSelecionado
-          ? (fornecedorSelecionado.termos_fabricante || (isFornecedorMidea(fornecedorSelecionado)
-              ? 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
-              : null))
-          : null,
+        termos_fornecedor: resolverTermosFornecedor(
+          fornecedorSelecionado?.termos_fabricante,
+          isFornecedorMidea(fornecedorSelecionado)
+        ),
         imagem_marketing_url: imagemMarketingUrl,
         status: 'rascunho',
       }

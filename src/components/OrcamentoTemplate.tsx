@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSig
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
+import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 interface FornecedorLayout {
   tipo_layout: string | null
@@ -15,8 +16,6 @@ interface Props {
   itens: OrcamentoItem[]
 }
 
-const TERMOS_MIDEA_PADRAO = 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
-
 function normalizarNomeFornecedor(nome: string | null | undefined) {
   return String(nome || '')
     .normalize('NFD')
@@ -27,7 +26,14 @@ function normalizarNomeFornecedor(nome: string | null | undefined) {
 
 function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: string) {
   if (tipoLayout === 'midea') return true
-  return normalizarNomeFornecedor(nomeFornecedor).includes('MIDEA')
+
+  const nomeNormalizado = normalizarNomeFornecedor(nomeFornecedor)
+  return (
+    nomeNormalizado.includes('MIDEA') ||
+    nomeNormalizado.includes('SPRINGER') ||
+    nomeNormalizado.includes('CLIMAZON') ||
+    nomeNormalizado.includes('CARRIER')
+  )
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
@@ -128,8 +134,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
   const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
   const layoutMidea = isMideaLayout(tipoLayout, nomeFornecedorExibicao)
-  const termosFornecedorTexto = String(orcamento.termos_fornecedor || '').trim()
-  const termosFornecedorExibicao = termosFornecedorTexto || (layoutMidea ? TERMOS_MIDEA_PADRAO : '')
+  const termosFornecedorExibicao = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea) || ''
   console.log('📊 numero:', orcamento.numero)
   console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
   console.log('📊 impostos:', orcamento.impostos, '| tipo:', typeof orcamento.impostos)
@@ -633,19 +638,19 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </button>
             </div>
 
-            {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
-            {layoutMidea && (
+            {/* TERMOS DO FABRICANTE */}
+            {termosFornecedorExibicao && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
                   {fornecedor?.logotipo_url && (
-                    <img 
-                      src={fornecedor.logotipo_url} 
-                      alt="Midea Carrier" 
+                    <img
+                      src={fornecedor.logotipo_url}
+                      alt={nomeFornecedorExibicao || 'Fornecedor'}
                       className="h-16"
                     />
                   )}
                   <h3 className="text-xl font-bold text-[#1a4168]">
-                    Termos Legais Midea Carrier
+                    {layoutMidea ? 'Termos Legais Midea Carrier' : 'Termos do Fabricante'}
                   </h3>
                 </div>
                 
