@@ -213,7 +213,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* ESPECIFICAÇÕES */}
-        <div className="col-span-12">
+        <div className={tipoLayout === 'castor' ? 'col-span-12' : 'col-span-10'}>
           <Label>Especificações</Label>
           <Textarea
             placeholder="Detalhes técnicos, cor, tamanho, etc."
