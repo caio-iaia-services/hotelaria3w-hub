@@ -180,7 +180,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
               : "hover:bg-[rgba(255,255,255,0.1)]"
           )}
         >
-          <item.icon size={18} className="shrink-0" />
+          <item.icon size={16} className="shrink-0" />
           <span>{item.title}</span>
         </Link>
       )}
