@@ -1196,6 +1196,7 @@ export default function AcoesComerciais() {
                     item={{ ...item, id: String(item.id) }}
                     index={index}
                     canRemove={itensOrcamento.length > 1}
+                    tipoLayout={fornecedorSelecionado?.tipo_layout}
                     onUpdate={(id, campo, valor) => atualizarItem(Number(id), campo, valor)}
                     onRemove={(id) => removerItem(Number(id))}
                   />
