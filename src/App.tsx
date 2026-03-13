@@ -17,6 +17,7 @@ import AcoesComerciais from "./pages/AcoesComerciais";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Fornecedores from "./pages/Fornecedores";
 import Orcamentos from "./pages/Orcamentos";
+import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
