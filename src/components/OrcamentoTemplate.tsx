@@ -553,7 +553,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                         CONDIÇÕES DE PAGAMENTO:
                       </div>
                       
-                      {orcamento.total < 50000 ? (
+                      {totalCalculado < 50000 ? (
                         <div className="space-y-2 text-sm">
                           <p className="font-semibold text-blue-800">
                             Para compras ABAIXO de R$ 50.000,00:
