@@ -3,7 +3,7 @@ import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSig
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
-import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
+import { resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 interface FornecedorLayout {
   tipo_layout: string | null
