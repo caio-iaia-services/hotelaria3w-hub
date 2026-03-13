@@ -308,6 +308,7 @@ interface FornecedorLocal {
   validade_dias_padrao: number | null
   condicoes_pagamento_padrao: string | null
   imagem_template_url: string | null
+  tipo_layout: string | null
 }
 
 // ─── ImagemMarketing type ────────────────────────────────────────────────────
