@@ -611,6 +611,45 @@ export type Database = {
           },
         ]
       }
+      usuarios_email_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          email: string
+          host: string
+          id: string
+          port: number
+          secure: boolean
+          senha_smtp: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          email: string
+          host?: string
+          id?: string
+          port?: number
+          secure?: boolean
+          senha_smtp: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          email?: string
+          host?: string
+          id?: string
+          port?: number
+          secure?: boolean
+          senha_smtp?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
