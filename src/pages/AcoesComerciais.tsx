@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
+import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
