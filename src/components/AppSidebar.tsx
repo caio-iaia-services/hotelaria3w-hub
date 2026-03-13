@@ -237,7 +237,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
           ))}
 
           {/* Separator */}
-          <div className="mx-1 my-2 h-px bg-sidebar-foreground/20" />
+          <div className="mx-1 my-1 h-px bg-sidebar-foreground/20" />
 
           {/* Admin with submenu */}
           {(() => {
