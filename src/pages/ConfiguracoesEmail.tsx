@@ -13,7 +13,7 @@ export default function ConfiguracoesEmail() {
   const [config, setConfig] = useState({
     email: 'comercial1@3whotelaria.com.br',
     senha_smtp: '',
-    host: 'smtp.hostinger.com',
+    host: 'email-ssl.com.br',
     port: 465,
     secure: true,
     ativo: true,
