@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Save, TestTube, Mail, Shield, Server, Eye, EyeOff } from 'lucide-react'
+import { Save, TestTube, Mail, Shield, Server, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ConfiguracoesEmail() {
@@ -19,7 +20,43 @@ export default function ConfiguracoesEmail() {
   })
   const [salvando, setSalvando] = useState(false)
   const [testando, setTestando] = useState(false)
+  const [carregando, setCarregando] = useState(true)
   const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [configId, setConfigId] = useState<string | null>(null)
+
+  useEffect(() => {
+    carregarConfig()
+  }, [])
+
+  async function carregarConfig() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('usuarios_email_config' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (data && !error) {
+        const d = data as any
+        setConfigId(d.id)
+        setConfig({
+          email: d.email || '',
+          senha_smtp: d.senha_smtp || '',
+          host: d.host || 'smtp.hostinger.com',
+          port: d.port || 465,
+          secure: d.secure ?? true,
+          ativo: d.ativo ?? true,
+        })
+      }
+    } catch (err) {
+      console.error('Erro ao carregar config:', err)
+    } finally {
+      setCarregando(false)
+    }
+  }
 
   function handleChange(field: string, value: string | number | boolean) {
     setConfig(prev => ({ ...prev, [field]: value }))
@@ -32,13 +69,40 @@ export default function ConfiguracoesEmail() {
     }
     setSalvando(true)
     try {
-      // Placeholder - integração futura
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log('💾 Config salva:', { ...config, senha_smtp: '***' })
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const payload = {
+        user_id: user.id,
+        email: config.email,
+        senha_smtp: config.senha_smtp,
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        ativo: config.ativo,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (configId) {
+        const { error } = await supabase
+          .from('usuarios_email_config' as any)
+          .update(payload)
+          .eq('id', configId)
+        if (error) throw error
+      } else {
+        const { data, error } = await supabase
+          .from('usuarios_email_config' as any)
+          .insert(payload)
+          .select()
+          .single()
+        if (error) throw error
+        if (data) setConfigId((data as any).id)
+      }
+
       toast.success('Configurações salvas com sucesso!')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar:', error)
-      toast.error('Erro ao salvar configurações')
+      toast.error('Erro ao salvar configurações', { description: error?.message })
     } finally {
       setSalvando(false)
     }
@@ -51,7 +115,6 @@ export default function ConfiguracoesEmail() {
     }
     setTestando(true)
     try {
-      // Placeholder - integração futura
       await new Promise(resolve => setTimeout(resolve, 2000))
       console.log('🧪 Teste SMTP:', { host: config.host, port: config.port })
       toast.success('Conexão SMTP testada com sucesso!')
@@ -61,6 +124,14 @@ export default function ConfiguracoesEmail() {
     } finally {
       setTestando(false)
     }
+  }
+
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -97,8 +168,8 @@ export default function ConfiguracoesEmail() {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             {config.ativo
-              ? '✅ O envio de e-mails está habilitado. Orçamentos e notificações serão enviados automaticamente.'
-              : '⚠️ O envio de e-mails está desabilitado. Nenhum e-mail será enviado pelo sistema.'}
+              ? '✅ O envio de e-mails está habilitado.'
+              : '⚠️ O envio de e-mails está desabilitado.'}
           </p>
         </CardContent>
       </Card>
@@ -210,7 +281,10 @@ export default function ConfiguracoesEmail() {
           disabled={testando || salvando}
         >
           {testando ? (
-            <>Testando...</>
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Testando...
+            </>
           ) : (
             <>
               <TestTube className="w-4 h-4 mr-2" />
@@ -223,7 +297,10 @@ export default function ConfiguracoesEmail() {
           disabled={salvando || testando}
         >
           {salvando ? (
-            <>Salvando...</>
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Salvando...
+            </>
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
