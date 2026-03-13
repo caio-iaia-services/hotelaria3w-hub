@@ -599,38 +599,49 @@ export default function AcoesComerciais() {
     setOperacaoSelecionada(operacao)
     if (!operacao) {
       setFornecedorSelecionado(null)
+      setImagemMarketing(null)
       return
     }
+
     // Use provided list (fresh from DB) or fall back to state
     const lista = listaFornecedores || fornecedoresDisponiveis
     const fornecedor = lista.find(
       f => f.nome_fantasia.toUpperCase() === operacao.toUpperCase()
     )
+
     setFornecedorSelecionado(fornecedor || null)
-    if (fornecedor) {
-      // Aplicar defaults do fornecedor
-      // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
-      const isMidea = isFornecedorMidea(fornecedor)
-      setDadosOrcamento(prev => ({
-        ...prev,
-        prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
-        validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
-        condicoes_pagamento: isMidea
-          ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
-          : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
-      }))
-      // Carregar imagem padrão do fornecedor
-      if (fornecedor.imagem_template_url) {
-        setImagemMarketing({
-          preview: fornecedor.imagem_template_url,
-          nome: 'Imagem padrão ' + fornecedor.nome_fantasia,
-          tamanho: 0,
-          file: null,
-          ehPadrao: true,
-        })
-      }
-      toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
+
+    if (!fornecedor) {
+      setImagemMarketing(null)
+      return
     }
+
+    // Aplicar defaults do fornecedor
+    // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
+    const isMidea = isFornecedorMidea(fornecedor)
+    setDadosOrcamento(prev => ({
+      ...prev,
+      prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
+      validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
+      condicoes_pagamento: isMidea
+        ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
+        : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
+    }))
+
+    const imagemPadrao = resolverImagemMarketing(null, fornecedor.imagem_template_url, isMidea)
+    if (imagemPadrao) {
+      setImagemMarketing({
+        preview: imagemPadrao,
+        nome: `Imagem padrão ${fornecedor.nome_fantasia}`,
+        tamanho: 0,
+        file: null,
+        ehPadrao: true,
+      })
+    } else {
+      setImagemMarketing(null)
+    }
+
+    toast.success(`Fornecedor ${fornecedor.nome_fantasia} vinculado automaticamente`)
   }
 
   function adicionarItem() {
