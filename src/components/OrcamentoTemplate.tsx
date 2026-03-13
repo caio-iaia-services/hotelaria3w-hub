@@ -138,6 +138,11 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
   const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
   const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
   const layoutMidea = isMideaLayout(tipoLayout, nomeFornecedorExibicao)
+  const imagemMarketingExibicao = resolverImagemMarketing(
+    orcamento.imagem_marketing_url,
+    fornecedor?.imagem_template_url || fornecedorInicialImagemTemplate,
+    layoutMidea
+  )
   const termosFornecedorExibicao = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea) || ''
   console.log('📊 numero:', orcamento.numero)
   console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
