@@ -847,7 +847,10 @@ export default function AcoesComerciais() {
       console.log('total:', total, typeof total)
       console.log('impPerc:', impPerc, 'descPerc:', descPerc)
 
-      const condicoesPagamento = montarCondicoesPagamentoPayload(dadosOrcamento.condicoes_pagamento)
+      const condicoesPagamentoTexto = isFornecedorMidea(fornecedorSelecionado)
+        ? resolverCondicoesPagamentoMidea(dadosOrcamento.condicoes_pagamento)
+        : dadosOrcamento.condicoes_pagamento
+      const condicoesPagamento = montarCondicoesPagamentoPayload(condicoesPagamentoTexto)
 
       const orcamentoPayload: Record<string, unknown> = {
         numero,
