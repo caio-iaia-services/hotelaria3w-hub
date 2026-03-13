@@ -1152,6 +1152,7 @@ export default function Fornecedores() {
                 { value: "G1", label: "G1" },
                 { value: "G2", label: "G2" },
                 { value: "G3", label: "G3" },
+                { value: "G4", label: "G4" },
               ]}
               onToggle={(v) => toggleFiltro("gestao", v)}
             />

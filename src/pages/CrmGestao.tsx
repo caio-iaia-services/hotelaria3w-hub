@@ -15,6 +15,7 @@ const gestaoKeys: Record<string, { gestao: string; title: string; subtitle: stri
   "gestao-1": { gestao: "G1", title: "CRM — Gestão 1", subtitle: "Funil comercial das operações G1" },
   "gestao-2": { gestao: "G2", title: "CRM — Gestão 2", subtitle: "Funil comercial das operações G2" },
   "gestao-3": { gestao: "G3", title: "CRM — Gestão 3", subtitle: "Funil comercial das operações G3" },
+  "gestao-4": { gestao: "G4", title: "CRM — Gestão 4", subtitle: "Funil comercial das operações G4" },
 };
 
 // Cores dinâmicas para operações — cicla entre cores pré-definidas

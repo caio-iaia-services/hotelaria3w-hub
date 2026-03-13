@@ -17,6 +17,7 @@ const gestaoColors: Record<string, string> = {
   G1: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
   G2: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
   G3: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
+  G4: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
 };
 
 function formatCnpj(cnpj: string): string {

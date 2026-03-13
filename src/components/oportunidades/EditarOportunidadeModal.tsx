@@ -38,14 +38,15 @@ interface CrmCardItem {
 
 const operacaoGestaoMap: Record<string, string> = {
   CASTOR: "G1", RUBBERMAID: "G1", SOLEMAR: "G1", UNIBLU: "G1",
-  MIDEA: "G2", "D-LOCK": "G2", "CIÇA ENXOVAIS": "G2", "IM IN": "G2",
   TEKA: "G3", KENBY: "G3", "REDES DE DORMIR": "G3", SKARA: "G3",
+  MIDEA: "G4", "D-LOCK": "G4", "CIÇA ENXOVAIS": "G4", "IM IN": "G4",
 };
 
 const operacoesPorGestao: Record<string, string[]> = {
   "Gestão 1": ["CASTOR", "RUBBERMAID", "SOLEMAR", "UNIBLU"],
-  "Gestão 2": ["MIDEA", "D-LOCK", "CIÇA ENXOVAIS", "IM IN"],
+  "Gestão 2": [],
   "Gestão 3": ["TEKA", "KENBY", "REDES DE DORMIR", "SKARA"],
+  "Gestão 4": ["MIDEA", "D-LOCK", "CIÇA ENXOVAIS", "IM IN"],
 };
 
 interface EditarOportunidadeModalProps {

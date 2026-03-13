@@ -66,6 +66,7 @@ const menuSections: MenuSection[] = [
           { title: "Gestão 1", url: "/crm/gestao-1" },
           { title: "Gestão 2", url: "/crm/gestao-2" },
           { title: "Gestão 3", url: "/crm/gestao-3" },
+          { title: "Gestão 4", url: "/crm/gestao-4" },
         ],
       },
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
