@@ -26,7 +26,14 @@ function normalizarNomeFornecedor(nome: string | null | undefined) {
 
 function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: string) {
   if (tipoLayout === 'midea') return true
-  return normalizarNomeFornecedor(nomeFornecedor).includes('MIDEA')
+
+  const nomeNormalizado = normalizarNomeFornecedor(nomeFornecedor)
+  return (
+    nomeNormalizado.includes('MIDEA') ||
+    nomeNormalizado.includes('SPRINGER') ||
+    nomeNormalizado.includes('CLIMAZON') ||
+    nomeNormalizado.includes('CARRIER')
+  )
 }
 
 export function OrcamentoTemplate({ orcamento, itens }: Props) {
