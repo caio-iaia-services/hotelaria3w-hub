@@ -7,20 +7,14 @@ O fabricante dos produtos não se responsabiliza por quaisquer danos a terceiros
 
 Sendo assim, o fabricante somente será responsável por eventuais danos materiais diretos, isto é, prejuízos diretos comprovadamente sofridos em decorrência de atos culposos e/ou dolosos de única e exclusiva responsabilidade do fabricante, sendo que o montante de responsabilidade em relação aos danos diretos, em nenhuma hipótese, poderá superar o valor total dos itens desta Proposta Comercial relacionados a Produtos de fabricação da Midea Carrier.`
 
-function normalizarTermosFornecedor(termos: string | null | undefined): string {
-  const texto = String(termos || '').trim()
-  if (!texto) return ''
-  if (texto === TERMOS_MIDEA_FALLBACK_ANTIGO) return ''
-  return texto
-}
-
 export function resolverTermosFornecedor(
   termosFornecedor: string | null | undefined,
   isMidea: boolean
 ): string | null {
-  const termosLimpos = normalizarTermosFornecedor(termosFornecedor)
+  const texto = String(termosFornecedor || '').trim()
 
-  if (termosLimpos) return termosLimpos
+  if (texto === TERMOS_MIDEA_FALLBACK_ANTIGO) return TERMOS_MIDEA_LEGAIS
+  if (texto) return texto
   if (isMidea) return TERMOS_MIDEA_LEGAIS
 
   return null
