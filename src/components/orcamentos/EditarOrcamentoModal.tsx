@@ -101,6 +101,14 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagemFile(null)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
+
+      // Fetch fornecedor tipo_layout
+      if (o.fornecedor_id) {
+        const { data: forn } = await supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
+        setTipoLayout((forn as any)?.tipo_layout || null)
+      } else {
+        setTipoLayout(null)
+      }
     }
 
     if (itensDb) {
