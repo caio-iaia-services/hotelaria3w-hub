@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSig
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
+import { resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 interface FornecedorLayout {
   tipo_layout: string | null
@@ -14,8 +15,6 @@ interface Props {
   orcamento: Orcamento
   itens: OrcamentoItem[]
 }
-
-const TERMOS_MIDEA_PADRAO = 'Termos legais Midea Carrier não cadastrados no fornecedor. Solicite ao comercial a versão vigente para anexar ao orçamento.'
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
   return String(nome || '')
