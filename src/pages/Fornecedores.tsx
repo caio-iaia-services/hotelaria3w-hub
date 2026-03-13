@@ -67,6 +67,7 @@ interface Fornecedor {
   observacoes?: string | null;
   gestao?: string | null;
   produtos_servicos?: string | null;
+  termos_fabricante?: string | null;
   comissao_vendas?: number | null;
   created_at?: string;
   updated_at?: string;
