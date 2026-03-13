@@ -634,7 +634,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
 
             {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
-            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
+            {layoutMidea && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
                   {fornecedor?.logotipo_url && (
