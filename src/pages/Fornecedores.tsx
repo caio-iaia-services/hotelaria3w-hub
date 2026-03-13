@@ -94,6 +94,7 @@ type FornecedorForm = {
   prazo_entrega_padrao: string;
   validade_dias_padrao: string;
   condicoes_pagamento_padrao: string;
+  termos_fabricante: string;
   imagem_template_url: string;
 };
 
