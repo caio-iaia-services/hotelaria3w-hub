@@ -385,6 +385,7 @@ export default function AcoesComerciais() {
       1: [...gestaoOperacoesBase[1]],
       2: [...gestaoOperacoesBase[2]],
       3: [...gestaoOperacoesBase[3]],
+      4: [...(gestaoOperacoesBase[4] || [])],
     }
     for (const f of fornecedoresDb) {
       const gestoes = f.gestao.split(',').map(g => g.trim()).filter(Boolean)

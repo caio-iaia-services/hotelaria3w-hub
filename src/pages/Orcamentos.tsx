@@ -919,6 +919,7 @@ comercial1@3whotelaria.com.br`
           <option value="G1">Gestão 1</option>
           <option value="G2">Gestão 2</option>
           <option value="G3">Gestão 3</option>
+          <option value="G4">Gestão 4</option>
         </select>
 
         <Button

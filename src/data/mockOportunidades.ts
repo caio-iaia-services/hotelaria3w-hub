@@ -20,6 +20,7 @@ export const gestaoOperacoes: Record<number, string[]> = {
   1: [],
   2: [],
   3: [],
+  4: [],
 };
 
 export function formatCnpj(cnpj: string): string {

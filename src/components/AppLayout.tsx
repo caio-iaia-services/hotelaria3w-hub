@@ -13,6 +13,7 @@ const pageTitles: Record<string, string> = {
   "/crm/gestao-1": "CRM - Gestão 1",
   "/crm/gestao-2": "CRM - Gestão 2",
   "/crm/gestao-3": "CRM - Gestão 3",
+  "/crm/gestao-4": "CRM - Gestão 4",
   "/crm/outras": "Outras Categorias",
   "/oportunidades": "Oportunidades",
   "/orcamentos": "Orçamentos",

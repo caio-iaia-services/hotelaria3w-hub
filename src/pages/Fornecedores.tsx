@@ -830,7 +830,7 @@ export default function Fornecedores() {
           <p className="text-xs text-muted-foreground italic mt-1">Sem gestão para fornecedores com status {statusVal}.</p>
         ) : (
           <div className="flex gap-4 mt-1">
-            {["G1", "G2", "G3"].map((g) => (
+            {["G1", "G2", "G3", "G4"].map((g) => (
               <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
                 <Checkbox
                   checked={gestaoVal.includes(g)}
@@ -1152,6 +1152,7 @@ export default function Fornecedores() {
                 { value: "G1", label: "G1" },
                 { value: "G2", label: "G2" },
                 { value: "G3", label: "G3" },
+                { value: "G4", label: "G4" },
               ]}
               onToggle={(v) => toggleFiltro("gestao", v)}
             />

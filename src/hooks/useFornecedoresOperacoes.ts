@@ -32,7 +32,7 @@ export function useFornecedoresOperacoes(enabled = true) {
   }, [enabled]);
 
   const gestaoOperacoes = useMemo(() => {
-    const map: Record<string, string[]> = { G1: [], G2: [], G3: [] };
+    const map: Record<string, string[]> = { G1: [], G2: [], G3: [], G4: [] };
     for (const f of fornecedores) {
       // gestao pode ser "G1", "G1, G2", etc.
       const gestoes = f.gestao.split(",").map(g => g.trim()).filter(Boolean);
