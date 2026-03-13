@@ -602,6 +602,41 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               </div>
             )}
             
+            {/* BOTÕES DE AÇÃO */}
+            <div className="mt-6 grid md:grid-cols-2 gap-4">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+                <Phone className="w-6 h-6" />
+                <span>Clique aqui para falar com o Vendedor</span>
+              </button>
+              
+              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
+                <Package className="w-6 h-6" />
+                <span>Clique aqui para confirmar o pedido</span>
+              </button>
+            </div>
+
+            {/* TERMOS LEGAIS MIDEA - Só aparece para Midea */}
+            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
+              <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
+                <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
+                  {fornecedor?.logotipo_url && (
+                    <img 
+                      src={fornecedor.logotipo_url} 
+                      alt="Midea Carrier" 
+                      className="h-16"
+                    />
+                  )}
+                  <h3 className="text-xl font-bold text-[#1a4168]">
+                    Termos Legais Midea Carrier
+                  </h3>
+                </div>
+                
+                <div className="text-sm text-gray-800 leading-relaxed space-y-3 whitespace-pre-wrap">
+                  {orcamento.termos_fornecedor}
+                </div>
+              </div>
+            )}
+
             {/* TERMOS LEGAIS 3W */}
             <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -619,19 +654,6 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 <p>• Embora o sistema atribua automaticamente a validade do Orçamento conforme política de expiração vigente, a 3W não se responsabiliza por eventuais mudanças de tabela de preços do Fabricante/Fornecedor, ainda que isto ocorra no período de validade do orçamento.</p>
                 <p>• Para eventuais questões pós-venda, o cliente deverá fazer contato diretamente com o SAC da {orcamento.fornecedor_nome || 'Fabricante'}.</p>
               </div>
-            </div>
-            
-            {/* BOTÕES DE AÇÃO - últimos elementos */}
-            <div className="mt-6 grid md:grid-cols-2 gap-4">
-              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Phone className="w-6 h-6" />
-                <span>Clique aqui para falar com o Vendedor</span>
-              </button>
-              
-              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Package className="w-6 h-6" />
-                <span>Clique aqui para confirmar o pedido</span>
-              </button>
             </div>
           </div>
         </div>
