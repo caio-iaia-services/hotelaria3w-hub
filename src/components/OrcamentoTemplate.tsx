@@ -690,23 +690,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
             </div>
           </div>
 
-            {/* TERMOS DO FORNECEDOR - APENAS MIDEA */}
-            {tipoLayout === 'midea' && orcamento.termos_fornecedor && (
-              <div className="mt-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  {logotipoFornecedor ? (
-                    <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} className="h-12" />
-                  ) : (
-                    <p className="text-2xl font-bold text-blue-600">
-                      {orcamento.fornecedor_nome}
-                    </p>
-                  )}
-                </div>
-                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {orcamento.termos_fornecedor}
-                </div>
-              </div>
-            )}
+
           
           <div className="flex-1 flex items-center justify-center bg-gray-100 p-12">
             <div className="text-center max-w-4xl">
