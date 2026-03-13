@@ -224,7 +224,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         {/* Menu */}
         <nav className="flex-1 py-1 px-3">
           {menuSections.map((section, idx) => (
-            <div key={section.label} className={cn(idx > 0 && "mt-2")}>
+            <div key={section.label} className={cn(idx > 0 && "mt-1")}>
               {section.label && (
                 <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
                   {section.label}
