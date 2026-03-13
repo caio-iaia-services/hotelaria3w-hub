@@ -565,7 +565,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                   </p>
                 </div>
               <div className="p-4">
-                  {tipoLayout === 'midea' ? (
+                  {layoutMidea ? (
                     <div className="space-y-4">
                       <div className="text-sm font-semibold text-gray-700 mb-2">
                         CONDIÇÕES DE PAGAMENTO:
