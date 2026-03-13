@@ -235,9 +235,10 @@ export default function ConfiguracoesEmail() {
             <Label htmlFor="host">Host SMTP *</Label>
             <Input
               id="host"
-              value={config.host}
-              onChange={(e) => handleChange('host', e.target.value)}
-              placeholder="email-ssl.com.br"
+              value="email-ssl.com.br"
+              readOnly
+              disabled
+              className="bg-muted"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
