@@ -1,0 +1,1 @@
+UPDATE fornecedores SET tipo_layout = 'midea' WHERE nome_fantasia = 'MIDEA';
