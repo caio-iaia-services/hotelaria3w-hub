@@ -51,6 +51,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function isNomeMidea(nome: string | null | undefined) {
+  const normalizado = String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+
+  return (
+    normalizado.includes('MIDEA') ||
+    normalizado.includes('SPRINGER') ||
+    normalizado.includes('CLIMAZON') ||
+    normalizado.includes('CARRIER')
+  )
+}
+
 export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
