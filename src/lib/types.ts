@@ -188,6 +188,19 @@ export interface Fornecedor {
   updated_at: string
 }
 
+export interface UsuarioEmailConfig {
+  id: string
+  user_id: string
+  email: string
+  senha_smtp: string
+  host: string
+  port: number
+  secure: boolean
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface OrcamentoItem {
   id: string
   orcamento_id: string

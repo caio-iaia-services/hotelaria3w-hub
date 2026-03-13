@@ -27,6 +27,7 @@ const pageTitles: Record<string, string> = {
   "/admin": "Administração",
   "/planejamento": "Planejamento",
   "/acoes-comerciais": "Ações Comerciais",
+  "/configuracoes/email": "Configurações de E-mail",
 };
 
 interface AppLayoutProps {

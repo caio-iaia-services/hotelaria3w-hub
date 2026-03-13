@@ -12,6 +12,7 @@ import {
   Mail,
   DollarSign,
   Settings,
+  Mail as MailIcon,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -91,6 +92,12 @@ const menuSections: MenuSection[] = [
     label: "FERRAMENTAS",
     items: [
       { title: "Buscar Empresas", url: "/buscar", icon: Search },
+    ],
+  },
+  {
+    label: "CONFIGURAÇÕES",
+    items: [
+      { title: "E-mail", url: "/configuracoes/email", icon: MailIcon },
     ],
   },
 ];
