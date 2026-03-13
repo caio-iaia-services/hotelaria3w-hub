@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
 import { extrairTextoCondicoesPagamento, montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
+import { resolverCondicoesPagamentoMidea } from '@/lib/fornecedorTerms'
 import { Plus, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +51,21 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function isNomeMidea(nome: string | null | undefined) {
+  const normalizado = String(nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+
+  return (
+    normalizado.includes('MIDEA') ||
+    normalizado.includes('SPRINGER') ||
+    normalizado.includes('CLIMAZON') ||
+    normalizado.includes('CARRIER')
+  )
+}
+
 export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -92,7 +108,9 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         frete_tipo: o.frete_tipo || 'CIF (Incluso)',
         impostos_percentual: parseNum(o.impostos_percentual),
         desconto_percentual: parseNum(o.desconto_percentual),
-        condicoes_pagamento: extrairTextoCondicoesPagamento(o.condicoes_pagamento),
+        condicoes_pagamento: isNomeMidea(o.fornecedor_nome || o.operacao)
+          ? resolverCondicoesPagamentoMidea(extrairTextoCondicoesPagamento(o.condicoes_pagamento))
+          : extrairTextoCondicoesPagamento(o.condicoes_pagamento),
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',

@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
-import { resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
+import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
@@ -617,14 +617,13 @@ export default function AcoesComerciais() {
     }
 
     // Aplicar defaults do fornecedor
-    // Para Midea, condições de pagamento são dinâmicas (baseadas no valor) - não usar fallback anterior
     const isMidea = isFornecedorMidea(fornecedor)
     setDadosOrcamento(prev => ({
       ...prev,
       prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
       validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
       condicoes_pagamento: isMidea
-        ? 'Condições dinâmicas conforme valor do pedido (ver orçamento)'
+        ? resolverCondicoesPagamentoMidea(fornecedor.condicoes_pagamento_padrao)
         : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
     }))
 
@@ -848,7 +847,10 @@ export default function AcoesComerciais() {
       console.log('total:', total, typeof total)
       console.log('impPerc:', impPerc, 'descPerc:', descPerc)
 
-      const condicoesPagamento = montarCondicoesPagamentoPayload(dadosOrcamento.condicoes_pagamento)
+      const condicoesPagamentoTexto = isFornecedorMidea(fornecedorSelecionado)
+        ? resolverCondicoesPagamentoMidea(dadosOrcamento.condicoes_pagamento)
+        : dadosOrcamento.condicoes_pagamento
+      const condicoesPagamento = montarCondicoesPagamentoPayload(condicoesPagamentoTexto)
 
       const orcamentoPayload: Record<string, unknown> = {
         numero,
