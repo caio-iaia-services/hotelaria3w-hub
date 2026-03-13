@@ -650,7 +650,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 
                 <div className="text-sm text-gray-800 leading-relaxed space-y-3 whitespace-pre-wrap">
-                  {orcamento.termos_fornecedor}
+                  {termosFornecedorExibicao}
                 </div>
               </div>
             )}
