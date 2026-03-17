@@ -252,7 +252,7 @@ export function EditarOportunidadeModal({
               <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p>
             ) : operacoes.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Nenhuma operação encontrada.
+                Nenhum fornecedor encontrado.
               </p>
             ) : (
               operacoes.map((item) => (
