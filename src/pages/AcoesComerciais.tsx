@@ -988,6 +988,7 @@ export default function AcoesComerciais() {
         observacoes: '',
         observacoes_gerais: '',
         difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
+        endereco_entrega: '',
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
