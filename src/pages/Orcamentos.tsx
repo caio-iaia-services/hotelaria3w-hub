@@ -780,6 +780,91 @@ www.3whotelaria.com.br
     setModalEnviar(true)
   }
 
+  function inlineStyles(element: HTMLElement): string {
+    const clone = element.cloneNode(true) as HTMLElement
+    const tempContainer = document.createElement('div')
+    tempContainer.style.position = 'absolute'
+    tempContainer.style.left = '-9999px'
+    tempContainer.appendChild(clone)
+    document.body.appendChild(tempContainer)
+
+    const allElements = clone.querySelectorAll('*')
+    const processElement = (el: Element) => {
+      const htmlEl = el as HTMLElement
+      const computed = window.getComputedStyle(htmlEl)
+      const important = [
+        'color', 'background-color', 'background', 'font-family', 'font-size', 'font-weight',
+        'line-height', 'text-align', 'text-decoration', 'padding', 'padding-top', 'padding-right',
+        'padding-bottom', 'padding-left', 'margin', 'margin-top', 'margin-right', 'margin-bottom',
+        'margin-left', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+        'border-radius', 'border-collapse', 'width', 'max-width', 'min-width', 'height',
+        'display', 'flex-direction', 'justify-content', 'align-items', 'gap', 'flex-wrap',
+        'flex', 'flex-grow', 'flex-shrink', 'vertical-align', 'white-space', 'overflow',
+        'box-sizing', 'text-transform', 'letter-spacing', 'opacity',
+      ]
+      const styles = important
+        .map(prop => {
+          const val = computed.getPropertyValue(prop)
+          return val ? `${prop}:${val}` : ''
+        })
+        .filter(Boolean)
+        .join(';')
+      htmlEl.setAttribute('style', styles)
+      // Remove class attributes for cleaner HTML
+      htmlEl.removeAttribute('class')
+    }
+
+    processElement(clone)
+    allElements.forEach(processElement)
+
+    // Remove SVG icons (email clients don't render them well), replace with text equivalents
+    clone.querySelectorAll('svg').forEach(svg => {
+      svg.remove()
+    })
+
+    // Convert relative image URLs to absolute
+    const origin = window.location.origin
+    clone.querySelectorAll('img').forEach(img => {
+      const src = img.getAttribute('src')
+      if (src && src.startsWith('/')) {
+        img.setAttribute('src', `${origin}${src}`)
+      }
+    })
+
+    // Remove buttons (action buttons not useful in email)
+    clone.querySelectorAll('button').forEach(btn => btn.remove())
+
+    const html = clone.outerHTML
+    tempContainer.remove()
+    return html
+  }
+
+  async function capturarHtmlOrcamento(): Promise<string | null> {
+    const containerOriginal = await obterConteudoParaExportacao(orcamentoEnviar || undefined)
+    if (!containerOriginal) return null
+
+    const inlinedContent = inlineStyles(containerOriginal)
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orçamento ${orcamentoEnviar?.numero || ''}</title>
+<style>
+  body { margin: 0; padding: 0; background: #ffffff; font-family: Arial, Helvetica, sans-serif; }
+  table { border-collapse: collapse; }
+  img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<div style="max-width:800px;margin:0 auto;background:#ffffff;">
+${inlinedContent}
+</div>
+</body>
+</html>`
+  }
+
   async function enviarEmailProfissional() {
     if (!orcamentoEnviar) return
     setEnviandoEmail(true)
@@ -807,36 +892,28 @@ www.3whotelaria.com.br
 
       const config = configEmail as any
 
-      console.log('📧 Gerando PDF e enviando email...')
+      console.log('📧 Capturando HTML do orçamento e enviando email...')
       console.log('👤 Remetente SMTP (config):', config.email)
-      console.log('👤 Usuário logado (auth):', user?.email)
-      console.log('📨 from_email enviado:', config.email)
       console.log('📨 Destinatários:', emailDestinatarios)
 
-      // 2. Gerar PDF em base64
-      const pdfBlob = await gerarPDFBlob(orcamentoEnviar)
-      if (!pdfBlob) {
-        toast.error('Não foi possível gerar o PDF do orçamento')
+      // 2. Capturar HTML completo do orçamento com estilos inline
+      toast.info('Preparando orçamento para envio...')
+      const htmlContent = await capturarHtmlOrcamento()
+      if (!htmlContent) {
+        toast.error('Não foi possível capturar o HTML do orçamento')
         return
       }
 
-      const pdfBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(pdfBlob)
-      })
-
-      // 3. Enviar via webhook n8n com PDF anexado
+      // 3. Enviar via webhook n8n com HTML no corpo
       const response = await fetch(
         'https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            html_content: htmlContent,
             orcamento_id: orcamentoEnviar.id,
             numero: orcamentoEnviar.numero,
-            pdf_base64: pdfBase64,
             destinatarios: emailDestinatarios,
             assunto: emailAssunto,
             mensagem: emailMensagem,
@@ -851,7 +928,7 @@ www.3whotelaria.com.br
         throw new Error(resultado.error || `Erro HTTP ${response.status}`)
       }
 
-      // 3. Atualizar status do orçamento
+      // 4. Atualizar status do orçamento
       const { error } = await supabase
         .from('orcamentos')
         .update({
