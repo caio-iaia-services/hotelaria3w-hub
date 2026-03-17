@@ -678,7 +678,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
               <div className="text-sm space-y-1">
                 <p className="flex items-center gap-1"><Globe className="w-3 h-3" /> www.3whotelaria.com.br</p>
                 <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> +55 (11) 5197-5779</p>
-                <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> comercial1@3whotelaria.com.br</p>
+                <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> {emailExibicao}</p>
               </div>
               <div className="bg-[#c4942c] text-white px-6 py-2 rounded font-bold" data-pdf-orcamento-numero>
                 Orçamento {orcamento.numero}
