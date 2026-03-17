@@ -61,7 +61,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [termo, campo])
+  }, [termo, campo, habilitado])
 
   return { resultados, loading }
 }
