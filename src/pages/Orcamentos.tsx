@@ -382,6 +382,10 @@ export default function Orcamentos() {
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
           fornecedor_imagem_template_url: fornecedor.imagem_template_url,
+          fornecedor_cor_primaria: fornecedor.cor_primaria || '#C8962E',
+          fornecedor_cor_secundaria: fornecedor.cor_secundaria || '#1a4168',
+          fornecedor_termos_fabricante: fornecedor.termos_fabricante,
+          fornecedor_condicoes_pagamento_padrao: fornecedor.condicoes_pagamento_padrao,
         } as Orcamento)
       : orcamentoComCliente
 
