@@ -25,6 +25,15 @@ function formatCNPJ(cnpj: string | null) {
   return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 }
 
+function applyMaskCNPJ(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
 export default function ClienteModal({ cliente, open, onClose, onSave, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
