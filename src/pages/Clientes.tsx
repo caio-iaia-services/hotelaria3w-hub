@@ -581,7 +581,7 @@ export default function Clientes() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ *</Label>
-                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required />
+                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento</Label>
