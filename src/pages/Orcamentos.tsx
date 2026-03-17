@@ -66,8 +66,9 @@ function formatCurrency(value: any) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseNum(value))
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+function formatDate(date: string | null | undefined) {
+  if (!date) return '-'
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(date))
 }
 
 interface ClienteAtual {
