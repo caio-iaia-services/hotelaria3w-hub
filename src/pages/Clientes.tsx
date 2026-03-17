@@ -179,8 +179,10 @@ export default function Clientes() {
     let query = supabase.from("clientes").select("*", { count: "exact" });
 
     if (debouncedBusca) {
+      const buscaDigits = debouncedBusca.replace(/\D/g, "");
+      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
       query = query.or(
-        `nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%,cidade.ilike.%${debouncedBusca}%`
+        `nome_fantasia.ilike.%${debouncedBusca}%,${cnpjFilter},cidade.ilike.%${debouncedBusca}%`
       );
     }
     if (filtros.status.length > 0) query = query.in("status", filtros.status);

@@ -434,8 +434,10 @@ export default function Fornecedores() {
       .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao, logotipo_url, segmentos_atuacao", { count: "exact" });
 
     if (debouncedBusca) {
+      const buscaDigits = debouncedBusca.replace(/\D/g, "");
+      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
       query = query.or(
-        `nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,cnpj.ilike.%${debouncedBusca}%`
+        `nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,${cnpjFilter}`
       );
     }
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
