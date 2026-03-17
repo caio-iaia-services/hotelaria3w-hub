@@ -837,56 +837,10 @@ www.3whotelaria.com.br
     return `${window.location.origin}/${url.replace(/^\/+/, '')}`
   }
 
-  function buildEmailSection(title: string, content: string) {
-    return `
-      <tr>
-        <td style="padding:0 24px 24px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
-            <tr>
-              <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">
-                ${escapeHtml(title)}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#374151;">
-                ${content}
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>`
-  }
-
-  function buildInfoRow(label: string, value: unknown) {
-    return `
-      <tr>
-        <td style="padding:8px 0; width:160px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; color:#6b7280; font-weight:700; vertical-align:top;">
-          ${escapeHtml(label)}
-        </td>
-        <td style="padding:8px 0; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; color:#111827; vertical-align:top;">
-          ${escapeHtml(value || '—')}
-        </td>
-      </tr>`
-  }
-
-  function buildCurrencyRow(label: string, value: number, highlight = false) {
-    return `
-      <tr>
-        <td style="padding:10px 0; font-family:Arial, Helvetica, sans-serif; font-size:${highlight ? '18px' : '14px'}; line-height:${highlight ? '26px' : '20px'}; color:${highlight ? '#1a4168' : '#374151'}; font-weight:700;">
-          ${escapeHtml(label)}
-        </td>
-        <td align="right" style="padding:10px 0; font-family:Arial, Helvetica, sans-serif; font-size:${highlight ? '22px' : '14px'}; line-height:${highlight ? '30px' : '20px'}; color:${highlight ? '#1a4168' : '#111827'}; font-weight:700;">
-          ${escapeHtml(formatCurrency(value))}
-        </td>
-      </tr>`
-  }
-
-  function buildEmailButton(label: string, href: string, backgroundColor: string) {
-    return `
-      <a href="${escapeHtml(href)}" style="display:inline-block; background-color:${backgroundColor}; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; font-weight:700; text-decoration:none; padding:14px 22px; border-radius:8px;">
-        ${escapeHtml(label)}
-      </a>`
-  }
+  // ========== EMAIL HTML HELPERS ==========
+  const F = 'font-family:Arial,Helvetica,sans-serif;'
+  const esc = escapeHtml
+  const nl2br = (t: string) => t ? esc(t).replace(/\n/g, '<br/>') : '—'
 
   async function capturarHtmlOrcamento(): Promise<string | null> {
     if (!orcamentoEnviar) return null
@@ -895,207 +849,334 @@ www.3whotelaria.com.br
 
     const fornecedorNome = (orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '3W Hotelaria'
     const tipoLayout = String((orcamento as any).fornecedor_tipo_layout || 'padrao')
-    const fornecedorNomeNormalizado = fornecedorNome
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toUpperCase()
-    const layoutMidea = tipoLayout === 'midea' || ['MIDEA', 'SPRINGER', 'CLIMAZON', 'CARRIER'].some((item) => fornecedorNomeNormalizado.includes(item))
+    const fornecedorNomeNorm = fornecedorNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    const layoutMidea = tipoLayout === 'midea' || ['MIDEA','SPRINGER','CLIMAZON','CARRIER'].some(k => fornecedorNomeNorm.includes(k))
+    const isCastor = tipoLayout === 'castor'
 
-    const subtotal = parseNum((orcamento as any).subtotal) || itens.reduce((acc, item) => acc + parseNum(item.total), 0)
-    const impostosPercentual = parseNum((orcamento as any).impostos_percentual)
-    const impostos = parseNum((orcamento as any).impostos) || subtotal * (impostosPercentual / 100)
-    const descontoPercentual = parseNum((orcamento as any).desconto_percentual)
-    const descontoValor = parseNum((orcamento as any).desconto_valor) || parseNum((orcamento as any).desconto) || subtotal * (descontoPercentual / 100)
+    const subtotal = parseNum((orcamento as any).subtotal) || itens.reduce((a, i) => a + parseNum(i.total), 0)
+    const impostosPerc = parseNum((orcamento as any).impostos_percentual)
+    const impostos = parseNum((orcamento as any).impostos) || subtotal * (impostosPerc / 100)
+    const descontoPerc = parseNum((orcamento as any).desconto_percentual)
+    const descontoVal = parseNum((orcamento as any).desconto_valor) || parseNum((orcamento as any).desconto) || subtotal * (descontoPerc / 100)
     const frete = parseNum((orcamento as any).frete)
-    const total = parseNum((orcamento as any).total) || subtotal + impostos - descontoValor + frete
+    const total = parseNum((orcamento as any).total) || subtotal + impostos - descontoVal + frete
 
     const logo3w = getAbsoluteUrl('/logo_3Whotelaria.jpeg')
     const logoFornecedor = getAbsoluteUrl((orcamento as any).fornecedor_logotipo_url || null)
-    const marketingUrl = getAbsoluteUrl(
-      resolverImagemMarketing(
-        orcamento.imagem_marketing_url,
-        (orcamento as any).fornecedor_imagem_template_url || null,
-        layoutMidea
-      )
-    )
+    const marketingUrl = getAbsoluteUrl(resolverImagemMarketing(orcamento.imagem_marketing_url, (orcamento as any).fornecedor_imagem_template_url || null, layoutMidea))
 
-    const condicoesPagamentoBase = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
-    const condicoesPagamento = layoutMidea
-      ? resolverCondicoesPagamentoMidea(condicoesPagamentoBase)
-      : (condicoesPagamentoBase || '')
-    const termosFornecedor = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea)
-    const emailExibicao = user?.email || 'comercial1@3whotelaria.com.br'
-    const assuntoConfirmacao = encodeURIComponent(`Confirmação do orçamento ${orcamento.numero}`)
-    const whatsappHref = 'https://wa.me/551151975779?text=' + encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}.`)
-    const confirmacaoHref = `mailto:${emailExibicao}?subject=${assuntoConfirmacao}`
+    const condBase = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+    const condicoesPag = layoutMidea ? resolverCondicoesPagamentoMidea(condBase) : (condBase || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.')
+    const termosForn = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea)
+    const emailExib = user?.email || 'comercial1@3whotelaria.com.br'
+    const whatsHref = 'https://wa.me/551151975779?text=' + encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}.`)
+    const confirmHref = `mailto:${emailExib}?subject=${encodeURIComponent(`Confirmação do orçamento ${orcamento.numero}`)}`
 
-    const linhasItens = itens.length > 0
-      ? itens.map((item) => `
-        <tr>
-          <td style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.codigo || '—')}</td>
-          <td style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.descricao)}</td>
-          <td align="center" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.quantidade)}</td>
-          <td align="right" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(formatCurrency(item.preco_unitario))}</td>
-          <td align="right" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827; font-weight:700;">${escapeHtml(formatCurrency(item.total))}</td>
-        </tr>`).join('')
-      : `
-        <tr>
-          <td colspan="5" style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#6b7280; text-align:center;">Nenhum item encontrado neste orçamento.</td>
-        </tr>`
+    // Items table header columns
+    const colHeaders = isCastor
+      ? ['Item','Código','Descrição','Medidas','Qtd','Unitário','Total']
+      : ['Item','Código','Descrição','Qtd','Unitário','Total']
+
+    const itemRows = itens.map((item, idx) => {
+      const cols = isCastor
+        ? [
+            String(idx + 1),
+            esc(item.codigo || '—'),
+            `<strong>${esc(item.descricao)}</strong>${item.especificacoes ? `<br/><span style="color:#6b7280;font-size:12px;">${esc(item.especificacoes)}</span>` : ''}`,
+            esc((item as any).medidas || '—'),
+            String(item.quantidade),
+            esc(formatCurrency(item.preco_unitario)),
+            esc(formatCurrency(item.total)),
+          ]
+        : [
+            String(idx + 1),
+            esc(item.codigo || '—'),
+            `<strong>${esc(item.descricao)}</strong>${item.especificacoes ? `<br/><span style="color:#6b7280;font-size:12px;">${esc(item.especificacoes)}</span>` : ''}`,
+            String(item.quantidade),
+            esc(formatCurrency(item.preco_unitario)),
+            esc(formatCurrency(item.total)),
+          ]
+      const bg = idx % 2 === 0 ? '#f9fafb' : '#ffffff'
+      const aligns = isCastor
+        ? ['center','center','left','center','center','right','right']
+        : ['center','center','left','center','right','right']
+      return `<tr>${cols.map((c, i) => `<td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:${aligns[i]};vertical-align:top;">${c}</td>`).join('')}</tr>`
+    }).join('')
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Orçamento ${escapeHtml(orcamento.numero)}</title>
-  </head>
-  <body style="margin:0; padding:0; background-color:#f3f4f6; font-family:Arial, Helvetica, sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f3f4f6; margin:0; padding:0;">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Orçamento ${esc(orcamento.numero)}</title></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;${F}">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:0;">
+
+<!-- ============ PÁGINA 1 - CAPA ============ -->
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">
+
+  <!-- HEADER AZUL -->
+  <tr><td style="background-color:#1a4168;padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td align="center" style="padding:24px 12px;">
-          <table width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#ffffff; border-collapse:separate; border-spacing:0; border-radius:16px; overflow:hidden;">
-            <tr>
-              <td style="padding:24px; background-color:#1a4168;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td style="vertical-align:top;">
-                      ${logo3w ? `<img src="${escapeHtml(logo3w)}" alt="3W Hotelaria" style="display:block; width:180px; max-width:100%; height:auto; margin:0 0 16px 0;" />` : ''}
-                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">www.3whotelaria.com.br</div>
-                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">+55 (11) 5197-5779</div>
-                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">${escapeHtml(emailExibicao)}</div>
-                    </td>
-                    <td align="right" style="vertical-align:top;">
-                      <div style="display:inline-block; padding:10px 16px; background-color:#c4942c; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; font-weight:700; border-radius:10px; margin-bottom:16px;">
-                        Orçamento ${escapeHtml(orcamento.numero)}
-                      </div>
-                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">Emitido em ${escapeHtml(formatDate(orcamento.data_emissao || orcamento.created_at))}</div>
-                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff; font-weight:700;">Expira em ${escapeHtml(formatDate(orcamento.data_validade))}</div>
-                      <div style="display:inline-block; margin-top:12px; padding:6px 12px; background-color:#ffffff; color:#1a4168; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; font-weight:700; border-radius:999px;">
-                        ${escapeHtml(getStatusLabel(orcamento.status))}
-                      </div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            ${marketingUrl ? `
-            <tr>
-              <td style="padding:0;">
-                <img src="${escapeHtml(marketingUrl)}" alt="Imagem do orçamento" style="display:block; width:100%; max-width:600px; height:auto;" />
-              </td>
-            </tr>` : ''}
-            ${buildEmailSection('Resumo da proposta', `
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                ${buildInfoRow('Cliente', orcamento.cliente_razao_social || orcamento.cliente_nome)}
-                ${buildInfoRow('CNPJ', orcamento.cliente_cnpj || '—')}
-                ${buildInfoRow('E-mail', orcamento.cliente_email || '—')}
-                ${buildInfoRow('Telefone', orcamento.cliente_telefone || '—')}
-                ${buildInfoRow('Endereço', orcamento.cliente_endereco || '—')}
-                ${buildInfoRow('Fornecedor', fornecedorNome)}
-              </table>
-            `)}
-            ${buildEmailSection('Itens do orçamento', `
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
+        <!-- Esquerda: Logo + Contatos -->
+        <td style="vertical-align:top;width:55%;">
+          ${logo3w ? `<img src="${esc(logo3w)}" alt="3W Hotelaria" style="display:block;height:70px;width:auto;margin-bottom:12px;"/>` : ''}
+          <table cellpadding="0" cellspacing="0" border="0" style="padding-left:8px;">
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">🌐 www.3whotelaria.com.br</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">📞 +55 (11) 5197-5779</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">✉️ ${esc(emailExib)}</td></tr>
+          </table>
+        </td>
+        <!-- Direita: Número + Datas + Status -->
+        <td style="vertical-align:top;text-align:right;width:45%;">
+          <div style="display:inline-block;padding:10px 20px;background-color:#c4942c;color:#ffffff;${F}font-size:18px;font-weight:700;border-radius:8px;margin-bottom:12px;">
+            Orçamento ${esc(orcamento.numero)}
+          </div>
+          ${logoFornecedor ? `<div style="margin:12px 0;text-align:right;"><img src="${esc(logoFornecedor)}" alt="${esc(fornecedorNome)}" style="display:inline-block;height:48px;max-width:160px;"/></div>` : (orcamento.fornecedor_nome ? `<div style="margin:8px 0;${F}font-size:20px;font-weight:700;color:#ef4444;">${esc(orcamento.fornecedor_nome.split(' ')[0])}</div>` : '')}
+          <div style="${F}font-size:13px;color:#ffffff;line-height:20px;">
+            Emitido em ${esc(formatDate(orcamento.data_emissao || orcamento.created_at))}<br/>
+            <strong>Expira em ${esc(formatDate(orcamento.data_validade))}</strong>
+          </div>
+          <div style="display:inline-block;margin-top:10px;padding:5px 14px;background-color:#e5e7eb;color:#374151;${F}font-size:11px;font-weight:700;border-radius:4px;">
+            ${esc(getStatusLabel(orcamento.status))}
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- IMAGEM MARKETING -->
+  ${marketingUrl ? `
+  <tr><td style="padding:0;background-color:#f3f4f6;">
+    <img src="${esc(marketingUrl)}" alt="Marketing" style="display:block;width:100%;height:auto;"/>
+  </td></tr>` : `
+  <tr><td style="padding:40px 24px;background:linear-gradient(135deg,#eff6ff,#f5f3ff,#fdf2f8);text-align:center;">
+    <div style="${F}font-size:28px;font-weight:700;color:#1a4168;margin-bottom:8px;">${esc(orcamento.fornecedor_nome || orcamento.operacao || '')}</div>
+    <div style="${F}font-size:18px;color:#6b7280;">é na 3W Hotelaria!</div>
+  </td></tr>`}
+
+  <!-- RODAPÉ DOURADO - DADOS DO CLIENTE -->
+  <tr><td style="background-color:#c4942c;padding:20px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="vertical-align:top;width:60%;">
+          <div style="${F}font-size:16px;font-weight:700;color:#1a4168;margin-bottom:8px;">
+            ${esc(orcamento.cliente_cnpj || '')} &nbsp; ${esc(orcamento.cliente_nome || '')}
+          </div>
+          <div style="${F}font-size:13px;color:#000000;line-height:20px;">
+            ✉️ ${esc(orcamento.cliente_email || '—')}<br/>
+            📍 ${esc(orcamento.cliente_endereco || '—')}<br/>
+            📞 ${esc(orcamento.cliente_telefone || '—')}
+          </div>
+        </td>
+        <td style="vertical-align:top;text-align:right;width:40%;">
+          <div style="${F}font-size:14px;font-weight:700;color:#1a4168;margin-bottom:8px;">Endereço de Entrega</div>
+          <div style="${F}font-size:13px;color:#000000;">${esc(orcamento.cliente_endereco || '—')}</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding-top:12px;border-top:1px solid rgba(26,65,104,0.3);text-align:center;">
+          <div style="${F}font-size:13px;color:#1a4168;">
+            Segue abaixo o orçamento solicitado. Estamos à disposição para quaisquer esclarecimentos e alterações. <strong>Bons Negócios!</strong>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ============ PÁGINA 2 - ITENS E DETALHES ============ -->
+
+  <!-- TABELA DE ITENS -->
+  <tr><td style="padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+      <tr>
+        ${colHeaders.map(h => `<th style="padding:10px 8px;background-color:#1a4168;color:#ffffff;${F}font-size:12px;font-weight:700;border:1px solid #ffffff;text-align:center;">${h}</th>`).join('')}
+      </tr>
+      ${itemRows}
+    </table>
+  </td></tr>
+
+  <!-- ATENÇÃO + RESUMO FINANCEIRO lado a lado -->
+  <tr><td style="padding:0 24px 24px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <!-- BOX ATENÇÃO -->
+        <td width="48%" style="vertical-align:top;padding-right:10px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;border:2px solid #d1d5db;border-radius:8px;">
+            <tr><td style="padding:16px;">
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                 <tr>
-                  <td style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Código</td>
-                  <td style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Descrição</td>
-                  <td align="center" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Qtd.</td>
-                  <td align="right" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Valor Unit.</td>
-                  <td align="right" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Total</td>
+                  <td style="width:36px;height:36px;background-color:#c4942c;border-radius:50%;text-align:center;vertical-align:middle;${F}font-size:20px;color:#ffffff;">⚠</td>
+                  <td style="padding-left:10px;${F}font-size:16px;font-weight:700;color:#111827;">Atenção</td>
                 </tr>
-                ${linhasItens}
               </table>
-            `)}
-            <tr>
-              <td style="padding:0 24px 24px 24px;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td width="48%" style="vertical-align:top; padding-right:12px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
-                        <tr>
-                          <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">Logística</td>
-                        </tr>
-                        <tr>
-                          <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#374151;">
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                              ${buildInfoRow('Frete', orcamento.frete_tipo || 'CIF (Incluso)')}
-                              ${buildInfoRow('Valor do frete', formatCurrency(frete))}
-                              ${buildInfoRow('Prazo de entrega', orcamento.prazo_entrega || '—')}
-                              ${buildInfoRow('Validade', formatDate(orcamento.data_validade))}
-                            </table>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                    <td width="52%" style="vertical-align:top; padding-left:12px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
-                        <tr>
-                          <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">Condições de pagamento</td>
-                        </tr>
-                        <tr>
-                          <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; white-space:normal;">
-                            ${formatMultilineText(condicoesPagamento || 'Não informado')}
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            ${buildEmailSection('Resumo financeiro', `
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                ${buildCurrencyRow('Subtotal', subtotal)}
-                ${buildCurrencyRow(`Impostos${impostosPercentual > 0 ? ` (${impostosPercentual.toFixed(2)}%)` : ''}`, impostos)}
-                ${buildCurrencyRow(`Desconto${descontoPercentual > 0 ? ` (${descontoPercentual.toFixed(2)}%)` : ''}`, descontoValor)}
-                ${buildCurrencyRow('Frete', frete)}
-                ${buildCurrencyRow('Total final', total, true)}
-              </table>
-            `)}
-            ${buildEmailSection('DIFAL e observações', `
-              <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; margin-bottom:16px;"><strong>DIFAL:</strong><br />${formatMultilineText(orcamento.difal_texto || 'Este orçamento considera que o cliente possui inscrição estadual ativa. Caso não tenha, informe o vendedor para os ajustes tributários.')}</div>
-              <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; margin-bottom:${orcamento.observacoes_gerais ? '16px' : '0'};"><strong>Observações:</strong><br />${formatMultilineText(orcamento.observacoes || '—')}</div>
-              ${orcamento.observacoes_gerais ? `<div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151;"><strong>Observações gerais:</strong><br />${formatMultilineText(orcamento.observacoes_gerais)}</div>` : ''}
-            `)}
-            ${termosFornecedor ? buildEmailSection(layoutMidea ? 'Termos legais Midea Carrier' : 'Termos do fabricante', `<div style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:21px; color:#374151;">${formatMultilineText(termosFornecedor)}</div>`) : ''}
-            ${buildEmailSection('Termos legais da 3W Hotelaria', `
-              <div style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:21px; color:#374151;">
-                • O faturamento será realizado diretamente pelo Fabricante/Fornecedor.<br />
-                • Garantias e eventuais manuais/materiais de instrução são fornecidos diretamente pelo Fabricante/Fornecedor.<br />
-                • As políticas comerciais variam conforme o Fabricante/Fornecedor.<br />
-                • Questões de DIFAL dependem do estado do cliente, inscrição estadual e unidade fornecedora.<br />
-                • Mudanças de tabela de preços do Fabricante/Fornecedor podem ocorrer durante a validade do orçamento.<br />
-                • Para questões pós-venda, o cliente deverá contatar diretamente o SAC de ${escapeHtml(fornecedorNome)}.
+              <div style="${F}font-size:12px;color:#374151;line-height:18px;">
+                Antes de confirmar o pedido, recomendamos:<br/><br/>
+                • Confira todos os itens do orçamento, em especial a descrição e quantidade.<br/>
+                • Verifique as condições e forma de pagamento, informações sobre o frete, entrega e Difal.<br/>
+                • Leia atentamente as observações do orçamento.<br/>
+                • Veja os Termos Gerais da 3W Hotelaria.
               </div>
-            `)}
-            <tr>
-              <td style="padding:0 24px 32px 24px;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td align="center" style="padding-bottom:12px;">
-                      ${buildEmailButton('Falar com o vendedor', whatsappHref, '#16a34a')}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td align="center">
-                      ${buildEmailButton('Confirmar pedido', confirmacaoHref, '#c4942c')}
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 24px 24px 24px; text-align:center; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
-                ${logoFornecedor ? `<img src="${escapeHtml(logoFornecedor)}" alt="${escapeHtml(fornecedorNome)}" style="display:block; margin:0 auto 12px auto; max-width:140px; height:auto;" />` : ''}
-                Este orçamento foi preparado para leitura em Gmail, Outlook e Apple Mail, com largura adaptável e sem rolagem horizontal.
-              </td>
-            </tr>
+            </td></tr>
+          </table>
+        </td>
+        <!-- RESUMO FINANCEIRO -->
+        <td width="52%" style="vertical-align:top;padding-left:10px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:8px;overflow:hidden;">
+            <!-- Subtotal -->
+            <tr><td style="padding:12px 16px;background-color:#c4942c;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="${F}font-size:14px;font-weight:700;color:#ffffff;">Subtotal</td>
+                <td align="right" style="${F}font-size:18px;font-weight:700;color:#ffffff;">${esc(formatCurrency(subtotal))}</td>
+              </tr></table>
+            </td></tr>
+            <!-- Impostos -->
+            <tr><td style="padding:10px 16px;background-color:#ffffff;border-left:2px solid #d1d5db;border-right:2px solid #d1d5db;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="${F}font-size:13px;color:#374151;">Impostos</td>
+                <td align="center" style="${F}font-size:13px;color:#374151;width:60px;">${impostosPerc.toFixed(2)}%</td>
+                <td align="right" style="${F}font-size:13px;font-weight:600;color:#374151;width:100px;">${esc(formatCurrency(impostos))}</td>
+              </tr></table>
+            </td></tr>
+            ${descontoVal > 0 ? `
+            <!-- Desconto -->
+            <tr><td style="padding:10px 16px;background-color:#ffffff;border-left:2px solid #d1d5db;border-right:2px solid #d1d5db;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="${F}font-size:13px;color:#374151;">Desconto</td>
+                <td align="center" style="${F}font-size:13px;color:#374151;width:60px;">${descontoPerc.toFixed(2)}%</td>
+                <td align="right" style="${F}font-size:13px;font-weight:600;color:#dc2626;width:100px;">-${esc(formatCurrency(descontoVal))}</td>
+              </tr></table>
+            </td></tr>` : ''}
+            <!-- Total Final -->
+            <tr><td style="padding:14px 16px;background-color:#1a4168;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="${F}font-size:14px;font-weight:700;color:#ffffff;">Valor Final</td>
+                <td align="right" style="${F}font-size:22px;font-weight:700;color:#ffffff;">${esc(formatCurrency(total))}</td>
+              </tr></table>
+            </td></tr>
           </table>
         </td>
       </tr>
     </table>
-  </body>
+  </td></tr>
+
+  <!-- FRETE / ENTREGA / DIFAL (esquerda) | CONDIÇÕES (direita) -->
+  <tr><td style="padding:0 24px 24px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <!-- ESQUERDA: Frete + Entrega + Difal -->
+        <td width="35%" style="vertical-align:top;padding-right:10px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
+            <!-- Frete + Entrega lado a lado -->
+            <tr>
+              <td width="50%" style="border-right:1px solid #d1d5db;border-bottom:2px solid #d1d5db;">
+                <div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;">
+                  <strong style="${F}font-size:12px;color:#111827;">🚚 Frete</strong>
+                </div>
+                <div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">
+                  ${esc(orcamento.frete_tipo || 'CIF (Incluso)')}
+                </div>
+              </td>
+              <td width="50%" style="border-bottom:2px solid #d1d5db;">
+                <div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;">
+                  <strong style="${F}font-size:12px;color:#111827;">📦 Entrega</strong>
+                </div>
+                <div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">
+                  ${esc(orcamento.prazo_entrega || '45/60 dias')}
+                </div>
+              </td>
+            </tr>
+            <!-- Difal -->
+            <tr><td colspan="2">
+              <div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;">
+                <strong style="${F}font-size:12px;color:#111827;">💲 Difal</strong>
+              </div>
+              <div style="padding:10px;background-color:#eff6ff;${F}font-size:11px;color:#374151;line-height:16px;">
+                ${nl2br(orcamento.difal_texto || 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.')}
+              </div>
+            </td></tr>
+          </table>
+        </td>
+        <!-- DIREITA: Condições de Pagamento -->
+        <td width="65%" style="vertical-align:top;padding-left:10px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
+            <tr><td style="background-color:#f3f4f6;padding:10px;text-align:center;border-bottom:2px solid #d1d5db;">
+              <strong style="${F}font-size:13px;color:#111827;">💳 Condições e Forma de Pagamento</strong>
+            </td></tr>
+            <tr><td style="padding:14px;${F}font-size:12px;line-height:18px;color:#374151;">
+              ${layoutMidea ? `<div style="font-weight:600;margin-bottom:8px;">CONDIÇÕES DE PAGAMENTO:</div>` : ''}
+              ${nl2br(condicoesPag)}
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- OBSERVAÇÕES GERAIS -->
+  ${orcamento.observacoes_gerais ? `
+  <tr><td style="padding:0 24px 24px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
+      <tr><td style="padding:10px 16px;background-color:#f3f4f6;border-bottom:2px solid #d1d5db;${F}font-size:14px;font-weight:700;color:#111827;">Observações Gerais</td></tr>
+      <tr><td style="padding:14px 16px;${F}font-size:13px;line-height:20px;color:#374151;">${nl2br(orcamento.observacoes_gerais)}</td></tr>
+    </table>
+  </td></tr>` : ''}
+
+  <!-- TERMOS DO FABRICANTE -->
+  ${termosForn ? `
+  <tr><td style="padding:0 24px 24px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #1a4168;border-radius:8px;background-color:#eff6ff;overflow:hidden;">
+      <tr><td style="padding:14px 16px;border-bottom:2px solid #1a4168;">
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          ${logoFornecedor ? `<td style="padding-right:12px;"><img src="${esc(logoFornecedor)}" alt="" style="height:40px;width:auto;"/></td>` : ''}
+          <td style="${F}font-size:16px;font-weight:700;color:#1a4168;">${layoutMidea ? 'Termos Legais Midea Carrier' : 'Termos do Fabricante'}</td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:14px 16px;${F}font-size:12px;line-height:19px;color:#1f2937;">${nl2br(termosForn)}</td></tr>
+    </table>
+  </td></tr>` : ''}
+
+  <!-- TERMOS LEGAIS 3W -->
+  <tr><td style="padding:0 24px 24px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;background-color:#f9fafb;overflow:hidden;">
+      <tr><td style="padding:14px 16px;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;"><tr>
+          <td style="background-color:#1a4168;padding:6px;border-radius:4px;"><img src="${esc(logo3w || '')}" alt="3W" style="height:24px;width:auto;display:block;"/></td>
+          <td style="padding-left:10px;${F}font-size:14px;font-weight:700;color:#c4942c;">TERMOS LEGAIS DA 3W HOTELARIA</td>
+        </tr></table>
+        <div style="${F}font-size:11px;line-height:17px;color:#374151;">
+          • O Faturamento será realizado diretamente pelo Fabricante/Fornecedor.<br/>
+          • Garantias, bem como eventuais manuais/materiais de instrução e bom uso, são fornecidos diretamente pelo Fabricante/Fornecedor.<br/>
+          • As políticas comerciais variam conforme o Fabricante/Fornecedor.<br/>
+          • As questões de DIFAL dependem do estado de localização do cliente, situação cadastral de inscrição estadual do cliente, e estado da unidade/fábrica fornecedora.<br/>
+          • Embora o sistema atribua automaticamente a validade do Orçamento conforme política de expiração vigente, a 3W não se responsabiliza por eventuais mudanças de tabela de preços do Fabricante/Fornecedor, ainda que isto ocorra no período de validade do orçamento.<br/>
+          • Para eventuais questões pós-venda, o cliente deverá fazer contato diretamente com o SAC da ${esc(fornecedorNome)}.
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- BOTÕES DE AÇÃO -->
+  <tr><td style="padding:0 24px 32px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td width="48%" align="center" style="padding-right:8px;">
+          <a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#16a34a;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">
+            📞 Falar com o Vendedor
+          </a>
+        </td>
+        <td width="48%" align="center" style="padding-left:8px;">
+          <a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:#c4942c;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">
+            📦 Confirmar Pedido
+          </a>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
 </html>`
   }
 
