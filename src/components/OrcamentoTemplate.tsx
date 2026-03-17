@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
+import { formatDateBR } from '@/lib/date'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
