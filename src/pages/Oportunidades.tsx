@@ -165,7 +165,7 @@ export default function Oportunidades() {
                   <TableHead className="w-[160px] text-white">Número</TableHead>
                   <TableHead className="text-white">Cliente</TableHead>
                   <TableHead className="text-white">Gestão</TableHead>
-                  <TableHead className="text-white">Operação</TableHead>
+                  <TableHead className="text-white">Fornecedor</TableHead>
                   <TableHead className="text-white">Status</TableHead>
                   <TableHead className="text-white">Data Cadastro</TableHead>
                   <TableHead className="text-center w-[100px] text-white">Ações</TableHead>
