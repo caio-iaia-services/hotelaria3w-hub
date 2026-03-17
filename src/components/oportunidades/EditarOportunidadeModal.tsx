@@ -377,7 +377,7 @@ export function EditarOportunidadeModal({
             </div>
 
             <div>
-              <Label>Nova Operação</Label>
+              <Label>Novo Fornecedor</Label>
               <Select value={novaOperacao} onValueChange={setNovaOperacao}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione..." />
