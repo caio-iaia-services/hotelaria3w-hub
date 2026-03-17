@@ -1137,7 +1137,7 @@ www.3whotelaria.com.br
       <tr><td style="padding:14px 16px;border-bottom:2px solid #1a4168;">
         <table cellpadding="0" cellspacing="0" border="0"><tr>
           ${logoFornecedor ? `<td style="padding-right:12px;"><img src="${esc(logoFornecedor)}" alt="" style="height:40px;width:auto;"/></td>` : ''}
-          <td style="${F}font-size:16px;font-weight:700;color:#1a4168;">${layoutMidea ? 'Termos Legais Midea Carrier' : 'Termos do Fabricante'}</td>
+          <td style="${F}font-size:16px;font-weight:700;color:#1a4168;text-transform:uppercase;">${layoutMidea ? 'TERMOS LEGAIS MIDEA CARRIER' : 'TERMOS DO FABRICANTE'}</td>
         </tr></table>
       </td></tr>
       <tr><td style="padding:14px 16px;${F}font-size:12px;line-height:19px;color:#1f2937;">${nl2br(termosForn)}</td></tr>
