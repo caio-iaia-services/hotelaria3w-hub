@@ -148,8 +148,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
     return icones[tipo] ?? <FileText className="w-5 h-5 text-muted-foreground" />
   }
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const formatDate = (date: string) => formatDateBR(date)
 
   const abrirGoogleDrive = () => {
     window.open('https://drive.google.com', '_blank')
