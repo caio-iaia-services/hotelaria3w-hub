@@ -34,6 +34,21 @@ interface Props {
   onSaved: () => void
 }
 
+interface ClienteAtual {
+  nome_fantasia: string | null
+  cnpj: string | null
+  razao_social: string | null
+  email: string | null
+  telefone: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+}
+
 function parseNum(value: any): number {
   if (value === null || value === undefined) return 0
   if (typeof value === 'number') return isNaN(value) ? 0 : value
@@ -49,6 +64,36 @@ function parseNum(value: any): number {
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function montarEnderecoCliente(cliente?: ClienteAtual | null) {
+  if (!cliente) return null
+
+  const logradouroNumero = [cliente.logradouro, cliente.numero].filter(Boolean).join(', ')
+  const cidadeEstado = [cliente.cidade, cliente.estado].filter(Boolean).join('/')
+  const partes = [
+    logradouroNumero,
+    cliente.complemento,
+    cliente.bairro,
+    cidadeEstado,
+    cliente.cep ? `CEP: ${cliente.cep}` : null,
+  ].filter(Boolean)
+
+  return partes.length > 0 ? partes.join(' - ') : null
+}
+
+function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteAtual | null): Orcamento {
+  if (!cliente) return orcamento
+
+  return {
+    ...orcamento,
+    cliente_nome: cliente.nome_fantasia || orcamento.cliente_nome,
+    cliente_razao_social: cliente.razao_social || orcamento.cliente_razao_social,
+    cliente_cnpj: cliente.cnpj || orcamento.cliente_cnpj,
+    cliente_endereco: montarEnderecoCliente(cliente) || orcamento.cliente_endereco,
+    cliente_email: cliente.email || orcamento.cliente_email,
+    cliente_telefone: cliente.telefone || orcamento.cliente_telefone,
+  }
 }
 
 function isNomeMidea(nome: string | null | undefined) {
@@ -100,7 +145,20 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
 
     if (orc) {
       const o = orc as any
-      setOrcamento(o as Orcamento)
+      const [{ data: clienteAtual }, { data: forn }] = await Promise.all([
+        o.cliente_id
+          ? supabase
+              .from('clientes')
+              .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+              .eq('id', o.cliente_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        o.fornecedor_id
+          ? supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ])
+
+      setOrcamento(aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null))
       setDados({
         prazo_entrega: o.prazo_entrega || '',
         validade_dias: o.validade_dias || 30,
@@ -119,14 +177,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagemFile(null)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
-
-      // Fetch fornecedor tipo_layout
-      if (o.fornecedor_id) {
-        const { data: forn } = await supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
-        setTipoLayout((forn as any)?.tipo_layout || null)
-      } else {
-        setTipoLayout(null)
-      }
+      setTipoLayout((forn as any)?.tipo_layout || null)
     }
 
     if (itensDb) {
@@ -245,6 +296,15 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
 
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
+      const { data: clienteAtual } = orcamento.cliente_id
+        ? await supabase
+            .from('clientes')
+            .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+            .eq('id', orcamento.cliente_id)
+            .maybeSingle()
+        : { data: null }
+
+      const clienteEnderecoAtual = montarEnderecoCliente((clienteAtual as ClienteAtual | null) ?? null)
 
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
@@ -264,6 +324,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: dados.observacoes_gerais,
         difal_texto: dados.difal_texto,
         imagem_marketing_url: imagemMarketingUrl,
+        cliente_nome: (clienteAtual as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
+        cliente_razao_social: (clienteAtual as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
+        cliente_cnpj: (clienteAtual as ClienteAtual | null)?.cnpj || orcamento.cliente_cnpj,
+        cliente_endereco: clienteEnderecoAtual || orcamento.cliente_endereco,
+        cliente_email: (clienteAtual as ClienteAtual | null)?.email || orcamento.cliente_email,
+        cliente_telefone: (clienteAtual as ClienteAtual | null)?.telefone || orcamento.cliente_telefone,
         updated_at: new Date().toISOString(),
       }
 
