@@ -369,7 +369,7 @@ export function EditarOportunidadeModal({
             </div>
 
             <div>
-              <Label>Operação Atual</Label>
+              <Label>Fornecedor Atual</Label>
               <div className="mt-1 flex gap-2">
                 <Badge>{cardParaTrocar?.operacao}</Badge>
                 <Badge variant="outline">{cardParaTrocar?.gestao}</Badge>
