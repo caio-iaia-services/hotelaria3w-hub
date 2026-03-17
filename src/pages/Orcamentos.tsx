@@ -1306,7 +1306,7 @@ ${inlinedContent}
             </Button>
             <Button
               onClick={enviarEmailProfissional}
-              disabled={!emailDestinatarios || !emailAssunto || !emailMensagem || enviandoEmail}
+              disabled={!emailDestinatarios || !emailAssunto || enviandoEmail}
             >
               {enviandoEmail ? (
                 <>
