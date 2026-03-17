@@ -764,8 +764,8 @@ export default function AcoesComerciais() {
       return
     }
 
-    if (!clienteCompleto?.logradouro || !clienteCompleto?.numero) {
-      toast.error('Endereço completo do cliente é obrigatório. Atualize o cadastro do cliente.')
+    if (!dadosOrcamento.endereco_entrega.trim()) {
+      toast.error('Endereço de entrega é obrigatório.')
       return
     }
 
