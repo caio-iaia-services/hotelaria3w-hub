@@ -152,7 +152,7 @@ export function EditarOportunidadeModal({
       buscarOperacoes(oportunidade.id);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao trocar operação");
+      toast.error("Erro ao trocar fornecedor");
     }
   };
 
