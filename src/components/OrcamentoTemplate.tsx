@@ -183,7 +183,8 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
     return new Date(date).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'America/Sao_Paulo'
     })
   }
 
