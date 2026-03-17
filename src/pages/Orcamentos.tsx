@@ -357,23 +357,35 @@ export default function Orcamentos() {
         } as Orcamento)
       : o
 
-    const [fornecedor, { data: itens }] = await Promise.all([
+    const [fornecedor, { data: itens }, { data: clienteAtual }] = await Promise.all([
       buscarFornecedorLayout(orcamentoBase),
       supabase
         .from('orcamento_itens')
         .select('*')
         .eq('orcamento_id', o.id)
-        .order('ordem')
+        .order('ordem'),
+      orcamentoBase.cliente_id
+        ? supabase
+            .from('clientes')
+            .select('id, nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+            .eq('id', orcamentoBase.cliente_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
+
+    const orcamentoComCliente = aplicarDadosClienteNoOrcamento(
+      orcamentoBase,
+      (clienteAtual as ClienteAtual | null) ?? null
+    )
 
     const orcamentoComFornecedor = fornecedor
       ? ({
-          ...orcamentoBase,
+          ...orcamentoComCliente,
           fornecedor_tipo_layout: fornecedor.tipo_layout,
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
         } as Orcamento)
-      : orcamentoBase
+      : orcamentoComCliente
 
     setOrcamentoVisualizar(orcamentoComFornecedor)
     setItensVisualizar((itens as OrcamentoItem[]) || [])
