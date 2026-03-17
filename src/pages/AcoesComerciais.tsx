@@ -804,13 +804,9 @@ export default function AcoesComerciais() {
 
       console.log('💰 VALORES CALCULADOS:', { subtotal, impPerc, valorImpostos, descPerc, valorDesconto, valorFrete, total, itensDetails: itensOrcamento.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total })) })
 
-      // 3. Calcular data de validade (usando horário de Brasília)
-      const agora = new Date()
-      // Formata como YYYY-MM-DD no fuso de São Paulo
-      const hojeStr = agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-      const hoje = new Date(hojeStr + 'T12:00:00')
-      const dataValidade = new Date(hoje)
-      dataValidade.setDate(dataValidade.getDate() + dadosOrcamento.validade_dias)
+      // 3. Calcular datas no fuso de São Paulo sem depender do fuso do navegador
+      const dataEmissaoIso = getSaoPauloDateISOString(0)
+      const dataValidadeIso = getSaoPauloDateISOString(dadosOrcamento.validade_dias)
 
       // 4. Preparar endereço completo
       const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`
