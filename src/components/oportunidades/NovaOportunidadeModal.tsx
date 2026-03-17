@@ -422,8 +422,8 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
             {/* Header with VIP button */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-foreground">Selecione as Operações</h3>
-                <p className="text-sm text-muted-foreground">Escolha uma ou mais operações para este cliente</p>
+                <h3 className="font-semibold text-foreground">Selecione os Fornecedores</h3>
+                <p className="text-sm text-muted-foreground">Escolha um ou mais fornecedores para este cliente</p>
               </div>
               <Button
                 type="button"
