@@ -740,14 +740,13 @@ export default function Orcamentos() {
 
 
   function gerarMensagemPadrao(orcamento: Orcamento) {
-    return `Prezado(a) ${orcamento.cliente_nome},
+    return `Prezado(a) ${orcamento.cliente_razao_social || orcamento.cliente_nome},
 
-Segue em anexo o orçamento ${orcamento.numero}.
+Segue o orçamento ${orcamento.numero}.
 
 DETALHES DO ORÇAMENTO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Fornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || '-'}
-Valor Total: ${formatCurrency(orcamento.total)}
 Valor Total: ${formatCurrency(orcamento.total)}
 Prazo de Entrega: ${orcamento.prazo_entrega || '-'}
 Validade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : '-'}
@@ -760,8 +759,7 @@ Atenciosamente,
 Equipe Comercial
 3W Hotelaria - Hospitalidade com Excelência
 www.3whotelaria.com.br
-(11) 5197-5779
-comercial1@3whotelaria.com.br`
+(11) 5197-5779`
   }
 
   function restaurarMensagemPadrao() {
