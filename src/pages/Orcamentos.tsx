@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { supabase as cloudSupabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
