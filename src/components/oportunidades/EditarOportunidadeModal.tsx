@@ -168,7 +168,7 @@ export function EditarOportunidadeModal({
 
       if (error) throw error;
 
-      toast.success("Operação removida!");
+      toast.success("Fornecedor removido!");
 
       // Check remaining active cards
       const cardsRestantes = operacoes.filter(
