@@ -264,7 +264,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-6 h-6 flex-shrink-0" />
-                  <span className="text-lg">comercial1@3whotelaria.com.br</span>
+                  <span className="text-lg">{emailExibicao}</span>
                 </div>
               </div>
             </div>
