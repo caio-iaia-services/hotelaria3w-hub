@@ -540,7 +540,7 @@ export default function AcoesComerciais() {
     // Fetch client details
     const { data: cliente } = await supabase
       .from('clientes')
-      .select('razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+      .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
       .eq('id', cardSelecionado.cliente_id)
       .maybeSingle()
 
