@@ -820,8 +820,8 @@ export default function AcoesComerciais() {
       const dataEmissaoIso = getLocalDateString()
       const dataValidadeIso = addDaysToLocalDateString(dadosOrcamento.validade_dias)
 
-      // 4. Preparar endereço completo
-      const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`
+      // 4. Usar endereço de entrega editável (do campo do modal)
+      const enderecoCompleto = dadosOrcamento.endereco_entrega || ''
 
       // 5. Preparar termos 3W
       const termos3w = TERMOS_3W.replace('[VALIDADE]', String(dadosOrcamento.validade_dias))
