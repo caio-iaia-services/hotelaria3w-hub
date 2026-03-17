@@ -205,16 +205,16 @@ export default function Orcamentos() {
     if (!error) {
       let rows = (data || []) as any[]
 
-      // Enrich: resolve cliente_nome from clientes table if missing
+      // Enrich: sempre usar os dados atuais do cliente pelo cliente_id
       const clienteIds = [...new Set(rows.filter(r => r.cliente_id).map(r => r.cliente_id))]
-      let clienteMap: Record<string, { nome_fantasia: string; cnpj: string }> = {}
+      let clienteMap: Record<string, ClienteAtual> = {}
       if (clienteIds.length > 0) {
         const { data: clientes } = await supabase
           .from('clientes')
-          .select('id, nome_fantasia, cnpj')
+          .select('id, nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
           .in('id', clienteIds)
         if (clientes) {
-          clienteMap = Object.fromEntries(clientes.map((c: any) => [c.id, { nome_fantasia: c.nome_fantasia, cnpj: c.cnpj }]))
+          clienteMap = Object.fromEntries(clientes.map((c: any) => [c.id, c as ClienteAtual]))
         }
       }
 
@@ -237,14 +237,13 @@ export default function Orcamentos() {
         }
       }
 
-      // Map rows, filling in missing fields from joined data
+      // Map rows, priorizando snapshot atual do cliente
       const enrichedRows = rows.map((r: any) => {
         const cliente = clienteMap[r.cliente_id]
         const card = cardMap[r.cliente_id]
-        return {
+
+        const orcamentoBase = {
           ...r,
-          cliente_nome: r.cliente_nome || cliente?.nome_fantasia || '',
-          cliente_cnpj: r.cliente_cnpj || cliente?.cnpj || '',
           fornecedor_nome: r.fornecedor_nome || card?.operacao || '',
           operacao: r.operacao || card?.operacao || null,
           gestao: r.gestao || card?.gestao || null,
@@ -253,6 +252,8 @@ export default function Orcamentos() {
           frete: parseNum(r.frete) || parseNum(r.valor_frete) || 0,
           desconto: parseNum(r.desconto) || parseNum(r.valor_desconto) || 0,
         } as Orcamento
+
+        return aplicarDadosClienteNoOrcamento(orcamentoBase, cliente)
       })
 
       setOrcamentos(enrichedRows)
