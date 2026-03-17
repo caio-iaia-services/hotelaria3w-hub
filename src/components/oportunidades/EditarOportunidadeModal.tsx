@@ -348,9 +348,9 @@ export function EditarOportunidadeModal({
       <Dialog open={swapOpen} onOpenChange={setSwapOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Trocar Operação</DialogTitle>
+            <DialogTitle>Trocar Fornecedor</DialogTitle>
             <DialogDescription>
-              Selecione a nova operação para substituir {cardParaTrocar?.operacao}
+              Selecione o novo fornecedor para substituir {cardParaTrocar?.operacao}
             </DialogDescription>
           </DialogHeader>
 
