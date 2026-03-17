@@ -179,15 +179,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
     }).format(toNumber(value))
   }
 
-  const formatDate = (date: string) => {
-    if (!date) return '-'
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'America/Sao_Paulo'
-    })
-  }
+  const formatDate = (date: string) => formatDateBR(date)
 
   const dividirCodigo = (codigo: string) => {
     if (!codigo) return []

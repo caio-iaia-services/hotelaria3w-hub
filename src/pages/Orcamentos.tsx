@@ -70,8 +70,7 @@ function formatCurrency(value: any) {
 }
 
 function formatDate(date: string | null | undefined) {
-  if (!date) return '-'
-  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(date))
+  return formatDateBR(date)
 }
 
 interface ClienteAtual {

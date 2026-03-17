@@ -293,7 +293,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       }
 
       // Update orcamento record
-      const dataValidadeIso = getSaoPauloDateISOString(dados.validade_dias || 30)
+      const dataValidadeIso = addDaysToLocalDateString(dados.validade_dias || 30)
 
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
       const { data: clienteAtual } = orcamento.cliente_id
