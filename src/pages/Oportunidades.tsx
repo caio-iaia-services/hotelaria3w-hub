@@ -116,7 +116,7 @@ export default function Oportunidades() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Oportunidades</h1>
-          <p className="text-sm text-muted-foreground mt-1">Cadastro e distribuição de oportunidades por gestão e operação</p>
+          <p className="text-sm text-muted-foreground mt-1">Cadastro e distribuição de oportunidades por gestão e fornecedor</p>
         </div>
         <Button className="gap-2 bg-[#1a4168] hover:bg-[#153554] text-white" onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" />Nova Oportunidade
