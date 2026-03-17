@@ -141,7 +141,7 @@ export default function CrmGestao() {
       <div className="bg-muted/50 rounded-lg p-4 border border-border">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground/80">Filtrar Operações</span>
+          <span className="text-sm font-medium text-foreground/80">Filtrar Fornecedores</span>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {operations.map((op) => (

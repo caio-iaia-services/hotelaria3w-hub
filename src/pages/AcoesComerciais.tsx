@@ -1148,7 +1148,7 @@ export default function AcoesComerciais() {
 
               {operacaoSelecionada && !fornecedorSelecionado && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Nenhum fornecedor vinculado a esta operação
+                  Nenhum fornecedor vinculado
                 </p>
               )}
             </div>

@@ -51,7 +51,7 @@ export function OpportunityModal({ card, open, onOpenChange }: OpportunityModalP
         <div className="space-y-4 pt-2">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Operação</p>
+              <p className="text-xs text-muted-foreground">Fornecedor</p>
               <Badge variant="secondary" className="mt-1">{card.operacao}</Badge>
             </div>
             <div>
