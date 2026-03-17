@@ -69,6 +69,52 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
+interface ClienteAtual {
+  id: string
+  nome_fantasia: string | null
+  cnpj: string | null
+  razao_social: string | null
+  email: string | null
+  telefone: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+}
+
+function montarEnderecoCliente(cliente?: ClienteAtual | null) {
+  if (!cliente) return null
+
+  const logradouroNumero = [cliente.logradouro, cliente.numero].filter(Boolean).join(', ')
+  const cidadeEstado = [cliente.cidade, cliente.estado].filter(Boolean).join('/')
+  const partes = [
+    logradouroNumero,
+    cliente.complemento,
+    cliente.bairro,
+    cidadeEstado,
+    cliente.cep ? `CEP: ${cliente.cep}` : null,
+  ].filter(Boolean)
+
+  return partes.length > 0 ? partes.join(' - ') : null
+}
+
+function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteAtual | null): Orcamento {
+  if (!cliente) return orcamento
+
+  return {
+    ...orcamento,
+    cliente_nome: cliente.nome_fantasia || orcamento.cliente_nome,
+    cliente_razao_social: cliente.razao_social || orcamento.cliente_razao_social,
+    cliente_cnpj: cliente.cnpj || orcamento.cliente_cnpj,
+    cliente_endereco: montarEnderecoCliente(cliente) || orcamento.cliente_endereco,
+    cliente_email: cliente.email || orcamento.cliente_email,
+    cliente_telefone: cliente.telefone || orcamento.cliente_telefone,
+  }
+}
+
 export default function Orcamentos() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)

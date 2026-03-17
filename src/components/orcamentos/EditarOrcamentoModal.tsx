@@ -34,6 +34,21 @@ interface Props {
   onSaved: () => void
 }
 
+interface ClienteAtual {
+  nome_fantasia: string | null
+  cnpj: string | null
+  razao_social: string | null
+  email: string | null
+  telefone: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  estado: string | null
+  cep: string | null
+}
+
 function parseNum(value: any): number {
   if (value === null || value === undefined) return 0
   if (typeof value === 'number') return isNaN(value) ? 0 : value
