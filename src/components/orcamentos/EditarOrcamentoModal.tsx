@@ -395,7 +395,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         <DialogHeader>
           <DialogTitle>Editar Orçamento {orcamento?.numero}</DialogTitle>
           <DialogDescription>
-            {orcamento?.cliente_nome} — {orcamento?.operacao || orcamento?.fornecedor_nome || ''}
+            {orcamento?.cliente_nome} — {orcamento?.fornecedor_nome || orcamento?.operacao || ''}
           </DialogDescription>
         </DialogHeader>
 
