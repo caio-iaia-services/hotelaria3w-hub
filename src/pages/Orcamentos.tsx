@@ -26,6 +26,8 @@ import {
 import { toast } from 'sonner'
 import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 import { EditarOrcamentoModal } from '@/components/orcamentos/EditarOrcamentoModal'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
+import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -304,45 +306,69 @@ export default function Orcamentos() {
     if (fornecedorId) {
       const { data } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .eq('id', fornecedorId)
         .maybeSingle()
 
-      if (data) return data as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+      if (data) {
+        return data as {
+          tipo_layout: string | null
+          nome_fantasia: string
+          logotipo_url: string | null
+          imagem_template_url: string | null
+        }
+      }
     }
 
     if (!nomeBusca) return null
 
     const { data: exato } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .eq('nome_fantasia', nomeBusca)
       .maybeSingle()
 
-    if (exato) return exato as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    if (exato) {
+      return exato as {
+        tipo_layout: string | null
+        nome_fantasia: string
+        logotipo_url: string | null
+        imagem_template_url: string | null
+      }
+    }
 
     const { data: caseInsensitive } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .ilike('nome_fantasia', nomeBusca)
       .limit(1)
 
     if (caseInsensitive && caseInsensitive.length > 0) {
-      return caseInsensitive[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+      return caseInsensitive[0] as {
+        tipo_layout: string | null
+        nome_fantasia: string
+        logotipo_url: string | null
+        imagem_template_url: string | null
+      }
     }
 
     const { data: parcial } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .ilike('nome_fantasia', `%${nomeBusca}%`)
       .limit(1)
 
     return parcial && parcial.length > 0
-      ? (parcial[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null })
+      ? (parcial[0] as {
+          tipo_layout: string | null
+          nome_fantasia: string
+          logotipo_url: string | null
+          imagem_template_url: string | null
+        })
       : null
   }
 
-  async function visualizarOrcamento(o: Orcamento) {
+  async function carregarOrcamentoCompleto(o: Orcamento) {
     const { data: orcamentoDb } = await supabase
       .from('orcamentos')
       .select('*')
@@ -387,11 +413,20 @@ export default function Orcamentos() {
           fornecedor_tipo_layout: fornecedor.tipo_layout,
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
+          fornecedor_imagem_template_url: fornecedor.imagem_template_url,
         } as Orcamento)
       : orcamentoComCliente
 
-    setOrcamentoVisualizar(orcamentoComFornecedor)
-    setItensVisualizar((itens as OrcamentoItem[]) || [])
+    return {
+      orcamento: orcamentoComFornecedor,
+      itens: ((itens as OrcamentoItem[]) || []).sort((a, b) => a.ordem - b.ordem),
+    }
+  }
+
+  async function visualizarOrcamento(o: Orcamento) {
+    const { orcamento, itens } = await carregarOrcamentoCompleto(o)
+    setOrcamentoVisualizar(orcamento)
+    setItensVisualizar(itens)
     setModalVisualizar(true)
   }
 
@@ -781,151 +816,286 @@ www.3whotelaria.com.br
     setModalEnviar(true)
   }
 
-  function inlineStyles(element: HTMLElement): string {
-    const sourceRoot = (element.firstElementChild as HTMLElement | null) || element
-    const clone = sourceRoot.cloneNode(true) as HTMLElement
-    const tempContainer = document.createElement('div')
-    tempContainer.style.position = 'absolute'
-    tempContainer.style.left = '-99999px'
-    tempContainer.style.top = '0'
-    tempContainer.style.width = `${Math.ceil(sourceRoot.getBoundingClientRect().width || 794)}px`
-    tempContainer.style.pointerEvents = 'none'
-    tempContainer.appendChild(clone)
-    document.body.appendChild(tempContainer)
+  function escapeHtml(value: unknown) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
 
-    const important = [
-      'color', 'background', 'background-color', 'background-image', 'background-position', 'background-repeat',
-      'background-size', 'font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'text-align',
-      'text-decoration', 'text-transform', 'letter-spacing', 'padding', 'padding-top', 'padding-right',
-      'padding-bottom', 'padding-left', 'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-      'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'border-radius', 'border-collapse',
-      'border-spacing', 'width', 'max-width', 'min-width', 'height', 'max-height', 'min-height', 'display',
-      'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row', 'column-gap', 'row-gap', 'gap',
-      'flex-direction', 'justify-content', 'align-items', 'align-self', 'flex-wrap', 'flex', 'flex-grow',
-      'flex-shrink', 'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y', 'box-sizing',
-      'text-overflow', 'opacity', 'position', 'top', 'right', 'bottom', 'left', 'transform', 'object-fit',
-      'object-position', 'list-style-type', 'list-style-position'
-    ]
+  function formatMultilineText(value: unknown) {
+    const text = String(value ?? '').trim()
+    return text ? escapeHtml(text).replace(/\n/g, '<br />') : '—'
+  }
 
-    const applyInlineStyles = (sourceEl: Element, targetEl: Element) => {
-      const sourceHtmlEl = sourceEl as HTMLElement
-      const targetHtmlEl = targetEl as HTMLElement
-      const computed = window.getComputedStyle(sourceHtmlEl)
-      const styles = important
-        .map((prop) => {
-          const val = computed.getPropertyValue(prop)
-          return val ? `${prop}:${val}` : ''
-        })
-        .filter(Boolean)
-        .join(';')
+  function getAbsoluteUrl(url?: string | null) {
+    if (!url) return null
+    if (/^https?:\/\//i.test(url)) return url
+    if (url.startsWith('/')) return `${window.location.origin}${url}`
+    return `${window.location.origin}/${url.replace(/^\/+/, '')}`
+  }
 
-      targetHtmlEl.setAttribute('style', styles)
+  function buildEmailSection(title: string, content: string) {
+    return `
+      <tr>
+        <td style="padding:0 24px 24px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
+            <tr>
+              <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">
+                ${escapeHtml(title)}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#374151;">
+                ${content}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+  }
 
-      const sourceChildren = Array.from(sourceEl.children)
-      const targetChildren = Array.from(targetEl.children)
-      sourceChildren.forEach((child, index) => {
-        const targetChild = targetChildren[index]
-        if (targetChild) applyInlineStyles(child, targetChild)
-      })
-    }
+  function buildInfoRow(label: string, value: unknown) {
+    return `
+      <tr>
+        <td style="padding:8px 0; width:160px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; color:#6b7280; font-weight:700; vertical-align:top;">
+          ${escapeHtml(label)}
+        </td>
+        <td style="padding:8px 0; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; color:#111827; vertical-align:top;">
+          ${escapeHtml(value || '—')}
+        </td>
+      </tr>`
+  }
 
-    applyInlineStyles(sourceRoot, clone)
+  function buildCurrencyRow(label: string, value: number, highlight = false) {
+    return `
+      <tr>
+        <td style="padding:10px 0; font-family:Arial, Helvetica, sans-serif; font-size:${highlight ? '18px' : '14px'}; line-height:${highlight ? '26px' : '20px'}; color:${highlight ? '#1a4168' : '#374151'}; font-weight:700;">
+          ${escapeHtml(label)}
+        </td>
+        <td align="right" style="padding:10px 0; font-family:Arial, Helvetica, sans-serif; font-size:${highlight ? '22px' : '14px'}; line-height:${highlight ? '30px' : '20px'}; color:${highlight ? '#1a4168' : '#111827'}; font-weight:700;">
+          ${escapeHtml(formatCurrency(value))}
+        </td>
+      </tr>`
+  }
 
-    clone.style.width = '100%'
-    clone.style.maxWidth = `${Math.ceil(sourceRoot.getBoundingClientRect().width || 794)}px`
-    clone.style.margin = '0 auto'
-    clone.style.boxSizing = 'border-box'
-    clone.style.overflow = 'visible'
-
-    clone.querySelectorAll('svg').forEach((svg) => {
-      const fallback = document.createElement('span')
-      fallback.textContent = ' '
-      fallback.setAttribute('style', 'display:inline-block;width:0;height:0;overflow:hidden;')
-      svg.replaceWith(fallback)
-    })
-
-    const origin = window.location.origin
-    clone.querySelectorAll('img').forEach((img) => {
-      const src = img.getAttribute('src')
-      if (src && src.startsWith('/')) {
-        img.setAttribute('src', `${origin}${src}`)
-      }
-      img.setAttribute('style', `${img.getAttribute('style') || ''};max-width:100%;height:auto;display:block;`)
-    })
-
-    clone.querySelectorAll('button').forEach((button) => {
-      const replacement = document.createElement('div')
-      replacement.innerHTML = button.innerHTML
-      replacement.setAttribute('style', button.getAttribute('style') || '')
-      replacement.setAttribute('data-email-action', 'true')
-      button.replaceWith(replacement)
-    })
-
-    Array.from(clone.querySelectorAll('div')).forEach((div) => {
-      const text = (div.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase()
-
-      if (text.includes('frete') && text.includes('entrega') && text.includes('condições e forma de pagamento')) {
-        div.setAttribute('data-email-stack-grid', 'true')
-        Array.from(div.children).forEach((child) => {
-          ;(child as HTMLElement).setAttribute('data-email-stack-item', 'true')
-        })
-      }
-
-      if (text.includes('frete') && text.includes('entrega') && div.children.length === 2) {
-        div.setAttribute('data-email-two-col', 'true')
-      }
-
-      if (text.includes('falar com o vendedor') && text.includes('confirmar o pedido')) {
-        div.setAttribute('data-email-actions', 'true')
-      }
-    })
-
-    const html = clone.outerHTML
-    tempContainer.remove()
-    return html
+  function buildEmailButton(label: string, href: string, backgroundColor: string) {
+    return `
+      <a href="${escapeHtml(href)}" style="display:inline-block; background-color:${backgroundColor}; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:20px; font-weight:700; text-decoration:none; padding:14px 22px; border-radius:8px;">
+        ${escapeHtml(label)}
+      </a>`
   }
 
   async function capturarHtmlOrcamento(): Promise<string | null> {
-    const containerOriginal = await obterConteudoParaExportacao(orcamentoEnviar || undefined)
-    if (!containerOriginal) return null
+    if (!orcamentoEnviar) return null
 
-    const larguraBase = Math.ceil(((containerOriginal.firstElementChild as HTMLElement | null)?.getBoundingClientRect().width) || containerOriginal.getBoundingClientRect().width || 794)
-    const inlinedContent = inlineStyles(containerOriginal)
+    const { orcamento, itens } = await carregarOrcamentoCompleto(orcamentoEnviar)
+
+    const fornecedorNome = (orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '3W Hotelaria'
+    const tipoLayout = String((orcamento as any).fornecedor_tipo_layout || 'padrao')
+    const fornecedorNomeNormalizado = fornecedorNome
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+    const layoutMidea = tipoLayout === 'midea' || ['MIDEA', 'SPRINGER', 'CLIMAZON', 'CARRIER'].some((item) => fornecedorNomeNormalizado.includes(item))
+
+    const subtotal = parseNum((orcamento as any).subtotal) || itens.reduce((acc, item) => acc + parseNum(item.total), 0)
+    const impostosPercentual = parseNum((orcamento as any).impostos_percentual)
+    const impostos = parseNum((orcamento as any).impostos) || subtotal * (impostosPercentual / 100)
+    const descontoPercentual = parseNum((orcamento as any).desconto_percentual)
+    const descontoValor = parseNum((orcamento as any).desconto_valor) || parseNum((orcamento as any).desconto) || subtotal * (descontoPercentual / 100)
+    const frete = parseNum((orcamento as any).frete)
+    const total = parseNum((orcamento as any).total) || subtotal + impostos - descontoValor + frete
+
+    const logo3w = getAbsoluteUrl('/logo_3Whotelaria.jpeg')
+    const logoFornecedor = getAbsoluteUrl((orcamento as any).fornecedor_logotipo_url || null)
+    const marketingUrl = getAbsoluteUrl(
+      resolverImagemMarketing(
+        orcamento.imagem_marketing_url,
+        (orcamento as any).fornecedor_imagem_template_url || null,
+        layoutMidea
+      )
+    )
+
+    const condicoesPagamentoBase = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
+    const condicoesPagamento = layoutMidea
+      ? resolverCondicoesPagamentoMidea(condicoesPagamentoBase)
+      : (condicoesPagamentoBase || '')
+    const termosFornecedor = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea)
+    const emailExibicao = user?.email || 'comercial1@3whotelaria.com.br'
+    const assuntoConfirmacao = encodeURIComponent(`Confirmação do orçamento ${orcamento.numero}`)
+    const whatsappHref = 'https://wa.me/551151975779?text=' + encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}.`)
+    const confirmacaoHref = `mailto:${emailExibicao}?subject=${assuntoConfirmacao}`
+
+    const linhasItens = itens.length > 0
+      ? itens.map((item) => `
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.codigo || '—')}</td>
+          <td style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.descricao)}</td>
+          <td align="center" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(item.quantidade)}</td>
+          <td align="right" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827;">${escapeHtml(formatCurrency(item.preco_unitario))}</td>
+          <td align="right" style="padding:12px; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#111827; font-weight:700;">${escapeHtml(formatCurrency(item.total))}</td>
+        </tr>`).join('')
+      : `
+        <tr>
+          <td colspan="5" style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#6b7280; text-align:center;">Nenhum item encontrado neste orçamento.</td>
+        </tr>`
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Orçamento ${orcamentoEnviar?.numero || ''}</title>
-<style>
-  html, body { margin: 0; padding: 0; width: 100% !important; overflow-x: hidden !important; background: #ffffff; font-family: Arial, Helvetica, sans-serif; }
-  * { box-sizing: border-box; }
-  img { max-width: 100% !important; height: auto !important; }
-  [data-email-root] { width: 100% !important; max-width: ${larguraBase}px !important; margin: 0 auto !important; overflow: hidden !important; }
-  @media only screen and (max-width: 820px) {
-    [data-email-root] { max-width: 100% !important; }
-    [data-email-stack-grid], [data-email-two-col], [data-email-actions] { display: block !important; width: 100% !important; }
-    [data-email-stack-item], [data-email-two-col] > *, [data-email-actions] > * {
-      display: block !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      min-width: 0 !important;
-      grid-column: auto !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-    }
-    [data-email-stack-item] + [data-email-stack-item], [data-email-two-col] > * + *, [data-email-actions] > * + * {
-      margin-top: 16px !important;
-    }
-  }
-</style>
-</head>
-<body>
-<div data-email-root="true" style="width:100%;max-width:${larguraBase}px;margin:0 auto;background:#ffffff;overflow:hidden;">
-${inlinedContent}
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orçamento ${escapeHtml(orcamento.numero)}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f3f4f6; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f3f4f6; margin:0; padding:0;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#ffffff; border-collapse:separate; border-spacing:0; border-radius:16px; overflow:hidden;">
+            <tr>
+              <td style="padding:24px; background-color:#1a4168;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="vertical-align:top;">
+                      ${logo3w ? `<img src="${escapeHtml(logo3w)}" alt="3W Hotelaria" style="display:block; width:180px; max-width:100%; height:auto; margin:0 0 16px 0;" />` : ''}
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">www.3whotelaria.com.br</div>
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">+55 (11) 5197-5779</div>
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">${escapeHtml(emailExibicao)}</div>
+                    </td>
+                    <td align="right" style="vertical-align:top;">
+                      <div style="display:inline-block; padding:10px 16px; background-color:#c4942c; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; font-weight:700; border-radius:10px; margin-bottom:16px;">
+                        Orçamento ${escapeHtml(orcamento.numero)}
+                      </div>
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff;">Emitido em ${escapeHtml(formatDate(orcamento.data_emissao || orcamento.created_at))}</div>
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#ffffff; font-weight:700;">Expira em ${escapeHtml(formatDate(orcamento.data_validade))}</div>
+                      <div style="display:inline-block; margin-top:12px; padding:6px 12px; background-color:#ffffff; color:#1a4168; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; font-weight:700; border-radius:999px;">
+                        ${escapeHtml(getStatusLabel(orcamento.status))}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            ${marketingUrl ? `
+            <tr>
+              <td style="padding:0;">
+                <img src="${escapeHtml(marketingUrl)}" alt="Imagem do orçamento" style="display:block; width:100%; max-width:600px; height:auto;" />
+              </td>
+            </tr>` : ''}
+            ${buildEmailSection('Resumo da proposta', `
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${buildInfoRow('Cliente', orcamento.cliente_razao_social || orcamento.cliente_nome)}
+                ${buildInfoRow('CNPJ', orcamento.cliente_cnpj || '—')}
+                ${buildInfoRow('E-mail', orcamento.cliente_email || '—')}
+                ${buildInfoRow('Telefone', orcamento.cliente_telefone || '—')}
+                ${buildInfoRow('Endereço', orcamento.cliente_endereco || '—')}
+                ${buildInfoRow('Fornecedor', fornecedorNome)}
+              </table>
+            `)}
+            ${buildEmailSection('Itens do orçamento', `
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
+                <tr>
+                  <td style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Código</td>
+                  <td style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Descrição</td>
+                  <td align="center" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Qtd.</td>
+                  <td align="right" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Valor Unit.</td>
+                  <td align="right" style="padding:12px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280; font-weight:700;">Total</td>
+                </tr>
+                ${linhasItens}
+              </table>
+            `)}
+            <tr>
+              <td style="padding:0 24px 24px 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="48%" style="vertical-align:top; padding-right:12px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
+                        <tr>
+                          <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">Logística</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#374151;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                              ${buildInfoRow('Frete', orcamento.frete_tipo || 'CIF (Incluso)')}
+                              ${buildInfoRow('Valor do frete', formatCurrency(frete))}
+                              ${buildInfoRow('Prazo de entrega', orcamento.prazo_entrega || '—')}
+                              ${buildInfoRow('Validade', formatDate(orcamento.data_validade))}
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td width="52%" style="vertical-align:top; padding-left:12px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d1d5db; border-radius:12px;">
+                        <tr>
+                          <td style="padding:12px 16px; background-color:#f3f4f6; border-bottom:1px solid #d1d5db; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:22px; font-weight:700; color:#1f2937;">Condições de pagamento</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:16px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; white-space:normal;">
+                            ${formatMultilineText(condicoesPagamento || 'Não informado')}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            ${buildEmailSection('Resumo financeiro', `
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${buildCurrencyRow('Subtotal', subtotal)}
+                ${buildCurrencyRow(`Impostos${impostosPercentual > 0 ? ` (${impostosPercentual.toFixed(2)}%)` : ''}`, impostos)}
+                ${buildCurrencyRow(`Desconto${descontoPercentual > 0 ? ` (${descontoPercentual.toFixed(2)}%)` : ''}`, descontoValor)}
+                ${buildCurrencyRow('Frete', frete)}
+                ${buildCurrencyRow('Total final', total, true)}
+              </table>
+            `)}
+            ${buildEmailSection('DIFAL e observações', `
+              <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; margin-bottom:16px;"><strong>DIFAL:</strong><br />${formatMultilineText(orcamento.difal_texto || 'Este orçamento considera que o cliente possui inscrição estadual ativa. Caso não tenha, informe o vendedor para os ajustes tributários.')}</div>
+              <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151; margin-bottom:${orcamento.observacoes_gerais ? '16px' : '0'};"><strong>Observações:</strong><br />${formatMultilineText(orcamento.observacoes || '—')}</div>
+              ${orcamento.observacoes_gerais ? `<div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151;"><strong>Observações gerais:</strong><br />${formatMultilineText(orcamento.observacoes_gerais)}</div>` : ''}
+            `)}
+            ${termosFornecedor ? buildEmailSection(layoutMidea ? 'Termos legais Midea Carrier' : 'Termos do fabricante', `<div style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:21px; color:#374151;">${formatMultilineText(termosFornecedor)}</div>`) : ''}
+            ${buildEmailSection('Termos legais da 3W Hotelaria', `
+              <div style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:21px; color:#374151;">
+                • O faturamento será realizado diretamente pelo Fabricante/Fornecedor.<br />
+                • Garantias e eventuais manuais/materiais de instrução são fornecidos diretamente pelo Fabricante/Fornecedor.<br />
+                • As políticas comerciais variam conforme o Fabricante/Fornecedor.<br />
+                • Questões de DIFAL dependem do estado do cliente, inscrição estadual e unidade fornecedora.<br />
+                • Mudanças de tabela de preços do Fabricante/Fornecedor podem ocorrer durante a validade do orçamento.<br />
+                • Para questões pós-venda, o cliente deverá contatar diretamente o SAC de ${escapeHtml(fornecedorNome)}.
+              </div>
+            `)}
+            <tr>
+              <td style="padding:0 24px 32px 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding-bottom:12px;">
+                      ${buildEmailButton('Falar com o vendedor', whatsappHref, '#16a34a')}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center">
+                      ${buildEmailButton('Confirmar pedido', confirmacaoHref, '#c4942c')}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 24px 24px; text-align:center; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
+                ${logoFornecedor ? `<img src="${escapeHtml(logoFornecedor)}" alt="${escapeHtml(fornecedorNome)}" style="display:block; margin:0 auto 12px auto; max-width:140px; height:auto;" />` : ''}
+                Este orçamento foi preparado para leitura em Gmail, Outlook e Apple Mail, com largura adaptável e sem rolagem horizontal.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>`
   }
 
