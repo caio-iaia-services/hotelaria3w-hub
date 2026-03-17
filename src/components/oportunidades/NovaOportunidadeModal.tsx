@@ -83,10 +83,12 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
     const timer = setTimeout(async () => {
       setLoading(true);
+      const buscaDigits = busca.replace(/\D/g, "");
+      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${busca}%`;
       const { data } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, segmento, status, tipo")
-        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${busca}%,cidade.ilike.%${busca}%`)
+        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,${cnpjFilter},cidade.ilike.%${busca}%`)
         .order("nome_fantasia", { ascending: true })
         .limit(50);
 
