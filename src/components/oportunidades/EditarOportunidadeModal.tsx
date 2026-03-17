@@ -138,7 +138,7 @@ export function EditarOportunidadeModal({
           cliente_cnpj: cardParaTrocar.cliente_cnpj,
           cliente_cidade: cardParaTrocar.cliente_cidade,
           cliente_estado: cardParaTrocar.cliente_estado,
-          observacoes: `Substituiu operação ${cardParaTrocar.operacao}`,
+          observacoes: `Substituiu fornecedor ${cardParaTrocar.operacao}`,
         });
 
       if (erroNovo) throw erroNovo;
