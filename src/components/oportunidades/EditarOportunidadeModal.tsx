@@ -273,7 +273,7 @@ export function EditarOportunidadeModal({
                             variant="outline"
                             className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 text-[10px]"
                           >
-                            OPERAÇÃO SUBSTITUÍDA
+                            FORNECEDOR SUBSTITUÍDO
                           </Badge>
                         </div>
                       )}
