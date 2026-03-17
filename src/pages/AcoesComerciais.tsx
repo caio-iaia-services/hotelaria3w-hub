@@ -344,6 +344,8 @@ interface ImagemMarketingState {
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
 interface ClienteCompleto {
+  nome_fantasia: string | null
+  cnpj: string | null
   razao_social: string | null
   email: string | null
   telefone: string | null
@@ -538,7 +540,7 @@ export default function AcoesComerciais() {
     // Fetch client details
     const { data: cliente } = await supabase
       .from('clientes')
-      .select('razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+      .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
       .eq('id', cardSelecionado.cliente_id)
       .maybeSingle()
 
@@ -856,9 +858,9 @@ export default function AcoesComerciais() {
         numero,
         card_id: cardSelecionado.id,
         cliente_id: cardSelecionado.cliente_id,
-        cliente_nome: cardSelecionado.cliente_nome,
+        cliente_nome: clienteCompleto.nome_fantasia || cardSelecionado.cliente_nome,
         cliente_razao_social: clienteCompleto.razao_social,
-        cliente_cnpj: cardSelecionado.cliente_cnpj,
+        cliente_cnpj: clienteCompleto.cnpj || cardSelecionado.cliente_cnpj,
         cliente_endereco: enderecoCompleto,
         cliente_email: clienteCompleto.email,
         cliente_telefone: clienteCompleto.telefone,
