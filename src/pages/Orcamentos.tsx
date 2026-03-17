@@ -306,45 +306,69 @@ export default function Orcamentos() {
     if (fornecedorId) {
       const { data } = await supabase
         .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url')
+        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
         .eq('id', fornecedorId)
         .maybeSingle()
 
-      if (data) return data as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+      if (data) {
+        return data as {
+          tipo_layout: string | null
+          nome_fantasia: string
+          logotipo_url: string | null
+          imagem_template_url: string | null
+        }
+      }
     }
 
     if (!nomeBusca) return null
 
     const { data: exato } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .eq('nome_fantasia', nomeBusca)
       .maybeSingle()
 
-    if (exato) return exato as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+    if (exato) {
+      return exato as {
+        tipo_layout: string | null
+        nome_fantasia: string
+        logotipo_url: string | null
+        imagem_template_url: string | null
+      }
+    }
 
     const { data: caseInsensitive } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .ilike('nome_fantasia', nomeBusca)
       .limit(1)
 
     if (caseInsensitive && caseInsensitive.length > 0) {
-      return caseInsensitive[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null }
+      return caseInsensitive[0] as {
+        tipo_layout: string | null
+        nome_fantasia: string
+        logotipo_url: string | null
+        imagem_template_url: string | null
+      }
     }
 
     const { data: parcial } = await supabase
       .from('fornecedores')
-      .select('tipo_layout, nome_fantasia, logotipo_url')
+      .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
       .ilike('nome_fantasia', `%${nomeBusca}%`)
       .limit(1)
 
     return parcial && parcial.length > 0
-      ? (parcial[0] as { tipo_layout: string | null; nome_fantasia: string; logotipo_url: string | null })
+      ? (parcial[0] as {
+          tipo_layout: string | null
+          nome_fantasia: string
+          logotipo_url: string | null
+          imagem_template_url: string | null
+        })
       : null
   }
 
-  async function visualizarOrcamento(o: Orcamento) {
+  async function carregarOrcamentoCompleto(o: Orcamento) {
     const { data: orcamentoDb } = await supabase
       .from('orcamentos')
       .select('*')
@@ -389,11 +413,20 @@ export default function Orcamentos() {
           fornecedor_tipo_layout: fornecedor.tipo_layout,
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
+          fornecedor_imagem_template_url: fornecedor.imagem_template_url,
         } as Orcamento)
       : orcamentoComCliente
 
-    setOrcamentoVisualizar(orcamentoComFornecedor)
-    setItensVisualizar((itens as OrcamentoItem[]) || [])
+    return {
+      orcamento: orcamentoComFornecedor,
+      itens: ((itens as OrcamentoItem[]) || []).sort((a, b) => a.ordem - b.ordem),
+    }
+  }
+
+  async function visualizarOrcamento(o: Orcamento) {
+    const { orcamento, itens } = await carregarOrcamentoCompleto(o)
+    setOrcamentoVisualizar(orcamento)
+    setItensVisualizar(itens)
     setModalVisualizar(true)
   }
 
