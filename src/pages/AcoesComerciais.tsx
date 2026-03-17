@@ -747,7 +747,7 @@ export default function AcoesComerciais() {
     if (!cardSelecionado) return
 
     if (!operacaoSelecionada) {
-      toast.error('Selecione uma operação')
+      toast.error('Selecione um fornecedor')
       return
     }
 
