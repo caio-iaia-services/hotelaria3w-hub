@@ -96,7 +96,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ</Label>
-                <Input value={form.cnpj || ""} onChange={(e) => set("cnpj", e.target.value)} />
+                <Input value={formatCNPJ(form.cnpj) || ""} onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>E-mail</Label>
