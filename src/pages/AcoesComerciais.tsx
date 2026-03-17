@@ -344,6 +344,8 @@ interface ImagemMarketingState {
 
 // ─── ClienteCompleto type ────────────────────────────────────────────────────
 interface ClienteCompleto {
+  nome_fantasia: string | null
+  cnpj: string | null
   razao_social: string | null
   email: string | null
   telefone: string | null
