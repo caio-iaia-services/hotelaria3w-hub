@@ -1170,12 +1170,12 @@ www.3whotelaria.com.br
       <tr>
         <td width="48%" align="center" style="padding-right:8px;">
           <a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#16a34a;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">
-            📞 Falar com o Vendedor
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.81 19.79 19.79 0 0 1 .22 1.18 2 2 0 0 1 2.18 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L6.91 7.09a16 16 0 0 0 6 6l.56-.56a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/></svg>Falar com o Vendedor
           </a>
         </td>
         <td width="48%" align="center" style="padding-left:8px;">
           <a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:#c4942c;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">
-            📦 Confirmar Pedido
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Pedido
           </a>
         </td>
       </tr>
