@@ -332,7 +332,7 @@ export function EditarOportunidadeModal({
               onClick={() => toast.info("Adicionar operação em desenvolvimento")}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Nova Operação
+              Adicionar Novo Fornecedor
             </Button>
           </div>
 
