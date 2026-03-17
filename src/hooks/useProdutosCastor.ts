@@ -26,7 +26,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
     if (timerRef.current) clearTimeout(timerRef.current)
 
     const trimmed = termo.trim()
-    if (trimmed.length < 2) {
+    if (!habilitado || trimmed.length < 2) {
       setResultados([])
       return
     }
