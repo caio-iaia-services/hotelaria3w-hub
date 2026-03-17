@@ -803,8 +803,11 @@ export default function AcoesComerciais() {
 
       console.log('💰 VALORES CALCULADOS:', { subtotal, impPerc, valorImpostos, descPerc, valorDesconto, valorFrete, total, itensDetails: itensOrcamento.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total })) })
 
-      // 3. Calcular data de validade
-      const hoje = new Date()
+      // 3. Calcular data de validade (usando horário de Brasília)
+      const agora = new Date()
+      // Formata como YYYY-MM-DD no fuso de São Paulo
+      const hojeStr = agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+      const hoje = new Date(hojeStr + 'T12:00:00')
       const dataValidade = new Date(hoje)
       dataValidade.setDate(dataValidade.getDate() + dadosOrcamento.validade_dias)
 
