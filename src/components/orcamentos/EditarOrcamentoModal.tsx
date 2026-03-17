@@ -292,7 +292,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       }
 
       // Update orcamento record
-      const dataValidade = new Date()
+      const hojeStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+      const dataValidade = new Date(hojeStr + 'T12:00:00')
       dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
 
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)

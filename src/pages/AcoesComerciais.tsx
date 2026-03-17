@@ -884,7 +884,7 @@ export default function AcoesComerciais() {
         prazo_entrega: dadosOrcamento.prazo_entrega,
         validade_dias: dadosOrcamento.validade_dias,
         data_validade: dataValidade.toISOString(),
-        data_emissao: new Date().toISOString(),
+        data_emissao: hoje.toISOString(),
         condicoes_pagamento: condicoesPagamento,
         observacoes: dadosOrcamento.observacoes,
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
