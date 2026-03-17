@@ -17,7 +17,7 @@ export interface ProdutoCastor {
   medidas_disponiveis: string[]
 }
 
-export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descricao') {
+export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descricao', habilitado: boolean = true) {
   const [resultados, setResultados] = useState<ProdutoCastor[]>([])
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
