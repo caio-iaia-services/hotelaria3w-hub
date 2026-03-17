@@ -177,7 +177,7 @@ export function EditarOportunidadeModal({
 
       if (cardsRestantes.length === 0) {
         await supabase.from("oportunidades").delete().eq("id", oportunidade.id);
-        toast.info("Oportunidade removida (sem operações ativas)");
+        toast.info("Oportunidade removida (sem fornecedores ativos)");
         setDeleteTarget(null);
         handleClose(false);
         onRefresh();
