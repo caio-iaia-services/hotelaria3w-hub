@@ -17,7 +17,7 @@ export interface ProdutoCastor {
   medidas_disponiveis: string[]
 }
 
-export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descricao') {
+export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descricao', habilitado: boolean = true) {
   const [resultados, setResultados] = useState<ProdutoCastor[]>([])
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -26,7 +26,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
     if (timerRef.current) clearTimeout(timerRef.current)
 
     const trimmed = termo.trim()
-    if (trimmed.length < 2) {
+    if (!habilitado || trimmed.length < 2) {
       setResultados([])
       return
     }
@@ -61,7 +61,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [termo, campo])
+  }, [termo, campo, habilitado])
 
   return { resultados, loading }
 }

@@ -58,8 +58,9 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
   const codigoRef = useRef<HTMLDivElement>(null)
   const descricaoRef = useRef<HTMLDivElement>(null)
 
-  const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo')
-  const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao')
+  const isCastor = tipoLayout === 'castor'
+  const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
+  const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
 
   // Close dropdowns on outside click
   useEffect(() => {
