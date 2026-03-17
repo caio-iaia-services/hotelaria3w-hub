@@ -1144,6 +1144,7 @@ comercial1@3whotelaria.com.br`
               <OrcamentoTemplate
                 orcamento={orcamentoVisualizar}
                 itens={itensVisualizar}
+                emailUsuario={user?.email}
               />
             )}
           </div>
