@@ -241,7 +241,7 @@ export function EditarOportunidadeModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-foreground">
-                Operações desta Oportunidade
+                Fornecedores desta Oportunidade
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   ({activeCount} ativa{activeCount !== 1 ? "s" : ""})
                 </span>
