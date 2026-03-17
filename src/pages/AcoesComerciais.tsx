@@ -402,6 +402,7 @@ export default function AcoesComerciais() {
     observacoes: '',
     observacoes_gerais: '',
     difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
+    endereco_entrega: '',
   })
 
   // Merge static operations with DB fornecedores
@@ -546,6 +547,17 @@ export default function AcoesComerciais() {
 
     setClienteCompleto(cliente as ClienteCompleto | null)
 
+    // Montar endereço de entrega a partir do cadastro do cliente
+    const partes: string[] = []
+    if (cliente?.logradouro) partes.push(cliente.logradouro)
+    if (cliente?.numero) partes.push(cliente.numero)
+    if (cliente?.complemento) partes.push(cliente.complemento)
+    if (cliente?.bairro) partes.push(cliente.bairro)
+    const cidadeUf = [cliente?.cidade, cliente?.estado].filter(Boolean).join(' - ')
+    if (cidadeUf) partes.push(cidadeUf)
+    if (cliente?.cep) partes.push(`CEP: ${cliente.cep}`)
+    const enderecoAutoPreenchido = partes.join(', ')
+
     // Buscar fornecedores ativos para associação
     const fornecedoresCarregados = await buscarFornecedoresDisponiveis()
 
@@ -570,6 +582,7 @@ export default function AcoesComerciais() {
       observacoes: '',
       observacoes_gerais: '',
       difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
+      endereco_entrega: enderecoAutoPreenchido,
     })
     // Auto-select operação from card (using freshly loaded fornecedores)
     if (cardSelecionado.operacao) {
@@ -751,8 +764,8 @@ export default function AcoesComerciais() {
       return
     }
 
-    if (!clienteCompleto?.logradouro || !clienteCompleto?.numero) {
-      toast.error('Endereço completo do cliente é obrigatório. Atualize o cadastro do cliente.')
+    if (!dadosOrcamento.endereco_entrega.trim()) {
+      toast.error('Endereço de entrega é obrigatório.')
       return
     }
 
@@ -807,8 +820,8 @@ export default function AcoesComerciais() {
       const dataEmissaoIso = getLocalDateString()
       const dataValidadeIso = addDaysToLocalDateString(dadosOrcamento.validade_dias)
 
-      // 4. Preparar endereço completo
-      const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`
+      // 4. Usar endereço de entrega editável (do campo do modal)
+      const enderecoCompleto = dadosOrcamento.endereco_entrega || ''
 
       // 5. Preparar termos 3W
       const termos3w = TERMOS_3W.replace('[VALIDADE]', String(dadosOrcamento.validade_dias))
@@ -975,6 +988,7 @@ export default function AcoesComerciais() {
         observacoes: '',
         observacoes_gerais: '',
         difal_texto: 'Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.',
+        endereco_entrega: '',
       })
       setClienteCompleto(null)
       setFornecedorSelecionado(null)
@@ -1150,6 +1164,20 @@ export default function AcoesComerciais() {
                   Nenhum fornecedor vinculado
                 </p>
               )}
+            </div>
+
+            {/* ENDEREÇO DE ENTREGA */}
+            <div>
+              <Label>Endereço de Entrega *</Label>
+              <Textarea
+                placeholder="Rua, Número, Complemento, Bairro, Cidade - UF, CEP"
+                value={dadosOrcamento.endereco_entrega}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, endereco_entrega: e.target.value }))}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Preenchido automaticamente com o endereço do cliente. Edite se a entrega for em outro local.
+              </p>
             </div>
 
             {/* DADOS DO ORÇAMENTO */}
