@@ -263,7 +263,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
       if (erroCards) throw erroCards;
 
-      toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} operação(ões)!`);
+      toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} fornecedor(es)!`);
       onSave?.();
       handleClose(false);
     } catch (error: any) {
