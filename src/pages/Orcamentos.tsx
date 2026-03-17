@@ -998,7 +998,7 @@ comercial1@3whotelaria.com.br`
             <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
               <TableHead className="text-white">Número</TableHead>
               <TableHead className="text-white">Cliente</TableHead>
-              <TableHead className="text-white">Fornecedor/Operação</TableHead>
+              <TableHead className="text-white">Fornecedor</TableHead>
               <TableHead className="text-white">Valor Total</TableHead>
               <TableHead className="text-white">Validade</TableHead>
               <TableHead className="text-white">Status</TableHead>
