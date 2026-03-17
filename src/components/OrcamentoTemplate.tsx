@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
+import { formatDateBR } from '@/lib/date'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
@@ -178,15 +179,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
     }).format(toNumber(value))
   }
 
-  const formatDate = (date: string) => {
-    if (!date) return '-'
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'America/Sao_Paulo'
-    })
-  }
+  const formatDate = (date: string) => formatDateBR(date)
 
   const dividirCodigo = (codigo: string) => {
     if (!codigo) return []
@@ -296,7 +289,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
               ) : null}
               
               <div className="space-y-1 text-sm">
-                <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
+                <p>Emitido em {formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
               
@@ -692,7 +685,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
                 </div>
               )}
               <div className="text-sm text-right">
-                <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
+                <p>Emitido em {formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
                 <div className="mt-1 bg-gray-200 text-gray-700 px-3 py-1 rounded inline-block text-xs">
                   {orcamento.status.toUpperCase()}

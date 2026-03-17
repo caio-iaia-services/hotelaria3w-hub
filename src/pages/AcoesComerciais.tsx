@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { getSaoPauloDateISOString } from '@/lib/date'
+import { getLocalDateString, addDaysToLocalDateString, formatDateBR } from '@/lib/date'
 import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
@@ -148,8 +148,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
     return icones[tipo] ?? <FileText className="w-5 h-5 text-muted-foreground" />
   }
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const formatDate = (date: string) => formatDateBR(date)
 
   const abrirGoogleDrive = () => {
     window.open('https://drive.google.com', '_blank')
@@ -804,9 +803,9 @@ export default function AcoesComerciais() {
 
       console.log('💰 VALORES CALCULADOS:', { subtotal, impPerc, valorImpostos, descPerc, valorDesconto, valorFrete, total, itensDetails: itensOrcamento.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total })) })
 
-      // 3. Calcular datas no fuso de São Paulo sem depender do fuso do navegador
-      const dataEmissaoIso = getSaoPauloDateISOString(0)
-      const dataValidadeIso = getSaoPauloDateISOString(dadosOrcamento.validade_dias)
+      // 3. Calcular datas no horário local do usuário, sem deslocamento UTC
+      const dataEmissaoIso = getLocalDateString()
+      const dataValidadeIso = addDaysToLocalDateString(dadosOrcamento.validade_dias)
 
       // 4. Preparar endereço completo
       const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`

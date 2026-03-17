@@ -2,7 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
-import { getSaoPauloDateISOString } from '@/lib/date'
+import { addDaysToLocalDateString } from '@/lib/date'
 import { extrairTextoCondicoesPagamento, montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea } from '@/lib/fornecedorTerms'
 import { Plus, Upload, X } from 'lucide-react'
@@ -293,7 +293,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       }
 
       // Update orcamento record
-      const dataValidadeIso = getSaoPauloDateISOString(dados.validade_dias || 30)
+      const dataValidadeIso = addDaysToLocalDateString(dados.validade_dias || 30)
 
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
       const { data: clienteAtual } = orcamento.cliente_id
