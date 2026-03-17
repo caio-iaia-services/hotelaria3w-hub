@@ -1102,7 +1102,7 @@ export default function AcoesComerciais() {
                   <p className="font-medium">{cardSelecionado?.cliente_cnpj}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Operação</p>
+                  <p className="text-muted-foreground">Fornecedor</p>
                   <Badge>{cardSelecionado?.operacao}</Badge>
                 </div>
                 <div>
