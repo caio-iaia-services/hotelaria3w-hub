@@ -458,7 +458,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
             {/* Counter */}
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
               <p className="text-sm font-medium text-foreground">
-                {operacoesSelecionadas.length} operação(ões) selecionada(s)
+                {operacoesSelecionadas.length} fornecedor(es) selecionado(s)
               </p>
               {operacoesSelecionadas.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
