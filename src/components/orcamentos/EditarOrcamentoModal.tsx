@@ -2,6 +2,7 @@ import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { supabase as supabaseCloud } from '@/integrations/supabase/client'
 import { useState, useEffect, useCallback } from 'react'
+import { getSaoPauloDateISOString } from '@/lib/date'
 import { extrairTextoCondicoesPagamento, montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea } from '@/lib/fornecedorTerms'
 import { Plus, Upload, X } from 'lucide-react'
@@ -292,9 +293,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       }
 
       // Update orcamento record
-      const hojeStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-      const dataValidade = new Date(hojeStr + 'T12:00:00')
-      dataValidade.setDate(dataValidade.getDate() + (dados.validade_dias || 30))
+      const dataValidadeIso = getSaoPauloDateISOString(dados.validade_dias || 30)
 
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
       const { data: clienteAtual } = orcamento.cliente_id
@@ -310,7 +309,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
-        data_validade: dataValidade.toISOString(),
+        data_validade: dataValidadeIso,
         frete: parseNum(dados.frete),
         frete_tipo: dados.frete_tipo,
         impostos_percentual: parseNum(dados.impostos_percentual),

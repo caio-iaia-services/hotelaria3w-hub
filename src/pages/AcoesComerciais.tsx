@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getSaoPauloDateISOString } from '@/lib/date'
 import { montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
@@ -803,13 +804,9 @@ export default function AcoesComerciais() {
 
       console.log('💰 VALORES CALCULADOS:', { subtotal, impPerc, valorImpostos, descPerc, valorDesconto, valorFrete, total, itensDetails: itensOrcamento.map(i => ({ desc: i.descricao, qty: i.quantidade, price: i.preco_unitario, total: i.total })) })
 
-      // 3. Calcular data de validade (usando horário de Brasília)
-      const agora = new Date()
-      // Formata como YYYY-MM-DD no fuso de São Paulo
-      const hojeStr = agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-      const hoje = new Date(hojeStr + 'T12:00:00')
-      const dataValidade = new Date(hoje)
-      dataValidade.setDate(dataValidade.getDate() + dadosOrcamento.validade_dias)
+      // 3. Calcular datas no fuso de São Paulo sem depender do fuso do navegador
+      const dataEmissaoIso = getSaoPauloDateISOString(0)
+      const dataValidadeIso = getSaoPauloDateISOString(dadosOrcamento.validade_dias)
 
       // 4. Preparar endereço completo
       const enderecoCompleto = `${clienteCompleto.logradouro}, ${clienteCompleto.numero}${clienteCompleto.complemento ? ' - ' + clienteCompleto.complemento : ''}, ${clienteCompleto.bairro}, ${clienteCompleto.cidade}/${clienteCompleto.estado} - CEP: ${clienteCompleto.cep || 'Não informado'}`
@@ -883,8 +880,8 @@ export default function AcoesComerciais() {
         total: isNaN(total) ? 0 : Number(total),
         prazo_entrega: dadosOrcamento.prazo_entrega,
         validade_dias: dadosOrcamento.validade_dias,
-        data_validade: dataValidade.toISOString(),
-        data_emissao: hoje.toISOString(),
+        data_validade: dataValidadeIso,
+        data_emissao: dataEmissaoIso,
         condicoes_pagamento: condicoesPagamento,
         observacoes: dadosOrcamento.observacoes,
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
