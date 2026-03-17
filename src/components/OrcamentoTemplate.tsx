@@ -289,7 +289,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
               ) : null}
               
               <div className="space-y-1 text-sm">
-                <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
+                <p>Emitido em {formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
               

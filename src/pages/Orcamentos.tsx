@@ -933,7 +933,7 @@ www.3whotelaria.com.br
           </div>
           ${logoFornecedor ? `<div style="margin:12px 0;text-align:right;"><img src="${esc(logoFornecedor)}" alt="${esc(fornecedorNome)}" style="display:inline-block;height:48px;max-width:160px;"/></div>` : (orcamento.fornecedor_nome ? `<div style="margin:8px 0;${F}font-size:20px;font-weight:700;color:#ef4444;">${esc(orcamento.fornecedor_nome.split(' ')[0])}</div>` : '')}
           <div style="${F}font-size:13px;color:#ffffff;line-height:20px;">
-            Emitido em ${esc(formatDate(orcamento.data_emissao || orcamento.created_at))}<br/>
+            Emitido em ${esc(formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at))}<br/>
             <strong>Expira em ${esc(formatDate(orcamento.data_validade))}</strong>
           </div>
           <div style="display:inline-block;margin-top:10px;padding:5px 14px;background-color:#e5e7eb;color:#374151;${F}font-size:11px;font-weight:700;border-radius:4px;">
