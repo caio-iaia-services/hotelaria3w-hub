@@ -164,7 +164,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
   const handleSave = async () => {
     if (!step2Valid) {
-      toast.error("Selecione ao menos uma operação");
+      toast.error("Selecione ao menos um fornecedor");
       return;
     }
 
