@@ -360,9 +360,9 @@ export function EditarOportunidadeModal({
                 <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-yellow-900 dark:text-yellow-300">Atenção!</p>
-                  <p className="text-yellow-700 dark:text-yellow-400">
-                    A operação antiga será marcada como substituída e ficará amarela.
-                    Uma nova operação será criada no funil.
+                   <p className="text-yellow-700 dark:text-yellow-400">
+                    O fornecedor antigo será marcado como substituído e ficará amarelo.
+                    Um novo fornecedor será criado no funil.
                   </p>
                 </div>
               </div>
