@@ -15,6 +15,7 @@ interface FornecedorLayout {
 interface Props {
   orcamento: Orcamento
   itens: OrcamentoItem[]
+  emailUsuario?: string
 }
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
