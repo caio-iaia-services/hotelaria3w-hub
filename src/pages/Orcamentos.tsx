@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { supabase as cloudSupabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
@@ -66,7 +67,7 @@ function formatCurrency(value: any) {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-BR')
+  return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 }
 
 interface ClienteAtual {
@@ -116,6 +117,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 }
 
 export default function Orcamentos() {
+  const { user } = useAuth()
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -1143,6 +1145,7 @@ comercial1@3whotelaria.com.br`
               <OrcamentoTemplate
                 orcamento={orcamentoVisualizar}
                 itens={itensVisualizar}
+                emailUsuario={user?.email}
               />
             )}
           </div>

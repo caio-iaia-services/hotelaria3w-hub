@@ -15,6 +15,7 @@ interface FornecedorLayout {
 interface Props {
   orcamento: Orcamento
   itens: OrcamentoItem[]
+  emailUsuario?: string
 }
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
@@ -37,7 +38,8 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
   )
 }
 
-export function OrcamentoTemplate({ orcamento, itens }: Props) {
+export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
+  const emailExibicao = emailUsuario || 'comercial1@3whotelaria.com.br'
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
   const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
@@ -181,7 +183,8 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
     return new Date(date).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'America/Sao_Paulo'
     })
   }
 
@@ -262,7 +265,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-6 h-6 flex-shrink-0" />
-                  <span className="text-lg">comercial1@3whotelaria.com.br</span>
+                  <span className="text-lg">{emailExibicao}</span>
                 </div>
               </div>
             </div>
@@ -676,7 +679,7 @@ export function OrcamentoTemplate({ orcamento, itens }: Props) {
               <div className="text-sm space-y-1">
                 <p className="flex items-center gap-1"><Globe className="w-3 h-3" /> www.3whotelaria.com.br</p>
                 <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> +55 (11) 5197-5779</p>
-                <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> comercial1@3whotelaria.com.br</p>
+                <p className="flex items-center gap-1"><Mail className="w-3 h-3" /> {emailExibicao}</p>
               </div>
               <div className="bg-[#c4942c] text-white px-6 py-2 rounded font-bold" data-pdf-orcamento-numero>
                 Orçamento {orcamento.numero}
