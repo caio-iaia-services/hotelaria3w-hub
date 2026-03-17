@@ -782,58 +782,103 @@ www.3whotelaria.com.br
   }
 
   function inlineStyles(element: HTMLElement): string {
-    const clone = element.cloneNode(true) as HTMLElement
+    const sourceRoot = (element.firstElementChild as HTMLElement | null) || element
+    const clone = sourceRoot.cloneNode(true) as HTMLElement
     const tempContainer = document.createElement('div')
     tempContainer.style.position = 'absolute'
-    tempContainer.style.left = '-9999px'
+    tempContainer.style.left = '-99999px'
+    tempContainer.style.top = '0'
+    tempContainer.style.width = `${Math.ceil(sourceRoot.getBoundingClientRect().width || 794)}px`
+    tempContainer.style.pointerEvents = 'none'
     tempContainer.appendChild(clone)
     document.body.appendChild(tempContainer)
 
-    const allElements = clone.querySelectorAll('*')
-    const processElement = (el: Element) => {
-      const htmlEl = el as HTMLElement
-      const computed = window.getComputedStyle(htmlEl)
-      const important = [
-        'color', 'background-color', 'background', 'font-family', 'font-size', 'font-weight',
-        'line-height', 'text-align', 'text-decoration', 'padding', 'padding-top', 'padding-right',
-        'padding-bottom', 'padding-left', 'margin', 'margin-top', 'margin-right', 'margin-bottom',
-        'margin-left', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
-        'border-radius', 'border-collapse', 'width', 'max-width', 'min-width', 'height',
-        'display', 'flex-direction', 'justify-content', 'align-items', 'gap', 'flex-wrap',
-        'flex', 'flex-grow', 'flex-shrink', 'vertical-align', 'white-space', 'overflow',
-        'box-sizing', 'text-transform', 'letter-spacing', 'opacity',
-      ]
+    const important = [
+      'color', 'background', 'background-color', 'background-image', 'background-position', 'background-repeat',
+      'background-size', 'font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'text-align',
+      'text-decoration', 'text-transform', 'letter-spacing', 'padding', 'padding-top', 'padding-right',
+      'padding-bottom', 'padding-left', 'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+      'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'border-radius', 'border-collapse',
+      'border-spacing', 'width', 'max-width', 'min-width', 'height', 'max-height', 'min-height', 'display',
+      'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row', 'column-gap', 'row-gap', 'gap',
+      'flex-direction', 'justify-content', 'align-items', 'align-self', 'flex-wrap', 'flex', 'flex-grow',
+      'flex-shrink', 'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y', 'box-sizing',
+      'text-overflow', 'opacity', 'position', 'top', 'right', 'bottom', 'left', 'transform', 'object-fit',
+      'object-position', 'list-style-type', 'list-style-position'
+    ]
+
+    const applyInlineStyles = (sourceEl: Element, targetEl: Element) => {
+      const sourceHtmlEl = sourceEl as HTMLElement
+      const targetHtmlEl = targetEl as HTMLElement
+      const computed = window.getComputedStyle(sourceHtmlEl)
       const styles = important
-        .map(prop => {
+        .map((prop) => {
           const val = computed.getPropertyValue(prop)
           return val ? `${prop}:${val}` : ''
         })
         .filter(Boolean)
         .join(';')
-      htmlEl.setAttribute('style', styles)
-      // Remove class attributes for cleaner HTML
-      htmlEl.removeAttribute('class')
+
+      targetHtmlEl.setAttribute('style', styles)
+
+      const sourceChildren = Array.from(sourceEl.children)
+      const targetChildren = Array.from(targetEl.children)
+      sourceChildren.forEach((child, index) => {
+        const targetChild = targetChildren[index]
+        if (targetChild) applyInlineStyles(child, targetChild)
+      })
     }
 
-    processElement(clone)
-    allElements.forEach(processElement)
+    applyInlineStyles(sourceRoot, clone)
 
-    // Remove SVG icons (email clients don't render them well), replace with text equivalents
-    clone.querySelectorAll('svg').forEach(svg => {
-      svg.remove()
+    clone.style.width = '100%'
+    clone.style.maxWidth = `${Math.ceil(sourceRoot.getBoundingClientRect().width || 794)}px`
+    clone.style.margin = '0 auto'
+    clone.style.boxSizing = 'border-box'
+    clone.style.overflow = 'visible'
+
+    clone.querySelectorAll('svg').forEach((svg) => {
+      const fallback = document.createElement('span')
+      fallback.textContent = ' '
+      fallback.setAttribute('style', 'display:inline-block;width:0;height:0;overflow:hidden;')
+      svg.replaceWith(fallback)
     })
 
-    // Convert relative image URLs to absolute
     const origin = window.location.origin
-    clone.querySelectorAll('img').forEach(img => {
+    clone.querySelectorAll('img').forEach((img) => {
       const src = img.getAttribute('src')
       if (src && src.startsWith('/')) {
         img.setAttribute('src', `${origin}${src}`)
       }
+      img.setAttribute('style', `${img.getAttribute('style') || ''};max-width:100%;height:auto;display:block;`)
     })
 
-    // Remove buttons (action buttons not useful in email)
-    clone.querySelectorAll('button').forEach(btn => btn.remove())
+    clone.querySelectorAll('button').forEach((button) => {
+      const replacement = document.createElement('div')
+      replacement.innerHTML = button.innerHTML
+      replacement.setAttribute('style', button.getAttribute('style') || '')
+      replacement.setAttribute('data-email-action', 'true')
+      button.replaceWith(replacement)
+    })
+
+    Array.from(clone.querySelectorAll('div')).forEach((div) => {
+      const text = (div.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+      if (text.includes('frete') && text.includes('entrega') && text.includes('condições e forma de pagamento')) {
+        div.setAttribute('data-email-stack-grid', 'true')
+        Array.from(div.children).forEach((child) => {
+          ;(child as HTMLElement).setAttribute('data-email-stack-item', 'true')
+        })
+      }
+
+      if (text.includes('frete') && text.includes('entrega') && div.children.length === 2) {
+        div.setAttribute('data-email-two-col', 'true')
+      }
+
+      if (text.includes('falar com o vendedor') && text.includes('confirmar o pedido')) {
+        div.setAttribute('data-email-actions', 'true')
+      }
+    })
 
     const html = clone.outerHTML
     tempContainer.remove()
@@ -844,6 +889,7 @@ www.3whotelaria.com.br
     const containerOriginal = await obterConteudoParaExportacao(orcamentoEnviar || undefined)
     if (!containerOriginal) return null
 
+    const larguraBase = Math.ceil(((containerOriginal.firstElementChild as HTMLElement | null)?.getBoundingClientRect().width) || containerOriginal.getBoundingClientRect().width || 794)
     const inlinedContent = inlineStyles(containerOriginal)
 
     return `<!DOCTYPE html>
@@ -853,13 +899,30 @@ www.3whotelaria.com.br
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orçamento ${orcamentoEnviar?.numero || ''}</title>
 <style>
-  body { margin: 0; padding: 0; background: #ffffff; font-family: Arial, Helvetica, sans-serif; }
-  table { border-collapse: collapse; }
-  img { max-width: 100%; height: auto; }
+  html, body { margin: 0; padding: 0; width: 100% !important; overflow-x: hidden !important; background: #ffffff; font-family: Arial, Helvetica, sans-serif; }
+  * { box-sizing: border-box; }
+  img { max-width: 100% !important; height: auto !important; }
+  [data-email-root] { width: 100% !important; max-width: ${larguraBase}px !important; margin: 0 auto !important; overflow: hidden !important; }
+  @media only screen and (max-width: 820px) {
+    [data-email-root] { max-width: 100% !important; }
+    [data-email-stack-grid], [data-email-two-col], [data-email-actions] { display: block !important; width: 100% !important; }
+    [data-email-stack-item], [data-email-two-col] > *, [data-email-actions] > * {
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      grid-column: auto !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+    [data-email-stack-item] + [data-email-stack-item], [data-email-two-col] > * + *, [data-email-actions] > * + * {
+      margin-top: 16px !important;
+    }
+  }
 </style>
 </head>
 <body>
-<div style="max-width:800px;margin:0 auto;background:#ffffff;">
+<div data-email-root="true" style="width:100%;max-width:${larguraBase}px;margin:0 auto;background:#ffffff;overflow:hidden;">
 ${inlinedContent}
 </div>
 </body>
