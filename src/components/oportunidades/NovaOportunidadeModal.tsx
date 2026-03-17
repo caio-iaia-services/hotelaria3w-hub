@@ -280,7 +280,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
         <DialogHeader>
           <DialogTitle>Nova Oportunidade</DialogTitle>
           <DialogDescription>
-            Passo {step} de 2 — {step === 1 ? "Dados do Cliente" : "Operações e Observações"}
+            Passo {step} de 2 — {step === 1 ? "Dados do Cliente" : "Fornecedores e Observações"}
           </DialogDescription>
         </DialogHeader>
 
