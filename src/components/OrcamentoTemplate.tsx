@@ -618,7 +618,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
                     />
                   )}
                   <h3 className="text-xl font-bold text-[#1a4168]">
-                    {layoutMidea ? 'Termos Legais Midea Carrier' : 'Termos do Fabricante'}
+                    {layoutMidea ? 'TERMOS LEGAIS MIDEA CARRIER' : 'TERMOS DO FABRICANTE'}
                   </h3>
                 </div>
                 
