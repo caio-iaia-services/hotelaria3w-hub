@@ -66,8 +66,9 @@ function formatCurrency(value: any) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseNum(value))
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+function formatDate(date: string | null | undefined) {
+  if (!date) return '-'
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(date))
 }
 
 interface ClienteAtual {
@@ -1124,7 +1125,7 @@ ${inlinedContent}
                   <TableCell>
                     <Badge variant={getStatusVariant(orcamento.status)}>{getStatusLabel(orcamento.status)}</Badge>
                   </TableCell>
-                  <TableCell><span className="text-sm text-muted-foreground">{formatDate(orcamento.created_at)}</span></TableCell>
+                  <TableCell><span className="text-sm text-muted-foreground">{formatDate(orcamento.data_emissao || orcamento.created_at)}</span></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}><Eye className="h-4 w-4" /></Button>

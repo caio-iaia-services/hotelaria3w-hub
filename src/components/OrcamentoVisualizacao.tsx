@@ -33,7 +33,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
                 <p className="text-3xl font-bold">{orcamento.numero}</p>
               </div>
               <div className="mt-4 text-sm space-y-1">
-                <p>Enviada em {formatDate(orcamento.created_at)}</p>
+                <p>Enviada em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
             </div>

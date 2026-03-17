@@ -14,9 +14,11 @@ export function formatCurrency(value: number) {
 
 export function formatDate(date: string | null | undefined) {
   if (!date) return '-'
-  return new Date(date).toLocaleDateString('pt-BR', {
+
+  return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: 'long',
-    year: 'numeric'
-  })
+    year: 'numeric',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(date))
 }
