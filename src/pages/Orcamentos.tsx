@@ -26,6 +26,8 @@ import {
 import { toast } from 'sonner'
 import { OrcamentoTemplate } from '@/components/OrcamentoTemplate'
 import { EditarOrcamentoModal } from '@/components/orcamentos/EditarOrcamentoModal'
+import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
+import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
