@@ -1166,6 +1166,20 @@ export default function AcoesComerciais() {
               )}
             </div>
 
+            {/* ENDEREÇO DE ENTREGA */}
+            <div>
+              <Label>Endereço de Entrega *</Label>
+              <Textarea
+                placeholder="Rua, Número, Complemento, Bairro, Cidade - UF, CEP"
+                value={dadosOrcamento.endereco_entrega}
+                onChange={(e) => setDadosOrcamento(prev => ({ ...prev, endereco_entrega: e.target.value }))}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Preenchido automaticamente com o endereço do cliente. Edite se a entrega for em outro local.
+              </p>
+            </div>
+
             {/* DADOS DO ORÇAMENTO */}
             <div className="grid grid-cols-3 gap-4">
               <div>
