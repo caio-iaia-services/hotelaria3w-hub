@@ -38,7 +38,8 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
   )
 }
 
-export function OrcamentoTemplate({ orcamento, itens }: Props) {
+export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
+  const emailExibicao = emailUsuario || 'comercial1@3whotelaria.com.br'
   const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
   const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
   const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
