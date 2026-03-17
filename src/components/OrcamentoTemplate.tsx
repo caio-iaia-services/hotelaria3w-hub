@@ -685,7 +685,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
                 </div>
               )}
               <div className="text-sm text-right">
-                <p>Emitido em {formatDate(orcamento.data_emissao || orcamento.created_at)}</p>
+                <p>Emitido em {formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</p>
                 <p className="font-semibold">Expira em {formatDate(orcamento.data_validade)}</p>
                 <div className="mt-1 bg-gray-200 text-gray-700 px-3 py-1 rounded inline-block text-xs">
                   {orcamento.status.toUpperCase()}

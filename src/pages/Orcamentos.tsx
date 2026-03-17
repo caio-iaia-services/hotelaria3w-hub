@@ -1439,7 +1439,7 @@ www.3whotelaria.com.br
                   <TableCell>
                     <Badge variant={getStatusVariant(orcamento.status)}>{getStatusLabel(orcamento.status)}</Badge>
                   </TableCell>
-                  <TableCell><span className="text-sm text-muted-foreground">{formatDate(orcamento.data_emissao || orcamento.created_at)}</span></TableCell>
+                  <TableCell><span className="text-sm text-muted-foreground">{formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</span></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => visualizarOrcamento(orcamento)}><Eye className="h-4 w-4" /></Button>
