@@ -145,7 +145,20 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
 
     if (orc) {
       const o = orc as any
-      setOrcamento(o as Orcamento)
+      const [{ data: clienteAtual }, { data: forn }] = await Promise.all([
+        o.cliente_id
+          ? supabase
+              .from('clientes')
+              .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+              .eq('id', o.cliente_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        o.fornecedor_id
+          ? supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ])
+
+      setOrcamento(aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null))
       setDados({
         prazo_entrega: o.prazo_entrega || '',
         validade_dias: o.validade_dias || 30,
@@ -164,14 +177,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagemFile(null)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
-
-      // Fetch fornecedor tipo_layout
-      if (o.fornecedor_id) {
-        const { data: forn } = await supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
-        setTipoLayout((forn as any)?.tipo_layout || null)
-      } else {
-        setTipoLayout(null)
-      }
+      setTipoLayout((forn as any)?.tipo_layout || null)
     }
 
     if (itensDb) {
