@@ -411,9 +411,9 @@ export function EditarOportunidadeModal({
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover operação?</AlertDialogTitle>
+            <AlertDialogTitle>Remover fornecedor?</AlertDialogTitle>
             <AlertDialogDescription>
-              A operação <span className="font-mono font-medium">{deleteTarget?.operacao}</span> e
+              O fornecedor <span className="font-mono font-medium">{deleteTarget?.operacao}</span> e
               seu card no funil serão removidos permanentemente.
               {activeCount <= 1 && (
                 <span className="block mt-2 font-medium text-destructive">
