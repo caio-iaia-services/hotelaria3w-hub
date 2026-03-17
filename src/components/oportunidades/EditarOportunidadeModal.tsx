@@ -188,7 +188,7 @@ export function EditarOportunidadeModal({
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao deletar operação");
+      toast.error("Erro ao deletar fornecedor");
     }
   };
 
