@@ -547,6 +547,17 @@ export default function AcoesComerciais() {
 
     setClienteCompleto(cliente as ClienteCompleto | null)
 
+    // Montar endereço de entrega a partir do cadastro do cliente
+    const partes: string[] = []
+    if (cliente?.logradouro) partes.push(cliente.logradouro)
+    if (cliente?.numero) partes.push(cliente.numero)
+    if (cliente?.complemento) partes.push(cliente.complemento)
+    if (cliente?.bairro) partes.push(cliente.bairro)
+    const cidadeUf = [cliente?.cidade, cliente?.estado].filter(Boolean).join(' - ')
+    if (cidadeUf) partes.push(cidadeUf)
+    if (cliente?.cep) partes.push(`CEP: ${cliente.cep}`)
+    const enderecoAutoPreenchido = partes.join(', ')
+
     // Buscar fornecedores ativos para associação
     const fornecedoresCarregados = await buscarFornecedoresDisponiveis()
 
