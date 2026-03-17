@@ -25,6 +25,15 @@ function formatCNPJ(cnpj: string | null) {
   return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 }
 
+function applyMaskCNPJ(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
 export default function ClienteModal({ cliente, open, onClose, onSave, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -87,7 +96,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ</Label>
-                <Input value={form.cnpj || ""} onChange={(e) => set("cnpj", e.target.value)} />
+                <Input value={formatCNPJ(form.cnpj) || ""} onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>E-mail</Label>

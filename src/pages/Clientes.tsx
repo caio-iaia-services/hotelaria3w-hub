@@ -33,6 +33,15 @@ function formatCNPJ(cnpj: string | null) {
   return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 }
 
+function applyMaskCNPJ(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
 const statusColors: Record<string, string> = {
   ativo: "bg-[#1a4168] text-white",
   inativo: "bg-[#D4AF37] text-[#1a4168]",
@@ -572,7 +581,7 @@ export default function Clientes() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ *</Label>
-                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required />
+                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento</Label>
