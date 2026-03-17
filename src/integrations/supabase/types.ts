@@ -267,6 +267,8 @@ export type Database = {
           condicoes_pagamento_padrao: string | null
           contatos: Json | null
           contrato: string | null
+          cor_primaria: string | null
+          cor_secundaria: string | null
           created_at: string
           data_inicio: string | null
           email: string | null
@@ -316,6 +318,8 @@ export type Database = {
           condicoes_pagamento_padrao?: string | null
           contatos?: Json | null
           contrato?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           data_inicio?: string | null
           email?: string | null
@@ -365,6 +369,8 @@ export type Database = {
           condicoes_pagamento_padrao?: string | null
           contatos?: Json | null
           contrato?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           data_inicio?: string | null
           email?: string | null
