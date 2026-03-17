@@ -117,6 +117,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 }
 
 export default function Orcamentos() {
+  const { user } = useAuth()
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
