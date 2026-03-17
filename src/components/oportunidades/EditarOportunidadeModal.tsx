@@ -138,7 +138,7 @@ export function EditarOportunidadeModal({
           cliente_cnpj: cardParaTrocar.cliente_cnpj,
           cliente_cidade: cardParaTrocar.cliente_cidade,
           cliente_estado: cardParaTrocar.cliente_estado,
-          observacoes: `Substituiu operação ${cardParaTrocar.operacao}`,
+          observacoes: `Substituiu fornecedor ${cardParaTrocar.operacao}`,
         });
 
       if (erroNovo) throw erroNovo;
@@ -146,13 +146,13 @@ export function EditarOportunidadeModal({
       // 3. Update oportunidade operacao/gestao strings
       await atualizarOportunidadeOperacoes(oportunidade.id);
 
-      toast.success("Operação trocada com sucesso!");
+      toast.success("Fornecedor trocado com sucesso!");
       setSwapOpen(false);
       setNovaOperacao("");
       buscarOperacoes(oportunidade.id);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao trocar operação");
+      toast.error("Erro ao trocar fornecedor");
     }
   };
 
@@ -168,7 +168,7 @@ export function EditarOportunidadeModal({
 
       if (error) throw error;
 
-      toast.success("Operação removida!");
+      toast.success("Fornecedor removido!");
 
       // Check remaining active cards
       const cardsRestantes = operacoes.filter(
@@ -177,7 +177,7 @@ export function EditarOportunidadeModal({
 
       if (cardsRestantes.length === 0) {
         await supabase.from("oportunidades").delete().eq("id", oportunidade.id);
-        toast.info("Oportunidade removida (sem operações ativas)");
+        toast.info("Oportunidade removida (sem fornecedores ativos)");
         setDeleteTarget(null);
         handleClose(false);
         onRefresh();
@@ -188,7 +188,7 @@ export function EditarOportunidadeModal({
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao deletar operação");
+      toast.error("Erro ao deletar fornecedor");
     }
   };
 
@@ -224,7 +224,7 @@ export function EditarOportunidadeModal({
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Oportunidade {oportunidade.numero}</DialogTitle>
-            <DialogDescription>Gerencie as operações desta oportunidade</DialogDescription>
+            <DialogDescription>Gerencie os fornecedores desta oportunidade</DialogDescription>
           </DialogHeader>
 
           {/* Client info (read-only) */}
@@ -241,7 +241,7 @@ export function EditarOportunidadeModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-foreground">
-                Operações desta Oportunidade
+                Fornecedores desta Oportunidade
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   ({activeCount} ativa{activeCount !== 1 ? "s" : ""})
                 </span>
@@ -252,7 +252,7 @@ export function EditarOportunidadeModal({
               <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p>
             ) : operacoes.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Nenhuma operação encontrada.
+                Nenhum fornecedor encontrado.
               </p>
             ) : (
               operacoes.map((item) => (
@@ -273,7 +273,7 @@ export function EditarOportunidadeModal({
                             variant="outline"
                             className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 text-[10px]"
                           >
-                            OPERAÇÃO SUBSTITUÍDA
+                            FORNECEDOR SUBSTITUÍDO
                           </Badge>
                         </div>
                       )}
@@ -332,7 +332,7 @@ export function EditarOportunidadeModal({
               onClick={() => toast.info("Adicionar operação em desenvolvimento")}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Nova Operação
+              Adicionar Novo Fornecedor
             </Button>
           </div>
 
@@ -348,9 +348,9 @@ export function EditarOportunidadeModal({
       <Dialog open={swapOpen} onOpenChange={setSwapOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Trocar Operação</DialogTitle>
+            <DialogTitle>Trocar Fornecedor</DialogTitle>
             <DialogDescription>
-              Selecione a nova operação para substituir {cardParaTrocar?.operacao}
+              Selecione o novo fornecedor para substituir {cardParaTrocar?.operacao}
             </DialogDescription>
           </DialogHeader>
 
@@ -360,16 +360,16 @@ export function EditarOportunidadeModal({
                 <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-yellow-900 dark:text-yellow-300">Atenção!</p>
-                  <p className="text-yellow-700 dark:text-yellow-400">
-                    A operação antiga será marcada como substituída e ficará amarela.
-                    Uma nova operação será criada no funil.
+                   <p className="text-yellow-700 dark:text-yellow-400">
+                    O fornecedor antigo será marcado como substituído e ficará amarelo.
+                    Um novo fornecedor será criado no funil.
                   </p>
                 </div>
               </div>
             </div>
 
             <div>
-              <Label>Operação Atual</Label>
+              <Label>Fornecedor Atual</Label>
               <div className="mt-1 flex gap-2">
                 <Badge>{cardParaTrocar?.operacao}</Badge>
                 <Badge variant="outline">{cardParaTrocar?.gestao}</Badge>
@@ -377,7 +377,7 @@ export function EditarOportunidadeModal({
             </div>
 
             <div>
-              <Label>Nova Operação</Label>
+              <Label>Novo Fornecedor</Label>
               <Select value={novaOperacao} onValueChange={setNovaOperacao}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione..." />
@@ -411,13 +411,13 @@ export function EditarOportunidadeModal({
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover operação?</AlertDialogTitle>
+            <AlertDialogTitle>Remover fornecedor?</AlertDialogTitle>
             <AlertDialogDescription>
-              A operação <span className="font-mono font-medium">{deleteTarget?.operacao}</span> e
+              O fornecedor <span className="font-mono font-medium">{deleteTarget?.operacao}</span> e
               seu card no funil serão removidos permanentemente.
               {activeCount <= 1 && (
                 <span className="block mt-2 font-medium text-destructive">
-                  ⚠️ Esta é a última operação ativa. A oportunidade também será removida.
+                  ⚠️ Este é o último fornecedor ativo. A oportunidade também será removida.
                 </span>
               )}
             </AlertDialogDescription>

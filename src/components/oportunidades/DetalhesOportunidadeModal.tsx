@@ -79,7 +79,7 @@ export function DetalhesOportunidadeModal({ oportunidade, open, onOpenChange, on
 
           <Card>
             <CardContent className="p-4 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Operações</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Fornecedores</h4>
               <div className="flex flex-wrap gap-1">
                 {oportunidade.operacao.split(", ").map((op, i) => (
                   <Badge key={i} variant="secondary">{op.trim()}</Badge>

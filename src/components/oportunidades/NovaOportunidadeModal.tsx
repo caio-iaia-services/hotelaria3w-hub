@@ -164,7 +164,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
   const handleSave = async () => {
     if (!step2Valid) {
-      toast.error("Selecione ao menos uma operação");
+      toast.error("Selecione ao menos um fornecedor");
       return;
     }
 
@@ -263,7 +263,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
       if (erroCards) throw erroCards;
 
-      toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} operação(ões)!`);
+      toast.success(`Oportunidade criada com ${operacoesSelecionadas.length} fornecedor(es)!`);
       onSave?.();
       handleClose(false);
     } catch (error: any) {
@@ -280,7 +280,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
         <DialogHeader>
           <DialogTitle>Nova Oportunidade</DialogTitle>
           <DialogDescription>
-            Passo {step} de 2 — {step === 1 ? "Dados do Cliente" : "Operações e Observações"}
+            Passo {step} de 2 — {step === 1 ? "Dados do Cliente" : "Fornecedores e Observações"}
           </DialogDescription>
         </DialogHeader>
 
@@ -422,8 +422,8 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
             {/* Header with VIP button */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-foreground">Selecione as Operações</h3>
-                <p className="text-sm text-muted-foreground">Escolha uma ou mais operações para este cliente</p>
+                <h3 className="font-semibold text-foreground">Selecione os Fornecedores</h3>
+                <p className="text-sm text-muted-foreground">Escolha um ou mais fornecedores para este cliente</p>
               </div>
               <Button
                 type="button"
@@ -458,7 +458,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
             {/* Counter */}
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
               <p className="text-sm font-medium text-foreground">
-                {operacoesSelecionadas.length} operação(ões) selecionada(s)
+                {operacoesSelecionadas.length} fornecedor(es) selecionado(s)
               </p>
               {operacoesSelecionadas.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -485,8 +485,8 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
                 {salvando
                   ? "Criando..."
                   : operacoesSelecionadas.length === 0
-                    ? "Selecione ao menos 1 operação"
-                    : `Criar Oportunidade (${operacoesSelecionadas.length} ${operacoesSelecionadas.length > 1 ? "operações" : "operação"})`
+                    ? "Selecione ao menos 1 fornecedor"
+                    : `Criar Oportunidade (${operacoesSelecionadas.length} ${operacoesSelecionadas.length > 1 ? "fornecedores" : "fornecedor"})`
                 }
               </Button>
             </div>

@@ -744,8 +744,8 @@ Segue em anexo o orçamento ${orcamento.numero}.
 
 DETALHES DO ORÇAMENTO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Operação: ${orcamento.operacao || '-'}
-Fornecedor: ${orcamento.fornecedor_nome || '-'}
+Fornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || '-'}
+Valor Total: ${formatCurrency(orcamento.total)}
 Valor Total: ${formatCurrency(orcamento.total)}
 Prazo de Entrega: ${orcamento.prazo_entrega || '-'}
 Validade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : '-'}
@@ -998,7 +998,7 @@ comercial1@3whotelaria.com.br`
             <TableRow className="hover:bg-[#1a4168] border-[#1a4168]">
               <TableHead className="text-white">Número</TableHead>
               <TableHead className="text-white">Cliente</TableHead>
-              <TableHead className="text-white">Fornecedor/Operação</TableHead>
+              <TableHead className="text-white">Fornecedor</TableHead>
               <TableHead className="text-white">Valor Total</TableHead>
               <TableHead className="text-white">Validade</TableHead>
               <TableHead className="text-white">Status</TableHead>
@@ -1036,12 +1036,7 @@ comercial1@3whotelaria.com.br`
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="text-sm">{orcamento.fornecedor_nome || '-'}</p>
-                      {orcamento.operacao && (
-                        <Badge variant="outline" className="text-xs mt-0.5">{orcamento.operacao}</Badge>
-                      )}
-                    </div>
+                    <p className="text-sm">{orcamento.fornecedor_nome || orcamento.operacao || '-'}</p>
                   </TableCell>
                   <TableCell><span className="font-medium">{formatCurrency(getTotalExibicao(orcamento))}</span></TableCell>
                   <TableCell>

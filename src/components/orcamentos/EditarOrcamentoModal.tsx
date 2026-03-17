@@ -395,7 +395,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         <DialogHeader>
           <DialogTitle>Editar Orçamento {orcamento?.numero}</DialogTitle>
           <DialogDescription>
-            {orcamento?.cliente_nome} — {orcamento?.operacao || orcamento?.fornecedor_nome || ''}
+            {orcamento?.cliente_nome} — {orcamento?.fornecedor_nome || orcamento?.operacao || ''}
           </DialogDescription>
         </DialogHeader>
 
@@ -415,12 +415,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                   <p className="font-medium">{orcamento?.cliente_cnpj}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Operação</p>
-                  <p className="font-medium">{orcamento?.operacao || '-'}</p>
-                </div>
-                <div>
                   <p className="text-muted-foreground">Fornecedor</p>
-                  <p className="font-medium">{orcamento?.fornecedor_nome || '-'}</p>
+                  <p className="font-medium">{orcamento?.fornecedor_nome || orcamento?.operacao || '-'}</p>
                 </div>
               </div>
             </div>

@@ -116,7 +116,7 @@ export default function Oportunidades() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Oportunidades</h1>
-          <p className="text-sm text-muted-foreground mt-1">Cadastro e distribuição de oportunidades por gestão e operação</p>
+          <p className="text-sm text-muted-foreground mt-1">Cadastro e distribuição de oportunidades por gestão e fornecedor</p>
         </div>
         <Button className="gap-2 bg-[#1a4168] hover:bg-[#153554] text-white" onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" />Nova Oportunidade
@@ -143,7 +143,7 @@ export default function Oportunidades() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número, cliente ou operação..."
+            placeholder="Buscar por número, cliente ou fornecedor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
@@ -165,7 +165,7 @@ export default function Oportunidades() {
                   <TableHead className="w-[160px] text-white">Número</TableHead>
                   <TableHead className="text-white">Cliente</TableHead>
                   <TableHead className="text-white">Gestão</TableHead>
-                  <TableHead className="text-white">Operação</TableHead>
+                  <TableHead className="text-white">Fornecedor</TableHead>
                   <TableHead className="text-white">Status</TableHead>
                   <TableHead className="text-white">Data Cadastro</TableHead>
                   <TableHead className="text-center w-[100px] text-white">Ações</TableHead>

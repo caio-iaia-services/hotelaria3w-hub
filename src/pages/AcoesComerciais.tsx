@@ -747,7 +747,7 @@ export default function AcoesComerciais() {
     if (!cardSelecionado) return
 
     if (!operacaoSelecionada) {
-      toast.error('Selecione uma operação')
+      toast.error('Selecione um fornecedor')
       return
     }
 
@@ -1102,7 +1102,7 @@ export default function AcoesComerciais() {
                   <p className="font-medium">{cardSelecionado?.cliente_cnpj}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Operação</p>
+                  <p className="text-muted-foreground">Fornecedor</p>
                   <Badge>{cardSelecionado?.operacao}</Badge>
                 </div>
                 <div>
@@ -1112,11 +1112,11 @@ export default function AcoesComerciais() {
               </div>
             </div>
 
-            {/* OPERAÇÃO (auto-selecionada) */}
+            {/* FORNECEDOR (auto-selecionado) */}
             <div className="bg-card border-2 border-primary/20 rounded-lg p-4">
-              <Label>Operação</Label>
+              <Label>Fornecedor</Label>
               <div className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
-                {operacaoSelecionada || cardSelecionado?.operacao || 'Não definida'}
+                {operacaoSelecionada || cardSelecionado?.operacao || 'Não definido'}
               </div>
 
               {fornecedorSelecionado && (
@@ -1148,7 +1148,7 @@ export default function AcoesComerciais() {
 
               {operacaoSelecionada && !fornecedorSelecionado && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Nenhum fornecedor vinculado a esta operação
+                  Nenhum fornecedor vinculado
                 </p>
               )}
             </div>
