@@ -132,7 +132,7 @@ export default function CrmGestao() {
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-heading font-bold text-[#1a4168]">{baseConfig.title}</h1>
-          <Badge>{operations.length} operações</Badge>
+          <Badge>{operations.length} fornecedores</Badge>
         </div>
         <p className="text-sm text-muted-foreground mt-1">{baseConfig.subtitle}</p>
       </div>
