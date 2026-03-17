@@ -309,7 +309,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
-        data_validade: dataValidade.toISOString(),
+        data_validade: dataValidadeIso,
         frete: parseNum(dados.frete),
         frete_tipo: dados.frete_tipo,
         impostos_percentual: parseNum(dados.impostos_percentual),
