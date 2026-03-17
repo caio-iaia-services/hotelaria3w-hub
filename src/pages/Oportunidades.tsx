@@ -146,7 +146,7 @@ export default function Oportunidades() {
             placeholder="Buscar por número, cliente ou operação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
+            className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]" placeholder="Buscar por número, cliente ou fornecedor..."
           />
         </div>
       </div>

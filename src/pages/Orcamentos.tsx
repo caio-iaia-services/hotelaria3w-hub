@@ -744,8 +744,8 @@ Segue em anexo o orçamento ${orcamento.numero}.
 
 DETALHES DO ORÇAMENTO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Operação/Fornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || '-'}
-Fornecedor: ${orcamento.fornecedor_nome || '-'}
+Fornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || '-'}
+Valor Total: ${formatCurrency(orcamento.total)}
 Valor Total: ${formatCurrency(orcamento.total)}
 Prazo de Entrega: ${orcamento.prazo_entrega || '-'}
 Validade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : '-'}
