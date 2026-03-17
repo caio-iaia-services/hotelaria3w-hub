@@ -146,7 +146,7 @@ export function EditarOportunidadeModal({
       // 3. Update oportunidade operacao/gestao strings
       await atualizarOportunidadeOperacoes(oportunidade.id);
 
-      toast.success("Operação trocada com sucesso!");
+      toast.success("Fornecedor trocado com sucesso!");
       setSwapOpen(false);
       setNovaOperacao("");
       buscarOperacoes(oportunidade.id);
