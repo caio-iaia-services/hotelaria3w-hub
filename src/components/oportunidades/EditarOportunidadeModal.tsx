@@ -224,7 +224,7 @@ export function EditarOportunidadeModal({
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Oportunidade {oportunidade.numero}</DialogTitle>
-            <DialogDescription>Gerencie as operações desta oportunidade</DialogDescription>
+            <DialogDescription>Gerencie os fornecedores desta oportunidade</DialogDescription>
           </DialogHeader>
 
           {/* Client info (read-only) */}
