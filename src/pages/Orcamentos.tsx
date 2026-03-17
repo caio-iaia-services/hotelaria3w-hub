@@ -1271,37 +1271,13 @@ ${inlinedContent}
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Mensagem *</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={restaurarMensagemPadrao}
-                >
-                  <RotateCcw className="w-4 h-4 mr-1" />
-                  Restaurar padrão
-                </Button>
-              </div>
-              <Textarea
-                value={emailMensagem}
-                onChange={(e) => setEmailMensagem(e.target.value)}
-                rows={12}
-                className="font-mono text-sm"
-              />
-            </div>
-
             <div className="bg-accent/50 border border-accent rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <Paperclip className="w-5 h-5 text-primary mt-0.5" />
+                <Mail className="w-5 h-5 text-primary mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">Anexo</p>
+                  <p className="font-semibold text-foreground">Conteúdo do E-mail</p>
                   <p className="text-sm text-muted-foreground">
-                    {orcamentoEnviar?.pdf_url
-                      ? '✅ PDF será anexado automaticamente'
-                      : '⚠️ PDF ainda não foi gerado. Será gerado automaticamente ao enviar.'
-                    }
+                    O orçamento completo será enviado diretamente no corpo do e-mail em HTML.
                   </p>
                 </div>
               </div>
@@ -1309,21 +1285,14 @@ ${inlinedContent}
 
             <details className="border rounded-lg p-4">
               <summary className="cursor-pointer font-semibold text-muted-foreground">
-                👁️ Pré-visualizar e-mail
+                👁️ Pré-visualizar resumo
               </summary>
               <div className="mt-4 bg-muted rounded p-4 text-sm space-y-2 border">
                 <p><strong>Para:</strong> {emailDestinatarios}</p>
                 <p><strong>Assunto:</strong> {emailAssunto}</p>
-                <div className="border-t pt-2 mt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Mensagem:</p>
-                  <div className="whitespace-pre-wrap bg-background p-3 rounded border">
-                    {emailMensagem}
-                  </div>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                  <p className="text-xs text-muted-foreground">Anexo:</p>
-                  <p className="text-sm">📎 Orcamento_{orcamentoEnviar?.numero}.pdf</p>
-                </div>
+                <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
+                  O orçamento será renderizado como HTML no corpo do e-mail.
+                </p>
               </div>
             </details>
           </div>
