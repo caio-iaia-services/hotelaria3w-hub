@@ -476,14 +476,14 @@ export default function Orcamentos() {
     const host = document.createElement('div')
     host.id = 'orcamento-export-host'
     host.style.position = 'fixed'
-    host.style.left = '0'
+    host.style.left = '-200vw'
     host.style.top = '0'
     host.style.width = '100vw'
     host.style.height = '100vh'
     host.style.overflow = 'auto'
-    host.style.opacity = '0'
+    host.style.opacity = '1'
     host.style.pointerEvents = 'none'
-    host.style.zIndex = '-1'
+    host.style.zIndex = '0'
     host.style.background = '#ffffff'
 
     const clone = containerOriginal.cloneNode(true) as HTMLElement
