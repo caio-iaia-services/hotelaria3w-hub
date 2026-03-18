@@ -476,14 +476,14 @@ export default function Orcamentos() {
     const host = document.createElement('div')
     host.id = 'orcamento-export-host'
     host.style.position = 'fixed'
-    host.style.left = '0'
+    host.style.left = '-200vw'
     host.style.top = '0'
     host.style.width = '100vw'
     host.style.height = '100vh'
     host.style.overflow = 'auto'
-    host.style.opacity = '0'
+    host.style.opacity = '1'
     host.style.pointerEvents = 'none'
-    host.style.zIndex = '-1'
+    host.style.zIndex = '0'
     host.style.background = '#ffffff'
 
     const clone = containerOriginal.cloneNode(true) as HTMLElement
@@ -809,6 +809,14 @@ www.3whotelaria.com.br
     return `${window.location.origin}/${url.replace(/^\/+/, '')}`
   }
 
+  function svgDataUri(svg: string) {
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+  }
+
+  function svgImage(svg: string, width: number, height: number, extraStyle = 'vertical-align:middle;margin-right:6px;display:inline-block;') {
+    return `<img src="${svgDataUri(svg)}" width="${width}" height="${height}" alt="" style="${extraStyle}"/>`
+  }
+
   // ========== EMAIL HTML HELPERS ==========
   const F = 'font-family:Arial,Helvetica,sans-serif;'
   const esc = escapeHtml
@@ -835,7 +843,7 @@ www.3whotelaria.com.br
     const frete = parseNum((orcamento as any).frete)
     const total = parseNum((orcamento as any).total) || subtotal + impostos - descontoVal + frete
 
-    const logo3w = getAbsoluteUrl('/logo_3Whotelaria.jpeg')
+    const logo3w = getAbsoluteUrl('/logo_3Whotelaria_transp.png') || getAbsoluteUrl('/logo_3Whotelaria.jpeg')
     const logoFornecedor = getAbsoluteUrl((orcamento as any).fornecedor_logotipo_url || null)
     const marketingUrl = getAbsoluteUrl(resolverImagemMarketing(orcamento.imagem_marketing_url, (orcamento as any).fornecedor_imagem_template_url || null, layoutMidea))
 
@@ -878,17 +886,17 @@ www.3whotelaria.com.br
       return `<tr>${cols.map((c, i) => `<td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:${aligns[i]};vertical-align:top;">${c}</td>`).join('')}</tr>`
     }).join('')
 
-    // SVG icons (inline, white for header, dark for gold section)
-    const svgGlobe = (color: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
-    const svgPhone = (color: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.81 19.79 19.79 0 0 1 .22 1.18 2 2 0 0 1 2.18 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L6.91 7.09a16 16 0 0 0 6 6l.56-.56a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/></svg>`
-    const svgEnvelope = (color: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`
-    const svgPin = (color: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`
-    const svgTruck = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`
-    const svgBox = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
-    const svgDollar = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`
-    const svgCard = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`
-    const svgAlert = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" style="vertical-align:middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
-    const svgCheck = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><polyline points="20 6 9 17 4 12"/></svg>`
+    // SVG icons as data-uri images for email/PDF compatibility
+    const svgGlobe = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`, 14, 14)
+    const svgPhone = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.81 19.79 19.79 0 0 1 .22 1.18 2 2 0 0 1 2.18 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L6.91 7.09a16 16 0 0 0 6 6l.56-.56a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/></svg>`, 14, 14)
+    const svgEnvelope = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, 14, 14)
+    const svgPin = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`, 14, 14)
+    const svgTruck = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`, 14, 14, 'vertical-align:middle;margin-right:4px;display:inline-block;')
+    const svgBox = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`, 14, 14, 'vertical-align:middle;margin-right:4px;display:inline-block;')
+    const svgDollar = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`, 14, 14, 'vertical-align:middle;margin-right:4px;display:inline-block;')
+    const svgCard = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`, 14, 14, 'vertical-align:middle;margin-right:4px;display:inline-block;')
+    const svgAlert = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`, 20, 20, 'vertical-align:middle;display:inline-block;')
+    const svgCheck = svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`, 16, 16)
 
     const termosFornecedorTitulo = `TERMOS LEGAIS ${fornecedorNome.toUpperCase()}`
 
