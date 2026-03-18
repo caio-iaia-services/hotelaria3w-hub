@@ -452,7 +452,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             </table>
 
             {/* GRID: BOX ATENÇÃO + RESUMO FINANCEIRO */}
-            <div className="grid md:grid-cols-2 gap-6 mt-8">
+            <div className="grid md:grid-cols-2 gap-6 mt-8 page-break-inside-avoid">
               
               {/* BOX ATENÇÃO */}
               <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-6">
@@ -524,7 +524,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             </div>
             
             {/* GRID: FRETE/ENTREGA/DIFAL (esquerda) | CONDIÇÕES (direita) */}
-            <div className="grid grid-cols-12 gap-6 mt-8">
+            <div className="grid grid-cols-12 gap-6 mt-8 page-break-inside-avoid">
               
               {/* LADO ESQUERDO: Frete + Entrega + Difal */}
               <div className="col-span-4 flex flex-col gap-0 h-full">
@@ -596,7 +596,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             
             {/* OBSERVAÇÕES GERAIS */}
             {orcamento.observacoes_gerais && (
-              <div className="mt-6 border-2 border-gray-300 rounded-lg overflow-hidden">
+              <div className="mt-6 border-2 border-gray-300 rounded-lg overflow-hidden page-break-inside-avoid">
                 <div className="bg-gray-100 p-3 border-b-2 border-gray-300">
                   <p className="font-bold">Observações Gerais</p>
                 </div>
@@ -629,7 +629,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             )}
 
             {/* TERMOS LEGAIS 3W */}
-            <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
+            <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6 page-break-inside-avoid">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-[#1a4168] p-2 rounded">
                   <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-8" />
@@ -648,7 +648,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             </div>
 
             {/* BOTÕES DE AÇÃO */}
-            <div className="mt-6 grid md:grid-cols-2 gap-4">
+            <div className="mt-6 grid md:grid-cols-2 gap-4 page-break-inside-avoid">
               <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
                 <Phone className="w-6 h-6" />
                 <span>Clique aqui para falar com o Vendedor</span>
