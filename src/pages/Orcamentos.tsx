@@ -792,37 +792,29 @@ export default function Orcamentos() {
               background: #fff;
             }
             #print-root > .page-break {
-              display: block !important;
               width: 100% !important;
-              min-height: auto !important;
-              height: auto !important;
-              max-height: none !important;
               break-after: auto;
               page-break-after: auto;
-              break-before: auto;
-              page-break-before: auto;
               overflow: visible !important;
             }
             #print-root > .page-break:first-child {
+              min-height: 277mm !important;
               break-after: page;
               page-break-after: always;
             }
             #print-root > .page-break:nth-child(2) {
+              min-height: auto !important;
+              height: auto !important;
               break-after: auto !important;
               page-break-after: auto !important;
             }
+            #print-root > .page-break:nth-child(2) > .flex-1 {
+              flex: 0 0 auto !important;
+            }
             #print-root > .page-break:nth-child(n + 3) {
+              min-height: 277mm !important;
               break-before: page;
               page-break-before: always;
-            }
-            #print-root .min-h-screen,
-            #print-root .flex-1 {
-              min-height: auto !important;
-              height: auto !important;
-              flex: none !important;
-            }
-            #print-root .flex {
-              align-items: stretch !important;
             }
             #print-root table {
               width: 100% !important;
@@ -841,20 +833,11 @@ export default function Orcamentos() {
               break-inside: avoid;
               page-break-inside: avoid;
             }
-            #print-root .grid {
-              display: block !important;
-            }
-            #print-root .grid > * {
-              width: 100% !important;
-              max-width: 100% !important;
-              margin-bottom: 12px !important;
-              break-inside: avoid;
-              page-break-inside: avoid;
-            }
             #print-root img {
               max-width: 100% !important;
               height: auto !important;
             }
+          </style>
             #print-root .overflow-hidden,
             #print-root .overflow-y-auto {
               overflow: visible !important;
