@@ -513,29 +513,53 @@ export default function Orcamentos() {
       #orcamento-export-clone .page-break:first-child .max-w-7xl > div:last-child {
         flex: 0 0 auto !important;
       }
-      #orcamento-export-clone .bg-\\[\\#1a4168\\] {
+      #orcamento-export-clone .bg-\[\#1a4168\] {
         background-color: #1a4168 !important;
         color: #ffffff !important;
       }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] {
+      #orcamento-export-clone .bg-\[\#c4942c\] {
         background-color: #c4942c !important;
         color: #ffffff !important;
       }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] * {
+      #orcamento-export-clone .bg-\[\#c4942c\] * {
         color: #ffffff !important;
       }
-      #orcamento-export-clone .page-break {
+      #orcamento-export-clone > .page-break {
         width: ${A4_WIDTH_PX}px !important;
-        min-height: ${A4_HEIGHT_PX}px !important;
+        min-height: auto !important;
+        height: auto !important;
         margin: 0 auto !important;
-        break-after: page;
-        page-break-after: always;
-        overflow: hidden;
-        box-sizing: border-box;
-      }
-      #orcamento-export-clone .page-break:last-child {
         break-after: auto;
         page-break-after: auto;
+        overflow: visible !important;
+        box-sizing: border-box;
+      }
+      #orcamento-export-clone > .page-break:first-child,
+      #orcamento-export-clone > .page-break:nth-child(n + 3) {
+        min-height: ${A4_HEIGHT_PX}px !important;
+        break-after: page;
+        page-break-after: always;
+      }
+      #orcamento-export-clone > .page-break:nth-child(2) {
+        break-after: auto;
+        page-break-after: auto;
+      }
+      #orcamento-export-clone table {
+        page-break-inside: auto;
+      }
+      #orcamento-export-clone thead {
+        display: table-header-group;
+      }
+      #orcamento-export-clone tfoot {
+        display: table-footer-group;
+      }
+      #orcamento-export-clone tr,
+      #orcamento-export-clone td,
+      #orcamento-export-clone th,
+      #orcamento-export-clone img,
+      #orcamento-export-clone .page-break-inside-avoid {
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
     `
 
@@ -590,6 +614,64 @@ export default function Orcamentos() {
     })
   }
 
+  function adicionarCanvasPaginadoAoPdf(
+    pdf: jsPDF,
+    pagina: HTMLElement,
+    canvas: HTMLCanvasElement,
+    captureWidth: number,
+    primeiraPaginaPdf: boolean
+  ) {
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const ratio = pageWidth / canvas.width
+    const sliceHeightPx = Math.max(1, Math.floor(pageHeight / ratio))
+    const domToCanvasScale = canvas.width / captureWidth
+
+    let offsetYpx = 0
+    let sliceIndex = 0
+
+    while (offsetYpx < canvas.height) {
+      const currentSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetYpx)
+      const sliceCanvas = document.createElement('canvas')
+      sliceCanvas.width = canvas.width
+      sliceCanvas.height = currentSliceHeight
+
+      const context = sliceCanvas.getContext('2d')
+      if (!context) {
+        throw new Error('Não foi possível preparar a página do PDF')
+      }
+
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
+      context.drawImage(
+        canvas,
+        0,
+        offsetYpx,
+        canvas.width,
+        currentSliceHeight,
+        0,
+        0,
+        canvas.width,
+        currentSliceHeight
+      )
+
+      if (!primeiraPaginaPdf || sliceIndex > 0) {
+        pdf.addPage()
+      }
+
+      const renderHeight = currentSliceHeight * ratio
+      const imgData = sliceCanvas.toDataURL('image/png')
+      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, renderHeight, undefined, 'FAST')
+
+      if (sliceIndex === 0) {
+        desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale)
+      }
+
+      offsetYpx += currentSliceHeight
+      sliceIndex += 1
+    }
+  }
+
   async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
     const containerOriginal = await obterConteudoParaExportacao(orcamento)
     if (!containerOriginal) return null
@@ -603,10 +685,9 @@ export default function Orcamentos() {
 
       const paginas = obterPaginasExportacao(clone)
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+      let primeiraPaginaPdf = true
 
-      for (let index = 0; index < paginas.length; index++) {
-        const pagina = paginas[index]
-
+      for (const pagina of paginas) {
         const captureWidth = Math.max(
           794,
           Math.ceil(pagina.scrollWidth || 0),
@@ -628,19 +709,8 @@ export default function Orcamentos() {
           imageTimeout: 10000,
         })
 
-        const domToCanvasScale = canvas.width / captureWidth
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const pageHeight = pdf.internal.pageSize.getHeight()
-        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
-        const renderWidth = canvas.width * ratio
-        const renderHeight = canvas.height * ratio
-        const offsetX = (pageWidth - renderWidth) / 2
-        const offsetY = (pageHeight - renderHeight) / 2
-        const imgData = canvas.toDataURL('image/png')
-
-        if (index > 0) pdf.addPage()
-        pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST')
-        desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, offsetX, offsetY, domToCanvasScale)
+        adicionarCanvasPaginadoAoPdf(pdf, pagina, canvas, captureWidth, primeiraPaginaPdf)
+        primeiraPaginaPdf = false
       }
 
       return pdf.output('blob')
@@ -705,8 +775,7 @@ export default function Orcamentos() {
               background: #fff !important;
             }
             body {
-              display: flex;
-              justify-content: center;
+              background: #fff !important;
             }
             #print-root {
               width: 210mm;
@@ -714,16 +783,40 @@ export default function Orcamentos() {
               margin: 0 auto;
               background: #fff;
             }
-            #print-root .page-break {
+            #print-root > .page-break {
               width: 210mm !important;
+              min-height: auto !important;
+              height: auto !important;
+              break-after: auto;
+              page-break-after: auto;
+              overflow: visible !important;
+            }
+            #print-root > .page-break:first-child,
+            #print-root > .page-break:nth-child(n + 3) {
               min-height: 297mm !important;
               break-after: page;
               page-break-after: always;
-              overflow: hidden;
             }
-            #print-root .page-break:last-child {
-              break-after: auto;
-              page-break-after: auto;
+            #print-root > .page-break:nth-child(2) {
+              break-after: auto !important;
+              page-break-after: auto !important;
+            }
+            #print-root table {
+              page-break-inside: auto;
+            }
+            #print-root thead {
+              display: table-header-group;
+            }
+            #print-root tfoot {
+              display: table-footer-group;
+            }
+            #print-root tr,
+            #print-root td,
+            #print-root th,
+            #print-root img,
+            #print-root .page-break-inside-avoid {
+              break-inside: avoid;
+              page-break-inside: avoid;
             }
           </style>
         </head>
