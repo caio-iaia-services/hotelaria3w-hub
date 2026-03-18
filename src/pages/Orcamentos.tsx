@@ -764,10 +764,11 @@ export default function Orcamentos() {
           <title>Orçamento</title>
           ${estilos}
           <style>
-            @page { size: A4; margin: 0; }
+            @page { size: A4; margin: 10mm 8mm; }
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              box-sizing: border-box;
             }
             html, body {
               margin: 0;
@@ -778,22 +779,24 @@ export default function Orcamentos() {
               background: #fff !important;
             }
             #print-root {
-              width: 210mm;
-              max-width: 210mm;
+              width: 100%;
+              max-width: 194mm;
               margin: 0 auto;
               background: #fff;
             }
             #print-root > .page-break {
-              width: 210mm !important;
+              display: block !important;
+              width: 100% !important;
               min-height: auto !important;
               height: auto !important;
+              max-height: none !important;
               break-after: auto;
               page-break-after: auto;
+              break-before: auto;
+              page-break-before: auto;
               overflow: visible !important;
             }
-            #print-root > .page-break:first-child,
-            #print-root > .page-break:nth-child(n + 3) {
-              min-height: 297mm !important;
+            #print-root > .page-break:first-child {
               break-after: page;
               page-break-after: always;
             }
@@ -801,7 +804,22 @@ export default function Orcamentos() {
               break-after: auto !important;
               page-break-after: auto !important;
             }
+            #print-root > .page-break:nth-child(n + 3) {
+              break-before: page;
+              page-break-before: always;
+            }
+            #print-root .min-h-screen,
+            #print-root .flex-1 {
+              min-height: auto !important;
+              height: auto !important;
+              flex: none !important;
+            }
+            #print-root .flex {
+              align-items: stretch !important;
+            }
             #print-root table {
+              width: 100% !important;
+              border-collapse: collapse;
               page-break-inside: auto;
             }
             #print-root thead {
@@ -811,12 +829,28 @@ export default function Orcamentos() {
               display: table-footer-group;
             }
             #print-root tr,
-            #print-root td,
-            #print-root th,
             #print-root img,
             #print-root .page-break-inside-avoid {
               break-inside: avoid;
               page-break-inside: avoid;
+            }
+            #print-root .grid {
+              display: block !important;
+            }
+            #print-root .grid > * {
+              width: 100% !important;
+              max-width: 100% !important;
+              margin-bottom: 12px !important;
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
+            #print-root img {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+            #print-root .overflow-hidden,
+            #print-root .overflow-y-auto {
+              overflow: visible !important;
             }
           </style>
         </head>
