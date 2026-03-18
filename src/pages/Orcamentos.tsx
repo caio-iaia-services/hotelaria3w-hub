@@ -502,6 +502,7 @@ export default function Orcamentos() {
       #orcamento-export-clone * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        box-sizing: border-box;
       }
       #orcamento-export-clone .max-w-7xl {
         max-width: 100% !important;
@@ -525,17 +526,18 @@ export default function Orcamentos() {
         color: #ffffff !important;
       }
       #orcamento-export-clone > .page-break {
+        display: block !important;
         width: ${A4_WIDTH_PX}px !important;
         min-height: auto !important;
         height: auto !important;
+        max-height: none !important;
         margin: 0 auto !important;
         break-after: auto;
         page-break-after: auto;
         overflow: visible !important;
         box-sizing: border-box;
       }
-      #orcamento-export-clone > .page-break:first-child,
-      #orcamento-export-clone > .page-break:nth-child(n + 3) {
+      #orcamento-export-clone > .page-break:first-child {
         min-height: ${A4_HEIGHT_PX}px !important;
         break-after: page;
         page-break-after: always;
@@ -544,7 +546,19 @@ export default function Orcamentos() {
         break-after: auto;
         page-break-after: auto;
       }
+      #orcamento-export-clone > .page-break:nth-child(n + 3) {
+        min-height: ${A4_HEIGHT_PX}px !important;
+        break-before: page;
+        page-break-before: always;
+      }
+      #orcamento-export-clone .min-h-screen,
+      #orcamento-export-clone .flex-1 {
+        min-height: auto !important;
+        height: auto !important;
+        flex: none !important;
+      }
       #orcamento-export-clone table {
+        width: 100% !important;
         page-break-inside: auto;
       }
       #orcamento-export-clone thead {
@@ -554,12 +568,24 @@ export default function Orcamentos() {
         display: table-footer-group;
       }
       #orcamento-export-clone tr,
-      #orcamento-export-clone td,
-      #orcamento-export-clone th,
       #orcamento-export-clone img,
       #orcamento-export-clone .page-break-inside-avoid {
         break-inside: avoid;
         page-break-inside: avoid;
+      }
+      #orcamento-export-clone .grid {
+        display: block !important;
+      }
+      #orcamento-export-clone .grid > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 16px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      #orcamento-export-clone .overflow-hidden,
+      #orcamento-export-clone .overflow-y-auto {
+        overflow: visible !important;
       }
     `
 
