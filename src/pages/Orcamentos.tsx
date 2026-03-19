@@ -301,16 +301,17 @@ export default function Orcamentos() {
 
   async function buscarFornecedorLayout(orcamentoBase: Orcamento) {
     const fornecedorId = (orcamentoBase as any).fornecedor_id
+    const fornecedorCodigo = String((orcamentoBase as any).codigo_empresa || '').trim()
     const nomeBusca = String((orcamentoBase as any).fornecedor_nome || (orcamentoBase as any).operacao || '').trim()
-    const cols = 'tipo_layout, nome_fantasia, logotipo_url, imagem_template_url, cor_primaria, cor_secundaria, termos_fabricante, condicoes_pagamento_padrao'
+    const cols = 'id, codigo, tipo_layout, nome_fantasia, logotipo_url, imagem_template_url, termos_fabricante, condicoes_pagamento_padrao'
 
     type FornecedorLayout = {
+      id: string
+      codigo: string | null
       tipo_layout: string | null
       nome_fantasia: string
       logotipo_url: string | null
       imagem_template_url: string | null
-      cor_primaria: string | null
-      cor_secundaria: string | null
       termos_fabricante: string | null
       condicoes_pagamento_padrao: string | null
     }
@@ -324,15 +325,37 @@ export default function Orcamentos() {
       if (data) return data as FornecedorLayout
     }
 
+    if (fornecedorCodigo) {
+      const { data } = await supabase
+        .from('fornecedores')
+        .select(cols)
+        .eq('codigo', fornecedorCodigo)
+        .maybeSingle()
+      if (data) return data as FornecedorLayout
+    }
+
     if (!nomeBusca) return null
 
-    const { data: exato } = await supabase.from('fornecedores').select(cols).eq('nome_fantasia', nomeBusca).maybeSingle()
+    const { data: exato } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .eq('nome_fantasia', nomeBusca)
+      .maybeSingle()
     if (exato) return exato as FornecedorLayout
 
-    const { data: ci } = await supabase.from('fornecedores').select(cols).ilike('nome_fantasia', nomeBusca).limit(1)
+    const { data: ci } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .ilike('nome_fantasia', nomeBusca)
+      .limit(1)
     if (ci && ci.length > 0) return ci[0] as FornecedorLayout
 
-    const { data: parcial } = await supabase.from('fornecedores').select(cols).ilike('nome_fantasia', `%${nomeBusca}%`).limit(1)
+    const { data: parcial } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .ilike('nome_fantasia', `%${nomeBusca}%`)
+      .limit(1)
+
     return parcial && parcial.length > 0 ? (parcial[0] as FornecedorLayout) : null
   }
 
@@ -378,12 +401,15 @@ export default function Orcamentos() {
     const orcamentoComFornecedor = fornecedor
       ? ({
           ...orcamentoComCliente,
+          fornecedor_id: (orcamentoComCliente as any).fornecedor_id || fornecedor.id,
+          fornecedor_nome: (orcamentoComCliente as any).fornecedor_nome || fornecedor.nome_fantasia,
+          operacao: (orcamentoComCliente as any).operacao || fornecedor.nome_fantasia,
           fornecedor_tipo_layout: fornecedor.tipo_layout,
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
           fornecedor_imagem_template_url: fornecedor.imagem_template_url,
-          fornecedor_cor_primaria: fornecedor.cor_primaria || '#C8962E',
-          fornecedor_cor_secundaria: fornecedor.cor_secundaria || '#1a4168',
+          fornecedor_cor_primaria: '#C8962E',
+          fornecedor_cor_secundaria: '#1a4168',
           fornecedor_termos_fabricante: fornecedor.termos_fabricante,
           fornecedor_condicoes_pagamento_padrao: fornecedor.condicoes_pagamento_padrao,
         } as Orcamento)
