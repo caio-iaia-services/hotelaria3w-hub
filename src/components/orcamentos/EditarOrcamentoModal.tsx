@@ -86,12 +86,16 @@ function montarEnderecoCliente(cliente?: ClienteAtual | null) {
 function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteAtual | null): Orcamento {
   if (!cliente) return orcamento
 
+  const enderecoEntregaSalvo = typeof orcamento.cliente_endereco === 'string'
+    ? orcamento.cliente_endereco.trim()
+    : ''
+
   return {
     ...orcamento,
     cliente_nome: cliente.nome_fantasia || orcamento.cliente_nome,
     cliente_razao_social: cliente.razao_social || orcamento.cliente_razao_social,
     cliente_cnpj: cliente.cnpj || orcamento.cliente_cnpj,
-    cliente_endereco: orcamento.cliente_endereco || montarEnderecoCliente(cliente),
+    cliente_endereco: enderecoEntregaSalvo.length > 0 ? enderecoEntregaSalvo : (montarEnderecoCliente(cliente) || null),
     cliente_email: cliente.email || orcamento.cliente_email,
     cliente_telefone: cliente.telefone || orcamento.cliente_telefone,
   }
