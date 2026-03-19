@@ -242,15 +242,15 @@ export default function Orcamentos() {
         }
       }
 
-      // Map rows, priorizando snapshot atual do cliente
+      // Map rows preservando o snapshot salvo no orçamento; só usar CRM como fallback mínimo
       const enrichedRows = rows.map((r: any) => {
         const cliente = clienteMap[r.cliente_id]
         const card = cardMap[r.cliente_id]
 
         const orcamentoBase = {
           ...r,
-          fornecedor_nome: r.fornecedor_nome || card?.operacao || '',
-          operacao: r.operacao || card?.operacao || null,
+          fornecedor_nome: r.fornecedor_nome || '',
+          operacao: r.operacao || r.fornecedor_nome || card?.operacao || null,
           gestao: r.gestao || card?.gestao || null,
           total: parseNum(r.total) || parseNum(r.valor_total) || 0,
           subtotal: parseNum(r.subtotal) || parseNum(r.valor_produtos) || 0,
@@ -301,16 +301,17 @@ export default function Orcamentos() {
 
   async function buscarFornecedorLayout(orcamentoBase: Orcamento) {
     const fornecedorId = (orcamentoBase as any).fornecedor_id
+    const fornecedorCodigo = String((orcamentoBase as any).codigo_empresa || '').trim()
     const nomeBusca = String((orcamentoBase as any).fornecedor_nome || (orcamentoBase as any).operacao || '').trim()
-    const cols = 'tipo_layout, nome_fantasia, logotipo_url, imagem_template_url, cor_primaria, cor_secundaria, termos_fabricante, condicoes_pagamento_padrao'
+    const cols = 'id, codigo, tipo_layout, nome_fantasia, logotipo_url, imagem_template_url, termos_fabricante, condicoes_pagamento_padrao'
 
     type FornecedorLayout = {
+      id: string
+      codigo: string | null
       tipo_layout: string | null
       nome_fantasia: string
       logotipo_url: string | null
       imagem_template_url: string | null
-      cor_primaria: string | null
-      cor_secundaria: string | null
       termos_fabricante: string | null
       condicoes_pagamento_padrao: string | null
     }
@@ -324,15 +325,37 @@ export default function Orcamentos() {
       if (data) return data as FornecedorLayout
     }
 
+    if (fornecedorCodigo) {
+      const { data } = await supabase
+        .from('fornecedores')
+        .select(cols)
+        .eq('codigo', fornecedorCodigo)
+        .maybeSingle()
+      if (data) return data as FornecedorLayout
+    }
+
     if (!nomeBusca) return null
 
-    const { data: exato } = await supabase.from('fornecedores').select(cols).eq('nome_fantasia', nomeBusca).maybeSingle()
+    const { data: exato } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .eq('nome_fantasia', nomeBusca)
+      .maybeSingle()
     if (exato) return exato as FornecedorLayout
 
-    const { data: ci } = await supabase.from('fornecedores').select(cols).ilike('nome_fantasia', nomeBusca).limit(1)
+    const { data: ci } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .ilike('nome_fantasia', nomeBusca)
+      .limit(1)
     if (ci && ci.length > 0) return ci[0] as FornecedorLayout
 
-    const { data: parcial } = await supabase.from('fornecedores').select(cols).ilike('nome_fantasia', `%${nomeBusca}%`).limit(1)
+    const { data: parcial } = await supabase
+      .from('fornecedores')
+      .select(cols)
+      .ilike('nome_fantasia', `%${nomeBusca}%`)
+      .limit(1)
+
     return parcial && parcial.length > 0 ? (parcial[0] as FornecedorLayout) : null
   }
 
@@ -378,12 +401,15 @@ export default function Orcamentos() {
     const orcamentoComFornecedor = fornecedor
       ? ({
           ...orcamentoComCliente,
+          fornecedor_id: (orcamentoComCliente as any).fornecedor_id || fornecedor.id,
+          fornecedor_nome: (orcamentoComCliente as any).fornecedor_nome || fornecedor.nome_fantasia,
+          operacao: (orcamentoComCliente as any).operacao || fornecedor.nome_fantasia,
           fornecedor_tipo_layout: fornecedor.tipo_layout,
           fornecedor_logotipo_url: fornecedor.logotipo_url,
           fornecedor_nome_fantasia: fornecedor.nome_fantasia,
           fornecedor_imagem_template_url: fornecedor.imagem_template_url,
-          fornecedor_cor_primaria: fornecedor.cor_primaria || '#C8962E',
-          fornecedor_cor_secundaria: fornecedor.cor_secundaria || '#1a4168',
+          fornecedor_cor_primaria: '#C8962E',
+          fornecedor_cor_secundaria: '#1a4168',
           fornecedor_termos_fabricante: fornecedor.termos_fabricante,
           fornecedor_condicoes_pagamento_padrao: fornecedor.condicoes_pagamento_padrao,
         } as Orcamento)
@@ -947,7 +973,9 @@ www.3whotelaria.com.br
 
     const fornecedorNome = (orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '3W Hotelaria'
     const fornecedorNomeNorm = fornecedorNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-    const layoutMidea = String((orcamento as any).fornecedor_tipo_layout || '') === 'midea' || ['MIDEA','SPRINGER','CLIMAZON','CARRIER'].some(k => fornecedorNomeNorm.includes(k))
+    const fornecedorTipoLayout = String((orcamento as any).fornecedor_tipo_layout || '').toLowerCase()
+    const layoutCastor = fornecedorTipoLayout === 'castor'
+    const layoutMidea = fornecedorTipoLayout === 'midea' || ['MIDEA','SPRINGER','CLIMAZON','CARRIER'].some(k => fornecedorNomeNorm.includes(k))
 
     // Dynamic colors from fornecedor (defaults match Castor)
     const corPrimaria = (orcamento as any).fornecedor_cor_primaria || '#C8962E'
@@ -972,13 +1000,34 @@ www.3whotelaria.com.br
     const whatsHref = 'https://wa.me/551151975779?text=' + encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}.`)
     const confirmHref = `mailto:${emailExib}?subject=${encodeURIComponent(`Confirmação do orçamento ${orcamento.numero}`)}`
 
-    // Dynamic Medidas column: show if ANY item has medidas
-    const temMedidas = itens.some(i => (i as any).medidas && String((i as any).medidas).trim())
-    const colHeaders = temMedidas
-      ? ['Item','Código','Descrição','Medidas','Qtd','Unitário','Total']
-      : ['Item','Código','Descrição','Qtd','Unitário','Total']
+    const dividirCodigoCastor = (codigo: string | null | undefined) => String(codigo || '').trim().split('').slice(0, 5)
+
+    const temMedidas = layoutCastor || itens.some(i => (i as any).medidas && String((i as any).medidas).trim())
+    const colHeaders = layoutCastor
+      ? ['Item', 'Código', 'Descrição', 'Medidas', 'Qtd', 'Unitário', 'Total']
+      : temMedidas
+        ? ['Item','Código','Descrição','Medidas','Qtd','Unitário','Total']
+        : ['Item','Código','Descrição','Qtd','Unitário','Total']
 
     const itemRows = itens.map((item, idx) => {
+      const bg = idx % 2 === 0 ? '#f9fafb' : '#ffffff'
+
+      if (layoutCastor) {
+        const codigoBoxes = dividirCodigoCastor(item.codigo).map((char) => (
+          `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;margin-right:4px;"><tr><td style="width:24px;height:28px;border:1px solid #d1d5db;background-color:#eff6ff;text-align:center;${F}font-size:13px;font-weight:700;color:#111827;">${esc(char)}</td></tr></table>`
+        )).join('') || '—'
+
+        return `<tr>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:center;vertical-align:top;">${idx + 1}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:center;vertical-align:top;white-space:nowrap;">${codigoBoxes}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:left;vertical-align:top;"><strong>${esc(item.descricao)}</strong>${item.especificacoes ? `<br/><span style="color:#6b7280;font-size:12px;">${esc(item.especificacoes)}</span>` : ''}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:center;vertical-align:top;">${esc((item as any).medidas || '—')}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:center;vertical-align:top;">${item.quantidade}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:right;vertical-align:top;">${esc(formatCurrency(item.preco_unitario))}</td>
+          <td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:right;vertical-align:top;">${esc(formatCurrency(item.total))}</td>
+        </tr>`
+      }
+
       const cols = temMedidas
         ? [
             String(idx + 1),
@@ -997,7 +1046,6 @@ www.3whotelaria.com.br
             esc(formatCurrency(item.preco_unitario)),
             esc(formatCurrency(item.total)),
           ]
-      const bg = idx % 2 === 0 ? '#f9fafb' : '#ffffff'
       const aligns = temMedidas
         ? ['center','center','left','center','center','right','right']
         : ['center','center','left','center','right','right']
