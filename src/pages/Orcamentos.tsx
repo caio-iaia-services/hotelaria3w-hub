@@ -986,17 +986,28 @@ www.3whotelaria.com.br
   const esc = escapeHtml
   const nl2br = (t: string) => t ? esc(t).replace(/\n/g, '<br/>') : '—'
 
+  async function capturarHtmlOrcamento(): Promise<string | null> {
+    if (!orcamentoEnviar) return null
+
+    const { orcamento, itens } = await carregarOrcamentoCompleto(orcamentoEnviar)
+    const enderecoEntrega = String(orcamento.cliente_endereco || '').trim()
+
+    console.log('ENDEREÇO QUE SERÁ USADO NO HTML:', enderecoEntrega)
+
+    return gerarHtmlOrcamento({
+      orcamento,
+      itens,
+      enderecoEntrega,
+      emailUsuario: user?.email,
+    })
+  }
+
   function gerarHtmlOrcamento({
     orcamento,
     itens,
     enderecoEntrega,
     emailUsuario,
   }: {
-    orcamento: Orcamento
-    itens: OrcamentoItem[]
-    enderecoEntrega: string
-    emailUsuario?: string | null
-  }) {
     const enderecoEntregaFinal = String(enderecoEntrega || '').trim()
     const fornecedorNome = (orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '3W Hotelaria'
     const fornecedorNomeNorm = fornecedorNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
