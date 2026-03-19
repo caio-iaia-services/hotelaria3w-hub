@@ -174,6 +174,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
+        endereco_entrega: o.cliente_endereco || montarEnderecoCliente((clienteAtual as ClienteAtual | null) ?? null) || '',
       })
       setImagemPreview(o.imagem_marketing_url || null)
       setImagemFile(null)
