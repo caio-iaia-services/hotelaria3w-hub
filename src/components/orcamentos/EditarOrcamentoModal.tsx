@@ -306,8 +306,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
             .maybeSingle()
         : { data: null }
 
-      const clienteEnderecoAtual = montarEnderecoCliente((clienteAtual as ClienteAtual | null) ?? null)
-
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
@@ -329,7 +327,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         cliente_nome: (clienteAtual as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
         cliente_razao_social: (clienteAtual as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
         cliente_cnpj: (clienteAtual as ClienteAtual | null)?.cnpj || orcamento.cliente_cnpj,
-        cliente_endereco: clienteEnderecoAtual || orcamento.cliente_endereco,
+        cliente_endereco: dados.endereco_entrega || orcamento.cliente_endereco,
         cliente_email: (clienteAtual as ClienteAtual | null)?.email || orcamento.cliente_email,
         cliente_telefone: (clienteAtual as ClienteAtual | null)?.telefone || orcamento.cliente_telefone,
         updated_at: new Date().toISOString(),
