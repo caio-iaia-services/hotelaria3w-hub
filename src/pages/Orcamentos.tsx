@@ -1603,7 +1603,7 @@ www.3whotelaria.com.br
                     </div>
                   </TableCell>
                   <TableCell>
-                    <p className="text-sm">{orcamento.fornecedor_nome || orcamento.operacao || '-'}</p>
+                    <p className="text-sm">{orcamento.fornecedor_nome || orcamento.operacao || orcamento.codigo_empresa || '-'}</p>
                   </TableCell>
                   <TableCell><span className="font-medium">{formatCurrency(getTotalExibicao(orcamento))}</span></TableCell>
                   <TableCell>
