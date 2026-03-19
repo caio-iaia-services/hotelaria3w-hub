@@ -86,12 +86,16 @@ function montarEnderecoCliente(cliente?: ClienteAtual | null) {
 function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteAtual | null): Orcamento {
   if (!cliente) return orcamento
 
+  const enderecoEntregaSalvo = typeof orcamento.cliente_endereco === 'string'
+    ? orcamento.cliente_endereco.trim()
+    : ''
+
   return {
     ...orcamento,
     cliente_nome: cliente.nome_fantasia || orcamento.cliente_nome,
     cliente_razao_social: cliente.razao_social || orcamento.cliente_razao_social,
     cliente_cnpj: cliente.cnpj || orcamento.cliente_cnpj,
-    cliente_endereco: orcamento.cliente_endereco || montarEnderecoCliente(cliente),
+    cliente_endereco: enderecoEntregaSalvo.length > 0 ? enderecoEntregaSalvo : (montarEnderecoCliente(cliente) || null),
     cliente_email: cliente.email || orcamento.cliente_email,
     cliente_telefone: cliente.telefone || orcamento.cliente_telefone,
   }
@@ -160,7 +164,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           : Promise.resolve({ data: null }),
       ])
 
-      setOrcamento(aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null))
+      const orcamentoComCliente = aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null)
+      const enderecoEntregaInicial = typeof orcamentoComCliente.cliente_endereco === 'string'
+        ? orcamentoComCliente.cliente_endereco
+        : ''
+
+      setOrcamento(orcamentoComCliente)
       setDados({
         prazo_entrega: o.prazo_entrega || '',
         validade_dias: o.validade_dias || 30,
@@ -174,7 +183,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
-        endereco_entrega: o.cliente_endereco || montarEnderecoCliente((clienteAtual as ClienteAtual | null) ?? null) || '',
+        endereco_entrega: enderecoEntregaInicial,
       })
       setImagemPreview(o.imagem_marketing_url || null)
       setImagemFile(null)
@@ -306,6 +315,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
             .maybeSingle()
         : { data: null }
 
+      const enderecoEntregaFinal = String(dados.endereco_entrega || '').trim()
+
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
         validade_dias: dados.validade_dias,
@@ -327,7 +338,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         cliente_nome: (clienteAtual as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
         cliente_razao_social: (clienteAtual as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
         cliente_cnpj: (clienteAtual as ClienteAtual | null)?.cnpj || orcamento.cliente_cnpj,
-        cliente_endereco: dados.endereco_entrega || orcamento.cliente_endereco,
+        cliente_endereco: enderecoEntregaFinal,
         cliente_email: (clienteAtual as ClienteAtual | null)?.email || orcamento.cliente_email,
         cliente_telefone: (clienteAtual as ClienteAtual | null)?.telefone || orcamento.cliente_telefone,
         updated_at: new Date().toISOString(),
