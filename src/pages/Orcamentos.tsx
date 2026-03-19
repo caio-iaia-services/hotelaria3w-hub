@@ -113,7 +113,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
     cliente_nome: cliente.nome_fantasia || orcamento.cliente_nome,
     cliente_razao_social: cliente.razao_social || orcamento.cliente_razao_social,
     cliente_cnpj: cliente.cnpj || orcamento.cliente_cnpj,
-    cliente_endereco: montarEnderecoCliente(cliente) || orcamento.cliente_endereco,
+    cliente_endereco: orcamento.cliente_endereco || montarEnderecoCliente(cliente),
     cliente_email: cliente.email || orcamento.cliente_email,
     cliente_telefone: cliente.telefone || orcamento.cliente_telefone,
   }
