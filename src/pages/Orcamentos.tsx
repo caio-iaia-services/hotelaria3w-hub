@@ -210,9 +210,11 @@ export default function Orcamentos() {
     if (!error) {
       let rows = (data || []) as any[]
 
-      // Enrich: sempre usar os dados atuais do cliente pelo cliente_id
       const clienteIds = [...new Set(rows.filter(r => r.cliente_id).map(r => r.cliente_id))]
+      const codigosFornecedor = [...new Set(rows.map(r => String(r.codigo_empresa || '').trim()).filter(Boolean))]
       let clienteMap: Record<string, ClienteAtual> = {}
+      let fornecedorNomePorCodigo: Record<string, string> = {}
+
       if (clienteIds.length > 0) {
         const { data: clientes } = await supabase
           .from('clientes')
@@ -223,7 +225,21 @@ export default function Orcamentos() {
         }
       }
 
-      // Enrich: resolve operacao/fornecedor from crm_cards by cliente_id
+      if (codigosFornecedor.length > 0) {
+        const { data: fornecedores } = await supabase
+          .from('fornecedores')
+          .select('codigo, nome_fantasia')
+          .in('codigo', codigosFornecedor)
+
+        if (fornecedores) {
+          fornecedorNomePorCodigo = Object.fromEntries(
+            fornecedores
+              .filter((f: any) => f.codigo)
+              .map((f: any) => [String(f.codigo).trim(), String(f.nome_fantasia || '').trim()])
+          )
+        }
+      }
+
       let cardMap: Record<string, { operacao: string; gestao: string }> = {}
       const idsParaCards = [...new Set(rows.filter(r => !r.operacao && !r.fornecedor_nome).map(r => r.cliente_id).filter(Boolean))]
       if (idsParaCards.length > 0) {
@@ -234,7 +250,6 @@ export default function Orcamentos() {
           .order('created_at', { ascending: false })
         if (cards) {
           for (const c of cards as any[]) {
-            // Use the most recent card per cliente
             if (!cardMap[c.cliente_id]) {
               cardMap[c.cliente_id] = { operacao: c.operacao, gestao: c.gestao }
             }
@@ -242,15 +257,16 @@ export default function Orcamentos() {
         }
       }
 
-      // Map rows preservando o snapshot salvo no orçamento; só usar CRM como fallback mínimo
       const enrichedRows = rows.map((r: any) => {
         const cliente = clienteMap[r.cliente_id]
         const card = cardMap[r.cliente_id]
+        const codigoFornecedor = String(r.codigo_empresa || '').trim()
+        const fornecedorResolvido = fornecedorNomePorCodigo[codigoFornecedor] || ''
 
         const orcamentoBase = {
           ...r,
-          fornecedor_nome: r.fornecedor_nome || '',
-          operacao: r.operacao || r.fornecedor_nome || card?.operacao || null,
+          fornecedor_nome: String(r.fornecedor_nome || '').trim() || fornecedorResolvido,
+          operacao: r.operacao || String(r.fornecedor_nome || '').trim() || fornecedorResolvido || card?.operacao || null,
           gestao: r.gestao || card?.gestao || null,
           total: parseNum(r.total) || parseNum(r.valor_total) || 0,
           subtotal: parseNum(r.subtotal) || parseNum(r.valor_produtos) || 0,
@@ -1587,7 +1603,7 @@ www.3whotelaria.com.br
                     </div>
                   </TableCell>
                   <TableCell>
-                    <p className="text-sm">{orcamento.fornecedor_nome || orcamento.operacao || '-'}</p>
+                    <p className="text-sm">{orcamento.fornecedor_nome || orcamento.operacao || orcamento.codigo_empresa || '-'}</p>
                   </TableCell>
                   <TableCell><span className="font-medium">{formatCurrency(getTotalExibicao(orcamento))}</span></TableCell>
                   <TableCell>
