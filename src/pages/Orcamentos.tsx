@@ -1732,7 +1732,11 @@ www.3whotelaria.com.br
         open={modalEditar}
         onOpenChange={setModalEditar}
         orcamentoId={orcamentoEditarId}
-        onSaved={() => {
+        onSaved={(orcamentoAtualizado) => {
+          if (orcamentoAtualizado) {
+            setOrcamentos(prev => prev.map(item => item.id === orcamentoAtualizado.id ? orcamentoAtualizado : item))
+            setOrcamentoVisualizar(prev => prev?.id === orcamentoAtualizado.id ? orcamentoAtualizado : prev)
+          }
           buscarOrcamentos()
           buscarContadores()
         }}

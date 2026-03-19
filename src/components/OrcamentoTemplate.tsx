@@ -239,7 +239,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
-                  <span>{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</span>
+                  <span>{enderecoEntregaFinal || '—'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <Phone className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
@@ -250,7 +250,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
               {/* Endereço de Entrega - Direita */}
               <div className="text-right space-y-1">
                 <p className="font-bold text-base text-[#1a4168] mb-3">Endereço de Entrega</p>
-                <p className="text-sm">{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</p>
+                <p className="text-sm">{enderecoEntregaFinal || '—'}</p>
               </div>
             </div>
             

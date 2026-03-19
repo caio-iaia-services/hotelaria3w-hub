@@ -457,9 +457,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
               <Label>Endereço de Entrega *</Label>
               <Textarea
                 placeholder="Rua, Número, Complemento, Bairro, Cidade - UF, CEP"
-                value={dados.endereco_entrega}
-                onChange={(e) => setDados(p => ({ ...p, endereco_entrega: e.target.value }))}
-                rows={2}
+                value={enderecoEntregaEditado}
+                onChange={(e) => setEnderecoEntregaEditado(e.target.value)}
+                rows={3}
+                style={{ width: '100%' }}
               />
             </div>
 
