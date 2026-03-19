@@ -838,6 +838,7 @@ export default function Orcamentos() {
               height: auto !important;
             }
           </style>
+          <style>
             #print-root .overflow-hidden,
             #print-root .overflow-y-auto {
               overflow: visible !important;
