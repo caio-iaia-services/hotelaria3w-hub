@@ -1720,6 +1720,7 @@ www.3whotelaria.com.br
                 orcamento={orcamentoVisualizar}
                 itens={itensVisualizar}
                 emailUsuario={user?.email}
+                enderecoEntrega={String(orcamentoVisualizar.cliente_endereco || '').trim()}
               />
             )}
           </div>
