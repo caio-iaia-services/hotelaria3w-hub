@@ -242,15 +242,15 @@ export default function Orcamentos() {
         }
       }
 
-      // Map rows, priorizando snapshot atual do cliente
+      // Map rows preservando o snapshot salvo no orçamento; só usar CRM como fallback mínimo
       const enrichedRows = rows.map((r: any) => {
         const cliente = clienteMap[r.cliente_id]
         const card = cardMap[r.cliente_id]
 
         const orcamentoBase = {
           ...r,
-          fornecedor_nome: r.fornecedor_nome || card?.operacao || '',
-          operacao: r.operacao || card?.operacao || null,
+          fornecedor_nome: r.fornecedor_nome || '',
+          operacao: r.operacao || r.fornecedor_nome || card?.operacao || null,
           gestao: r.gestao || card?.gestao || null,
           total: parseNum(r.total) || parseNum(r.valor_total) || 0,
           subtotal: parseNum(r.subtotal) || parseNum(r.valor_produtos) || 0,
