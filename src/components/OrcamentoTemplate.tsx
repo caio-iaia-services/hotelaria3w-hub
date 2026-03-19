@@ -504,9 +504,9 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             {termosFornecedorExibicao && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
-                  {fornecedor?.logotipo_url && (
+                  {logotipoFornecedor && (
                     <img
-                      src={fornecedor.logotipo_url}
+                      src={logotipoFornecedor}
                       alt={nomeFornecedorExibicao || 'Fornecedor'}
                       className="h-16"
                     />
