@@ -32,10 +32,11 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   orcamentoId: string | null
-  onSaved: () => void
+  onSaved: (orcamentoAtualizado?: Orcamento) => void
 }
 
 interface ClienteAtual {
+  id?: string
   nome_fantasia: string | null
   cnpj: string | null
   razao_social: string | null
@@ -120,6 +121,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null)
+  const [clienteAtual, setClienteAtual] = useState<ClienteAtual | null>(null)
+  const [enderecoEntregaEditado, setEnderecoEntregaEditado] = useState('')
   const [itens, setItens] = useState<ItemLocal[]>([])
   const [tipoLayout, setTipoLayout] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
@@ -137,7 +140,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     observacoes: '',
     observacoes_gerais: '',
     difal_texto: '',
-    endereco_entrega: '',
   })
 
   const carregarDados = useCallback(async () => {
@@ -151,11 +153,11 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
 
     if (orc) {
       const o = orc as any
-      const [{ data: clienteAtual }, { data: forn }] = await Promise.all([
+      const [{ data: clienteAtualDb }, { data: forn }] = await Promise.all([
         o.cliente_id
           ? supabase
               .from('clientes')
-              .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+              .select('id, nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
               .eq('id', o.cliente_id)
               .maybeSingle()
           : Promise.resolve({ data: null }),
@@ -164,11 +166,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           : Promise.resolve({ data: null }),
       ])
 
-      const orcamentoComCliente = aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null)
-      const enderecoEntregaInicial = typeof orcamentoComCliente.cliente_endereco === 'string'
-        ? orcamentoComCliente.cliente_endereco
-        : ''
+      const clienteNormalizado = (clienteAtualDb as ClienteAtual | null) ?? null
+      const orcamentoComCliente = aplicarDadosClienteNoOrcamento(o as Orcamento, clienteNormalizado)
 
+      setClienteAtual(clienteNormalizado)
       setOrcamento(orcamentoComCliente)
       setDados({
         prazo_entrega: o.prazo_entrega || '',
@@ -183,7 +184,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
-        endereco_entrega: enderecoEntregaInicial,
       })
       setImagemPreview(o.imagem_marketing_url || null)
       setImagemFile(null)
@@ -211,6 +211,26 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   useEffect(() => {
     if (open && orcamentoId) carregarDados()
   }, [open, orcamentoId, carregarDados])
+
+  useEffect(() => {
+    if (!open) {
+      setEnderecoEntregaEditado('')
+      return
+    }
+
+    const enderecoSalvo = typeof orcamento?.cliente_endereco === 'string'
+      ? orcamento.cliente_endereco.trim()
+      : ''
+
+    if (enderecoSalvo) {
+      setEnderecoEntregaEditado(enderecoSalvo)
+      return
+    }
+
+    if (clienteAtual?.id) {
+      setEnderecoEntregaEditado(montarEnderecoCliente(clienteAtual) || '')
+    }
+  }, [open, clienteAtual?.id, orcamento?.id, orcamento?.cliente_endereco])
 
   function atualizarItem(id: string, campo: string, valor: string | number) {
     setItens(prev => prev.map(item => {
@@ -277,7 +297,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     setSaving(true)
 
     try {
-      // Validate
       const itensInvalidos = itens.filter(i => {
         const qty = parseNum(i.quantidade)
         const price = parseNum(i.preco_unitario)
@@ -289,7 +308,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         return
       }
 
-      // Upload imagem de marketing se alterada
       let imagemMarketingUrl = imagemPreview
       if (imagemFile) {
         const ext = imagemFile.name.split('.').pop()
@@ -303,19 +321,17 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         }
       }
 
-      // Update orcamento record
       const dataValidadeIso = addDaysToLocalDateString(dados.validade_dias || 30)
-
       const condicoesPagamento = montarCondicoesPagamentoPayload(dados.condicoes_pagamento)
-      const { data: clienteAtual } = orcamento.cliente_id
+      const { data: clienteAtualDb } = orcamento.cliente_id
         ? await supabase
             .from('clientes')
-            .select('nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep')
+            .select('nome_fantasia, cnpj, razao_social, email, telefone')
             .eq('id', orcamento.cliente_id)
             .maybeSingle()
         : { data: null }
 
-      const enderecoEntregaFinal = String(dados.endereco_entrega || '').trim()
+      const enderecoEntregaFinal = String(enderecoEntregaEditado || '').trim()
 
       const updatePayload: Record<string, unknown> = {
         prazo_entrega: dados.prazo_entrega,
@@ -335,16 +351,15 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: dados.observacoes_gerais,
         difal_texto: dados.difal_texto,
         imagem_marketing_url: imagemMarketingUrl,
-        cliente_nome: (clienteAtual as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
-        cliente_razao_social: (clienteAtual as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
-        cliente_cnpj: (clienteAtual as ClienteAtual | null)?.cnpj || orcamento.cliente_cnpj,
+        cliente_nome: (clienteAtualDb as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
+        cliente_razao_social: (clienteAtualDb as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
+        cliente_cnpj: (clienteAtualDb as ClienteAtual | null)?.cnpj || orcamento.cliente_cnpj,
         cliente_endereco: enderecoEntregaFinal,
-        cliente_email: (clienteAtual as ClienteAtual | null)?.email || orcamento.cliente_email,
-        cliente_telefone: (clienteAtual as ClienteAtual | null)?.telefone || orcamento.cliente_telefone,
+        cliente_email: (clienteAtualDb as ClienteAtual | null)?.email || orcamento.cliente_email,
+        cliente_telefone: (clienteAtualDb as ClienteAtual | null)?.telefone || orcamento.cliente_telefone,
         updated_at: new Date().toISOString(),
       }
 
-      // Fallback: remove campos que não existem no schema cache
       for (let tentativa = 0; tentativa < 20; tentativa++) {
         const { error: errOrc } = await supabase
           .from('orcamentos')
@@ -366,7 +381,6 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         throw errOrc
       }
 
-      // Delete existing items and re-insert all
       await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcamento.id)
 
       const itensParaInserir = itens
@@ -388,8 +402,14 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         if (errItens) throw errItens
       }
 
+      const orcamentoAtualizado = {
+        ...orcamento,
+        ...updatePayload,
+      } as Orcamento
+
+      setOrcamento(orcamentoAtualizado)
       toast.success('Orçamento atualizado com sucesso!')
-      onSaved()
+      onSaved(orcamentoAtualizado)
       onOpenChange(false)
     } catch (err: any) {
       console.error('Erro ao salvar orçamento:', err)

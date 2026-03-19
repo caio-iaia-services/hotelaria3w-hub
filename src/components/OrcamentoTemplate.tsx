@@ -8,6 +8,7 @@ interface Props {
   orcamento: Orcamento
   itens: OrcamentoItem[]
   emailUsuario?: string
+  enderecoEntrega: string
 }
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
@@ -30,8 +31,9 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
   )
 }
 
-export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
+export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega }: Props) {
   const emailExibicao = emailUsuario || 'comercial1@3whotelaria.com.br'
+  const enderecoEntregaFinal = String(enderecoEntrega || '').trim()
 
   // All supplier data comes from props (set by carregarOrcamentoCompleto via buscarFornecedorLayout)
   // No independent fetch needed — prevents data mixing between suppliers
@@ -49,7 +51,6 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
     imagemTemplateFornecedor,
     layoutMidea
   )
-  // Use terms from the budget record first, then fall back to supplier's terms
   const termosFornecedorExibicao = resolverTermosFornecedor(
     orcamento.termos_fornecedor || termosFabricante,
     layoutMidea

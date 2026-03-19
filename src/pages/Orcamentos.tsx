@@ -986,18 +986,24 @@ www.3whotelaria.com.br
   const esc = escapeHtml
   const nl2br = (t: string) => t ? esc(t).replace(/\n/g, '<br/>') : '—'
 
-  async function capturarHtmlOrcamento(): Promise<string | null> {
-    if (!orcamentoEnviar) return null
-
-    const { orcamento, itens } = await carregarOrcamentoCompleto(orcamentoEnviar)
-
+  function gerarHtmlOrcamento({
+    orcamento,
+    itens,
+    enderecoEntrega,
+    emailUsuario,
+  }: {
+    orcamento: Orcamento
+    itens: OrcamentoItem[]
+    enderecoEntrega: string
+    emailUsuario?: string | null
+  }) {
+    const enderecoEntregaFinal = String(enderecoEntrega || '').trim()
     const fornecedorNome = (orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '3W Hotelaria'
     const fornecedorNomeNorm = fornecedorNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
     const fornecedorTipoLayout = String((orcamento as any).fornecedor_tipo_layout || '').toLowerCase()
     const layoutCastor = fornecedorTipoLayout === 'castor'
     const layoutMidea = fornecedorTipoLayout === 'midea' || ['MIDEA','SPRINGER','CLIMAZON','CARRIER'].some(k => fornecedorNomeNorm.includes(k))
 
-    // Dynamic colors from fornecedor (defaults match Castor)
     const corPrimaria = (orcamento as any).fornecedor_cor_primaria || '#C8962E'
     const corSecundaria = (orcamento as any).fornecedor_cor_secundaria || '#1a4168'
 
@@ -1016,7 +1022,7 @@ www.3whotelaria.com.br
     const condBase = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento)
     const condicoesPag = layoutMidea ? resolverCondicoesPagamentoMidea(condBase) : (condBase || 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\n- para 30/60/90/120/150 acréscimo de 3,80%\n- para 30/60/90/120/150/180 acréscimo de 4,20%\n- para 30/60/90/120/150/180/210 acréscimo de 4,80%\n- para 30/60/90/120/150/180/210/240 acréscimo de 5,20%\n- para 30/60/90/120/150/180/210/240/270 acréscimo de 6.00%\n- para 30/60/90/120/150/180/210/240/270/300 acréscimo de 7.00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.')
     const termosForn = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea)
-    const emailExib = user?.email || 'comercial1@3whotelaria.com.br'
+    const emailExib = emailUsuario || 'comercial1@3whotelaria.com.br'
     const whatsHref = 'https://wa.me/551151975779?text=' + encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}.`)
     const confirmHref = `mailto:${emailExib}?subject=${encodeURIComponent(`Confirmação do orçamento ${orcamento.numero}`)}`
 
@@ -1072,7 +1078,6 @@ www.3whotelaria.com.br
       return `<tr>${cols.map((c, i) => `<td style="padding:8px 10px;border:1px solid #d1d5db;${F}font-size:13px;color:#111827;background-color:${bg};text-align:${aligns[i]};vertical-align:top;">${c}</td>`).join('')}</tr>`
     }).join('')
 
-    // SVG icons as data-uri images for email/PDF compatibility
     const svgGlobe = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`, 14, 14)
     const svgPhone = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.81 19.79 19.79 0 0 1 .22 1.18 2 2 0 0 1 2.18 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L6.91 7.09a16 16 0 0 0 6 6l.56-.56a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/></svg>`, 14, 14)
     const svgEnvelope = (color: string) => svgImage(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, 14, 14)
@@ -1151,7 +1156,7 @@ www.3whotelaria.com.br
             </tr>
             <tr>
               <td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPin('#ffffff')}</td>
-              <td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_endereco || '—')}</td>
+              <td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(enderecoEntregaFinal || '—')}</td>
             </tr>
             <tr>
               <td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPhone('#ffffff')}</td>
@@ -1162,7 +1167,7 @@ www.3whotelaria.com.br
         <!-- Coluna direita: endereço de entrega -->
         <td style="vertical-align:top;text-align:right;width:40%;">
           <div style="${F}font-size:14px;font-weight:700;color:#ffffff;margin-bottom:8px;">Endereço de Entrega</div>
-          <div style="${F}font-size:13px;color:#ffffff;">${esc(orcamento.cliente_endereco || '—')}</div>
+          <div style="${F}font-size:13px;color:#ffffff;">${esc(enderecoEntregaFinal || '—')}</div>
         </td>
       </tr>
       <tr>
