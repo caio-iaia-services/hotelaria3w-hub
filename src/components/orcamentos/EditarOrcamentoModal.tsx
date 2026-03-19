@@ -133,6 +133,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     observacoes: '',
     observacoes_gerais: '',
     difal_texto: '',
+    endereco_entrega: '',
   })
 
   const carregarDados = useCallback(async () => {
