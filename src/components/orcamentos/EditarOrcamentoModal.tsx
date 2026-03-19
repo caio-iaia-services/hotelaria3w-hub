@@ -164,7 +164,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           : Promise.resolve({ data: null }),
       ])
 
-      setOrcamento(aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null))
+      const orcamentoComCliente = aplicarDadosClienteNoOrcamento(o as Orcamento, (clienteAtual as ClienteAtual | null) ?? null)
+      const enderecoEntregaInicial = typeof orcamentoComCliente.cliente_endereco === 'string'
+        ? orcamentoComCliente.cliente_endereco
+        : ''
+
+      setOrcamento(orcamentoComCliente)
       setDados({
         prazo_entrega: o.prazo_entrega || '',
         validade_dias: o.validade_dias || 30,
@@ -178,7 +183,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes: o.observacoes || '',
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
-        endereco_entrega: o.cliente_endereco || montarEnderecoCliente((clienteAtual as ClienteAtual | null) ?? null) || '',
+        endereco_entrega: enderecoEntregaInicial,
       })
       setImagemPreview(o.imagem_marketing_url || null)
       setImagemFile(null)
