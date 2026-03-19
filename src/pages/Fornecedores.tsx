@@ -165,14 +165,6 @@ const tipoColors: Record<string, string> = {
   regular: "bg-muted text-muted-foreground",
 };
 
-const ESTADOS_POR_REGIAO: Record<string, string[]> = {
-  Sul: ["RS", "SC", "PR"],
-  Sudeste: ["SP", "RJ", "MG", "ES"],
-  "Centro-Oeste": ["GO", "MT", "MS", "DF"],
-  Norte: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
-  Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
-};
-
 const TODOS_ESTADOS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
   "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR",
@@ -255,6 +247,7 @@ function Info({ label, value }: { label: string; value: string | null | undefine
     </div>
   );
 }
+
 export default function Fornecedores() {
   const navigate = useNavigate();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -265,7 +258,6 @@ export default function Fornecedores() {
   const [pageSize, setPageSize] = useState(50);
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [debouncedBusca, setDebouncedBusca] = useState("");
-  
 
   // Modais
   const [modalVer, setModalVer] = useState<Fornecedor | null>(null);
@@ -301,7 +293,6 @@ export default function Fornecedores() {
   const gestaoEditValue = watchEdit("gestao") || [];
   const segmentoEditValue = watchEdit("segmentos_atuacao") || [];
 
-  // Auto-clear gestão when status is encerrado/inativo
   useEffect(() => {
     if (statusNovoValue === "encerrado" || statusNovoValue === "inativo") {
       setNovo("gestao", [] as any);
@@ -313,10 +304,10 @@ export default function Fornecedores() {
       setEdit("gestao", [] as any);
     }
   }, [statusEditValue, setEdit]);
+
   const estadoEditValue = watchEdit("estado") || "";
   const cidadeEditValue = watchEdit("cidade") || "";
 
-  // Debounce busca
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleBuscaChange = (valor: string) => {
     setFiltros((prev) => ({ ...prev, busca: valor }));
@@ -327,7 +318,6 @@ export default function Fornecedores() {
     }, 500);
   };
 
-  // Contatos helpers
   const adicionarContato = (list: Contato[], setter: React.Dispatch<React.SetStateAction<Contato[]>>) => {
     setter([...list, { nome: '', cargo: '', whatsapp: '', email: '' }]);
   };
@@ -340,7 +330,6 @@ export default function Fornecedores() {
     setter(novos);
   };
 
-  // Arquivos helpers
   const handleUploadArquivos = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>, current: ArquivoUpload[]) => {
     const files = Array.from(e.target.files || []);
     const validos = files.filter(file => {
@@ -368,29 +357,21 @@ export default function Fornecedores() {
 
   const uploadArquivosStorage = async (arqs: ArquivoUpload[]) => {
     const urls: { nome: string; url: string; tipo: string }[] = [];
-
     for (const arq of arqs) {
       const nomeLimpo = limparNomeArquivo(arq.nome);
       const nomeArquivo = `catalogos/${Date.now()}_${Math.random().toString(36).slice(2)}_${nomeLimpo}`;
-
       const { error: uploadError } = await cloudSupabase.storage
         .from('fornecedores-documentos')
         .upload(nomeArquivo, arq.file, { upsert: true, contentType: arq.file.type || undefined });
-
       if (uploadError) {
-        console.error('❌ Erro upload:', uploadError);
-        console.error('Nome arquivo tentado:', nomeArquivo);
         toast({ title: `Erro ao fazer upload: ${uploadError.message}`, variant: "destructive" });
         throw new Error(`Falha no upload do arquivo ${arq.nome}: ${uploadError.message}`);
       }
-
       const { data: { publicUrl } } = cloudSupabase.storage
         .from('fornecedores-documentos')
         .getPublicUrl(nomeArquivo);
-
       urls.push({ nome: arq.nome, url: publicUrl, tipo: arq.tipo });
     }
-
     return urls;
   };
 
@@ -412,21 +393,12 @@ export default function Fornecedores() {
   const uploadLogo = async (file: File): Promise<string> => {
     const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
     const path = `logos/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-
     const { error } = await cloudSupabase.storage
       .from('fornecedores-documentos')
       .upload(path, file, { upsert: true, contentType: file.type || undefined });
-
-    if (error) {
-      throw new Error(`Falha no upload do logo: ${error.message}`);
-    }
-
+    if (error) throw new Error(`Falha no upload do logo: ${error.message}`);
     const { data: urlData } = cloudSupabase.storage.from('fornecedores-documentos').getPublicUrl(path);
-
-    if (!urlData?.publicUrl) {
-      throw new Error('Falha ao gerar URL pública do logo');
-    }
-
+    if (!urlData?.publicUrl) throw new Error('Falha ao gerar URL pública do logo');
     return urlData.publicUrl;
   };
 
@@ -439,9 +411,7 @@ export default function Fornecedores() {
     if (debouncedBusca) {
       const buscaDigits = debouncedBusca.replace(/\D/g, "");
       const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
-      query = query.or(
-        `nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,${cnpjFilter}`
-      );
+      query = query.or(`nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,${cnpjFilter}`);
     }
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.gestao.length > 0) {
@@ -455,10 +425,7 @@ export default function Fornecedores() {
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-
-    const { data, count, error } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
+    const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, to);
 
     if (error) {
       toast({ title: "Erro ao buscar fornecedores", description: error.message, variant: "destructive" });
@@ -469,7 +436,6 @@ export default function Fornecedores() {
     setLoading(false);
   }, [page, pageSize, debouncedBusca, filtros.status, filtros.gestao, filtros.segmento]);
 
-  // Buscar métricas
   const fetchMetrics = useCallback(async () => {
     const { count } = await supabase
       .from("fornecedores")
@@ -480,17 +446,13 @@ export default function Fornecedores() {
 
   useEffect(() => { fetchFornecedores(); }, [fetchFornecedores]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
-
   useEffect(() => { setPage(1); }, [filtros.status, filtros.gestao, filtros.segmento]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const taxaAtivacao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
 
   const toggleFiltro = (key: keyof Filtros, value: string) => {
-    if (key === "busca") {
-      setFiltros((prev) => ({ ...prev, busca: value }));
-      return;
-    }
+    if (key === "busca") { setFiltros((prev) => ({ ...prev, busca: value })); return; }
     setFiltros((prev) => {
       const arr = prev[key] as string[];
       const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
@@ -498,19 +460,11 @@ export default function Fornecedores() {
     });
   };
 
-  const limparFiltros = () => {
-    setFiltros(FILTROS_INICIAIS);
-    setDebouncedBusca("");
-    setPage(1);
-  };
+  const limparFiltros = () => { setFiltros(FILTROS_INICIAIS); setDebouncedBusca(""); setPage(1); };
 
   const temFiltrosAtivos =
-    filtros.busca !== "" ||
-    filtros.status.length > 0 ||
-    filtros.gestao.length > 0 ||
-    filtros.segmento.length > 0;
+    filtros.busca !== "" || filtros.status.length > 0 || filtros.gestao.length > 0 || filtros.segmento.length > 0;
 
-  // Salvar novo
   const statusRequerGestao = (status: string) => status === "ativo" || status === "prospecção";
 
   const salvarNovo = async (dados: FornecedorForm) => {
@@ -521,15 +475,9 @@ export default function Fornecedores() {
     setSalvando(true);
     try {
       let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
-      if (arquivos.length > 0) {
-        catalogosUrls = await uploadArquivosStorage(arquivos);
-      }
-
-      // Upload logo
+      if (arquivos.length > 0) catalogosUrls = await uploadArquivosStorage(arquivos);
       let logotipoUrl: string | null = null;
-      if (logoFile) {
-        logotipoUrl = await uploadLogo(logoFile);
-      }
+      if (logoFile) logotipoUrl = await uploadLogo(logoFile);
 
       const { error } = await supabase.from("fornecedores").insert({
         nome_fantasia: dados.nome_fantasia,
@@ -542,8 +490,8 @@ export default function Fornecedores() {
         site: dados.site || null,
         cidade: dados.cidade,
         estado: dados.estado?.toUpperCase() || null,
-      tipo: "regular",
-      status: dados.status || "ativo",
+        tipo: "regular",
+        status: dados.status || "ativo",
         observacoes: dados.observacoes || null,
         gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
         segmentos_atuacao: dados.segmentos_atuacao && dados.segmentos_atuacao.length > 0 ? dados.segmentos_atuacao : null,
@@ -576,74 +524,53 @@ export default function Fornecedores() {
     }
   };
 
-  // Ver detalhes (busca dados completos)
   const verDetalhes = async (fornecedor: Fornecedor) => {
-    const { data } = await supabase
-      .from("fornecedores")
-      .select("*")
-      .eq("id", fornecedor.id)
-      .single();
-    if (data) {
-      setModalVer(data as Fornecedor);
-    } else {
-      setModalVer(fornecedor);
-    }
+    const { data } = await supabase.from("fornecedores").select("*").eq("id", fornecedor.id).single();
+    setModalVer(data ? (data as Fornecedor) : fornecedor);
   };
 
-  // Abrir editar
   const abrirEditar = async (f: Fornecedor) => {
     setModalVer(null);
-
-    const { data, error } = await supabase
-      .from("fornecedores")
-      .select("*")
-      .eq("id", f.id)
-      .maybeSingle();
-
+    const { data, error } = await supabase.from("fornecedores").select("*").eq("id", f.id).maybeSingle();
     if (error) {
       toast({ title: "Erro ao carregar fornecedor", description: error.message, variant: "destructive" });
       return;
     }
-
-    const fornecedorCompleto = (data as Fornecedor) || f;
-
+    const fc = (data as Fornecedor) || f;
     resetEdit({
-      nome_fantasia: fornecedorCompleto.nome_fantasia,
-      razao_social: fornecedorCompleto.razao_social,
-      cnpj: formatCNPJ(fornecedorCompleto.cnpj),
-      codigo: fornecedorCompleto.codigo || "",
-      email: fornecedorCompleto.email || "",
-      telefone: fornecedorCompleto.telefone || "",
-      whatsapp: fornecedorCompleto.whatsapp || "",
-      site: fornecedorCompleto.site || "",
-      cidade: fornecedorCompleto.cidade || "",
-      estado: fornecedorCompleto.estado || "",
-      status: fornecedorCompleto.status || "ativo",
-      observacoes: fornecedorCompleto.observacoes || "",
-      gestao: fornecedorCompleto.gestao ? fornecedorCompleto.gestao.split(", ").filter(Boolean) : [],
-      segmentos_atuacao: fornecedorCompleto.segmentos_atuacao || [],
-      produtos_servicos: fornecedorCompleto.produtos_servicos || "",
-      comissao_vendas: fornecedorCompleto.comissao_vendas?.toString() || "",
-      tipo_layout: (fornecedorCompleto as any).tipo_layout || "padrao",
-      prazo_entrega_padrao: (fornecedorCompleto as any).prazo_entrega_padrao || "",
-      validade_dias_padrao: (fornecedorCompleto as any).validade_dias_padrao?.toString() || "",
-      condicoes_pagamento_padrao: (fornecedorCompleto as any).condicoes_pagamento_padrao || "",
-      termos_fabricante: (fornecedorCompleto as any).termos_fabricante || "",
-      imagem_template_url: (fornecedorCompleto as any).imagem_template_url || "",
+      nome_fantasia: fc.nome_fantasia,
+      razao_social: fc.razao_social,
+      cnpj: formatCNPJ(fc.cnpj),
+      codigo: fc.codigo || "",
+      email: fc.email || "",
+      telefone: fc.telefone || "",
+      whatsapp: fc.whatsapp || "",
+      site: fc.site || "",
+      cidade: fc.cidade || "",
+      estado: fc.estado || "",
+      status: fc.status || "ativo",
+      observacoes: fc.observacoes || "",
+      gestao: fc.gestao ? fc.gestao.split(", ").filter(Boolean) : [],
+      segmentos_atuacao: fc.segmentos_atuacao || [],
+      produtos_servicos: fc.produtos_servicos || "",
+      comissao_vendas: fc.comissao_vendas?.toString() || "",
+      tipo_layout: (fc as any).tipo_layout || "padrao",
+      prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
+      validade_dias_padrao: (fc as any).validade_dias_padrao?.toString() || "",
+      condicoes_pagamento_padrao: (fc as any).condicoes_pagamento_padrao || "",
+      termos_fabricante: (fc as any).termos_fabricante || "",
+      imagem_template_url: (fc as any).imagem_template_url || "",
     });
-
-    const existingContatos = fornecedorCompleto.contatos
-      ? (typeof fornecedorCompleto.contatos === 'string' ? JSON.parse(fornecedorCompleto.contatos) : fornecedorCompleto.contatos)
+    const existingContatos = fc.contatos
+      ? (typeof fc.contatos === 'string' ? JSON.parse(fc.contatos) : fc.contatos)
       : [];
-
     setContatosEdit(existingContatos);
     setArquivosEdit([]);
     setLogoFileEdit(null);
-    setLogoPreviewEdit(fornecedorCompleto.logotipo_url || null);
-    setModalEditar(fornecedorCompleto);
+    setLogoPreviewEdit(fc.logotipo_url || null);
+    setModalEditar(fc);
   };
 
-  // Salvar edição
   const salvarEdicao = async (dados: FornecedorForm) => {
     if (!modalEditar) return;
     if (statusRequerGestao(dados.status) && (!dados.gestao || dados.gestao.length === 0)) {
@@ -653,53 +580,42 @@ export default function Fornecedores() {
     setSalvando(true);
     try {
       let catalogosUrls: { nome: string; url: string; tipo: string }[] = [];
-      if (arquivosEdit.length > 0) {
-        catalogosUrls = await uploadArquivosStorage(arquivosEdit);
-      }
-      // Merge existing catalogos with new uploads
+      if (arquivosEdit.length > 0) catalogosUrls = await uploadArquivosStorage(arquivosEdit);
       const existingCatalogos = modalEditar.catalogos
         ? (typeof modalEditar.catalogos === 'string' ? JSON.parse(modalEditar.catalogos) : modalEditar.catalogos)
         : [];
       const allCatalogos = [...existingCatalogos, ...catalogosUrls];
-
-      // Upload logo if changed
       let logotipoUrl = modalEditar.logotipo_url || null;
-      if (logoFileEdit) {
-        const uploaded = await uploadLogo(logoFileEdit);
-        if (uploaded) logotipoUrl = uploaded;
-      }
+      if (logoFileEdit) logotipoUrl = await uploadLogo(logoFileEdit);
 
-      const { error } = await supabase
-        .from("fornecedores")
-        .update({
-          nome_fantasia: dados.nome_fantasia,
-          razao_social: dados.razao_social,
-          cnpj: dados.cnpj,
-          codigo: dados.codigo || null,
-          email: dados.email || null,
-          telefone: dados.telefone || null,
-          whatsapp: dados.whatsapp || null,
-          site: dados.site || null,
-          cidade: dados.cidade,
-          estado: dados.estado?.toUpperCase() || null,
-          tipo: "regular",
-          status: dados.status || "ativo",
-          observacoes: dados.observacoes || null,
-          gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
-          segmentos_atuacao: dados.segmentos_atuacao && dados.segmentos_atuacao.length > 0 ? dados.segmentos_atuacao : null,
-          produtos_servicos: dados.produtos_servicos || null,
-          comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
-          contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
-          catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
-          logotipo_url: logotipoUrl,
-          tipo_layout: dados.tipo_layout || 'padrao',
-          prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
-          validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
-          condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
-          termos_fabricante: dados.termos_fabricante || null,
-          imagem_template_url: dados.imagem_template_url || null,
-        })
-        .eq("id", modalEditar.id);
+      const { error } = await supabase.from("fornecedores").update({
+        nome_fantasia: dados.nome_fantasia,
+        razao_social: dados.razao_social,
+        cnpj: dados.cnpj,
+        codigo: dados.codigo || null,
+        email: dados.email || null,
+        telefone: dados.telefone || null,
+        whatsapp: dados.whatsapp || null,
+        site: dados.site || null,
+        cidade: dados.cidade,
+        estado: dados.estado?.toUpperCase() || null,
+        tipo: "regular",
+        status: dados.status || "ativo",
+        observacoes: dados.observacoes || null,
+        gestao: dados.gestao && dados.gestao.length > 0 ? dados.gestao.join(", ") : null,
+        segmentos_atuacao: dados.segmentos_atuacao && dados.segmentos_atuacao.length > 0 ? dados.segmentos_atuacao : null,
+        produtos_servicos: dados.produtos_servicos || null,
+        comissao_vendas: dados.comissao_vendas ? parseFloat(dados.comissao_vendas) : null,
+        contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
+        catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
+        logotipo_url: logotipoUrl,
+        tipo_layout: dados.tipo_layout || 'padrao',
+        prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
+        validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+        condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
+        termos_fabricante: dados.termos_fabricante || null,
+        imagem_template_url: dados.imagem_template_url || null,
+      }).eq("id", modalEditar.id);
       if (error) throw error;
       toast({ title: "Fornecedor atualizado com sucesso!" });
       setModalEditar(null);
@@ -714,7 +630,6 @@ export default function Fornecedores() {
     }
   };
 
-  // Deletar
   const deletar = async (id: string) => {
     if (!confirm("Tem certeza que deseja deletar este fornecedor?")) return;
     const { error } = await supabase.from("fornecedores").delete().eq("id", id);
@@ -729,14 +644,8 @@ export default function Fornecedores() {
     }
   };
 
-  const metrics = [
-    { label: "Total de Fornecedores", value: total.toLocaleString("pt-BR"), icon: Users, color: "text-primary" },
-    { label: "Fornecedores Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck, color: "text-emerald-600" },
-    { label: "Taxa de Ativação", value: `${taxaAtivacao}%`, icon: TrendingUp, color: "text-accent" },
-  ];
-
-  // Form compartilhado (novo/editar)
-  const renderFormFields = (     reg: typeof regNovo,     set: typeof setNovo,     statusVal: string,     contatosList: Contato[],     contatosSetter: React.Dispatch<React.SetStateAction<Contato[]>>,     arquivosList: ArquivoUpload[],     arquivosSetter: React.Dispatch<React.SetStateAction<ArquivoUpload[]>>,     gestaoVal: string[],     segmentoVal: string[],     estadoVal: string,     cidadeVal: string,     uploadInputId: string,     currentLogoPreview: string | null,     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,     onLogoRemove: () => void,   ) => (     <Tabs defaultValue="geral" className="w-full">       <TabsList className="grid w-full grid-cols-3 mb-4">         <TabsTrigger value="geral">Dados Gerais</TabsTrigger>         <TabsTrigger value="contatos">Contatos</TabsTrigger>         <TabsTrigger value="orcamento">Orçamento</TabsTrigger>       </TabsList>        {/* ── ABA DADOS GERAIS ── */}       <TabsContent value="geral" className="space-y-4 mt-0">         {/* Logo Upload */}         <div className="space-y-2">           <Label>Logotipo</Label>           <div className="flex items-center gap-4">             {currentLogoPreview ? (               <div className="relative">                 <img src={currentLogoPreview} alt="Logo" className="w-20 h-20 rounded-lg object-contain border border-border bg-white" />                 <Button                   type="button"                   variant="destructive"                   size="sm"                   className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"                   onClick={onLogoRemove}                 >                   <X className="w-3 h-3" />                 </Button>               </div>             ) : (               <label className="flex flex-col items-center justify-center w-20 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">                 <Upload className="w-5 h-5 text-muted-foreground" />                 <span className="text-[10px] text-muted-foreground mt-1">Logo</span>                 <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />               </label>             )}             <p className="text-xs text-muted-foreground">PNG, JPG até 5MB</p>           </div>         </div>          <div className="grid grid-cols-2 gap-4">           <div className="space-y-1.5">             <Label>Nome Fantasia *</Label>             <Input {...reg("nome_fantasia")} placeholder="Castor Colchões" required />           </div>           <div className="space-y-1.5">             <Label>Razão Social *</Label>             <Input {...reg("razao_social")} placeholder="Castor Colchões Ltda" required />           </div>         </div>          <div className="grid grid-cols-2 gap-4">           <div className="space-y-1.5">             <Label>CNPJ *</Label>             <Input               {...reg("cnpj")}               placeholder="00.000.000/0000-00"               maxLength={18}               required               onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))}             />           </div>           <div className="space-y-1.5">             <Label>Código</Label>             <Input {...reg("codigo")} placeholder="Código interno" />           </div>         </div>          {/* Segmento */}         <div className="space-y-1.5">           <Label>Segmento</Label>           <div className="flex flex-wrap gap-4 mt-1">             {SEGMENTOS_OPTIONS.map((s) => (               <label key={s.value} className="flex items-center gap-2 cursor-pointer text-sm">                 <Checkbox                   checked={segmentoVal.includes(s.value)}                   onCheckedChange={(checked) => {                     const next = checked                       ? [...segmentoVal, s.value]                       : segmentoVal.filter((v) => v !== s.value);                     set("segmentos_atuacao", next as any);                   }}                 />                 {s.label}               </label>             ))}           </div>         </div>          {/* Gestão */}         <div className="space-y-1.5">           <Label>             Gestão Responsável             {(statusVal === "ativo" || statusVal === "prospecção") && <span className="text-red-500 ml-1">*</span>}           </Label>           {(statusVal === "encerrado" || statusVal === "inativo") ? (             <p className="text-xs text-muted-foreground italic mt-1">Sem gestão para fornecedores com status {statusVal}.</p>           ) : (             <div className="flex gap-4 mt-1">               {["G1", "G2", "G3", "G4"].map((g) => (                 <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">                   <Checkbox                     checked={gestaoVal.includes(g)}                     onCheckedChange={(checked) => {                       const next = checked                         ? [...gestaoVal, g]                         : gestaoVal.filter((v) => v !== g);                       set("gestao", next as any);                     }}                   />                   {g}                 </label>               ))}             </div>           )}         </div>          <div className="grid grid-cols-3 gap-4">           <div className="space-y-1.5">             <Label>E-mail</Label>             <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />           </div>           <div className="space-y-1.5">             <Label>Telefone</Label>             <Input               {...reg("telefone")}               placeholder="(11) 99999-9999"               maxLength={15}               onChange={(e) => set("telefone", applyMaskTelefone(e.target.value))}             />           </div>           <div className="space-y-1.5">             <Label>WhatsApp</Label>             <Input               {...reg("whatsapp")}               placeholder="(11) 99999-9999"               maxLength={15}               onChange={(e) => set("whatsapp", applyMaskTelefone(e.target.value))}             />           </div>         </div>          <div className="space-y-1.5">           <Label>Site</Label>           <Input {...reg("site")} placeholder="https://www.fornecedor.com.br" />         </div>          <div className="grid grid-cols-2 gap-4">           <div className="space-y-1.5">             <Label>Estado</Label>             <Select value={estadoVal} onValueChange={(v) => { set("estado", v); set("cidade", ""); }}>               <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>               <SelectContent className="bg-card z-50 max-h-60">                 {TODOS_ESTADOS.map((uf) => (                   <SelectItem key={uf} value={uf}>{uf}</SelectItem>                 ))}               </SelectContent>             </Select>           </div>           <div className="space-y-1.5">             <Label>Cidade</Label>             <Select value={cidadeVal} onValueChange={(v) => set("cidade", v)} disabled={!estadoVal}>               <SelectTrigger><SelectValue placeholder={estadoVal ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>               <SelectContent className="bg-card z-50 max-h-60">                 {estadoVal && CIDADES_POR_ESTADO[estadoVal]?.map((cidade) => (                   <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>                 ))}               </SelectContent>             </Select>           </div>         </div>          <div className="space-y-1.5">           <Label>Status *</Label>           <Select value={statusVal} onValueChange={(v) => set("status", v)}>             <SelectTrigger><SelectValue /></SelectTrigger>             <SelectContent className="bg-card z-50">               <SelectItem value="ativo">Ativo</SelectItem>               <SelectItem value="inativo">Inativo</SelectItem>               <SelectItem value="encerrado">Encerrado</SelectItem>               <SelectItem value="prospecção">Prospecção</SelectItem>             </SelectContent>           </Select>         </div>          <div className="space-y-1.5">           <Label>Produtos e Serviços</Label>           <Textarea             {...reg("produtos_servicos")}             placeholder="Descreva os principais produtos e serviços oferecidos..."             rows={4}           />         </div>          <div className="space-y-1.5">           <Label>Comissão de Vendas (%)</Label>           <Input             {...reg("comissao_vendas")}             type="number"             step="0.01"             min="0"             max="100"             placeholder="Ex: 5.5"           />           <p className="text-xs text-muted-foreground mt-1">Percentual de comissão sobre vendas</p>         </div>          <div className="space-y-1.5">           <Label>Observações</Label>           <Textarea {...reg("observacoes")} placeholder="Notas sobre o fornecedor..." rows={3} />         </div>          {/* Upload de Arquivos */}         <div className="border-t border-border pt-4 mt-4">           <Label>Catálogos e Documentos</Label>           <div className="mt-2">             <input               type="file"               id={uploadInputId}               multiple               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"               onChange={(e) => handleUploadArquivos(e, arquivosSetter, arquivosList)}               className="hidden"             />             <Button type="button" variant="outline" onClick={() => document.getElementById(uploadInputId)?.click()} className="w-full">               <Upload className="w-4 h-4 mr-2" /> Fazer Upload de Arquivos             </Button>             <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB por arquivo)</p>           </div>           {arquivosList.length > 0 && (             <div className="mt-4 space-y-2">               <p className="text-sm font-medium">Arquivos anexados:</p>               {arquivosList.map((arquivo, index) => (                 <div key={index} className="flex items-center justify-between p-2 border border-border rounded bg-background">                   <div className="flex items-center gap-2">                     <FileText className="w-4 h-4 text-muted-foreground" />                     <span className="text-sm">{arquivo.nome}</span>                     <Badge variant="secondary">{(arquivo.tamanho / 1024).toFixed(1)} KB</Badge>                   </div>                   <Button type="button" variant="ghost" size="sm" onClick={() => removerArquivo(index, arquivosList, arquivosSetter)}>                     <Trash2 className="w-4 h-4 text-destructive" />                   </Button>                 </div>               ))}             </div>           )}         </div>       </TabsContent>        {/* ── ABA CONTATOS ── */}       <TabsContent value="contatos" className="space-y-4 mt-0">         <div className="flex items-center justify-between mb-3">           <Label>Contatos da Empresa</Label>           <Button type="button" variant="outline" size="sm" onClick={() => adicionarContato(contatosList, contatosSetter)}>             <Plus className="w-4 h-4 mr-1" /> Adicionar Contato           </Button>         </div>         {contatosList.map((contato, index) => (           <div key={index} className="border border-border rounded-lg p-4 mb-3 bg-muted/30">             <div className="flex items-start justify-between mb-3">               <p className="font-medium text-sm">Contato {index + 1}</p>               <Button type="button" variant="ghost" size="sm" onClick={() => removerContato(index, contatosList, contatosSetter)}>                 <Trash2 className="w-4 h-4 text-destructive" />               </Button>             </div>             <div className="grid grid-cols-2 gap-3">               <div className="space-y-1">                 <Label className="text-xs">Nome *</Label>                 <Input value={contato.nome} onChange={(e) => atualizarContato(index, 'nome', e.target.value, contatosList, contatosSetter)} placeholder="Nome completo" required />               </div>               <div className="space-y-1">                 <Label className="text-xs">Cargo</Label>                 <Input value={contato.cargo} onChange={(e) => atualizarContato(index, 'cargo', e.target.value, contatosList, contatosSetter)} placeholder="Ex: Gerente Comercial" />               </div>               <div className="space-y-1">                 <Label className="text-xs">WhatsApp</Label>                 <Input value={contato.whatsapp} onChange={(e) => atualizarContato(index, 'whatsapp', e.target.value, contatosList, contatosSetter)} placeholder="(11) 99999-9999" />               </div>               <div className="space-y-1">                 <Label className="text-xs">E-mail</Label>                 <Input type="email" value={contato.email} onChange={(e) => atualizarContato(index, 'email', e.target.value, contatosList, contatosSetter)} placeholder="contato@empresa.com" />               </div>             </div>           </div>         ))}         {contatosList.length === 0 && (           <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato adicionado</p>         )}       </TabsContent>        {/* ── ABA ORÇAMENTO ── */}       <TabsContent value="orcamento" className="space-y-4 mt-0">         <div className="space-y-1.5">           <Label>Tipo de Layout do Orçamento</Label>           <select             {...reg("tipo_layout")}             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"           >             <option value="padrao">Padrão (genérico)</option>             <option value="castor">Castor (código dividido, sem box extra)</option>             <option value="midea">Midea (código normal, com box termos)</option>           </select>           <p className="text-xs text-muted-foreground mt-1">Define como o orçamento será apresentado visualmente</p>         </div>          <div className="grid grid-cols-2 gap-4">           <div className="space-y-1.5">             <Label>Prazo de Entrega Padrão</Label>             <Input {...reg("prazo_entrega_padrao")} placeholder="Ex: 45/60 dias" />           </div>           <div className="space-y-1.5">             <Label>Validade da Proposta (dias)</Label>             <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />           </div>         </div>          <div className="space-y-1.5">           <Label>Condições de Pagamento Padrão</Label>           <Textarea             {...reg("condicoes_pagamento_padrao")}             placeholder="Ex: ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO&#10;Em 2x (30/60 dias) com acréscimo de 2,5%..."             rows={4}           />         </div>          <div className="space-y-1.5">           <Label>Termos do Fabricante (opcional)</Label>           <Textarea             {...reg("termos_fabricante")}             placeholder="Termos legais/comerciais do fornecedor que aparecem no orçamento. Deixe vazio se o fornecedor não possuir termos próprios."             rows={5}           />           <p className="text-xs text-muted-foreground mt-1">             Se vazio, o bloco de termos do fabricante não será exibido no orçamento.           </p>         </div>          <div className="space-y-1.5">           <Label>URL da Imagem de Marketing</Label>           <Input {...reg("imagem_template_url")} placeholder="https://..." />           <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>         </div>       </TabsContent>     </Tabs>   );
+  // ─── Form compartilhado com abas ─────────────────────────────────────────
+  const renderFormFields = (
     reg: typeof regNovo,
     set: typeof setNovo,
     statusVal: string,
@@ -753,262 +662,202 @@ export default function Fornecedores() {
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
     onLogoRemove: () => void,
   ) => (
-    <>
-      {/* Logo Upload */}
-      <div className="space-y-2">
-        <Label>Logotipo</Label>
-        <div className="flex items-center gap-4">
-          {currentLogoPreview ? (
-            <div className="relative">
-              <img src={currentLogoPreview} alt="Logo" className="w-20 h-20 rounded-lg object-contain border border-border bg-white" />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
-                onClick={onLogoRemove}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <label className="flex flex-col items-center justify-center w-20 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">
-              <Upload className="w-5 h-5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground mt-1">Logo</span>
-              <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
-            </label>
-          )}
-          <p className="text-xs text-muted-foreground">PNG, JPG até 5MB</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Nome Fantasia *</Label>
-          <Input {...reg("nome_fantasia")} placeholder="Castor Colchões" required />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Razão Social *</Label>
-          <Input {...reg("razao_social")} placeholder="Castor Colchões Ltda" required />
-        </div>
-      </div>
+    <Tabs defaultValue="geral" className="w-full">
+      <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsTrigger value="geral">Dados Gerais</TabsTrigger>
+        <TabsTrigger value="contatos">Contatos</TabsTrigger>
+        <TabsTrigger value="orcamento">Orçamento</TabsTrigger>
+      </TabsList>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>CNPJ *</Label>
-          <Input
-            {...reg("cnpj")}
-            placeholder="00.000.000/0000-00"
-            maxLength={18}
-            required
-            onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))}
-          />
+      {/* ── ABA DADOS GERAIS ── */}
+      <TabsContent value="geral" className="space-y-4 mt-0">
+        <div className="space-y-2">
+          <Label>Logotipo</Label>
+          <div className="flex items-center gap-4">
+            {currentLogoPreview ? (
+              <div className="relative">
+                <img src={currentLogoPreview} alt="Logo" className="w-20 h-20 rounded-lg object-contain border border-border bg-white" />
+                <Button type="button" variant="destructive" size="sm" className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full" onClick={onLogoRemove}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-20 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground mt-1">Logo</span>
+                <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground">PNG, JPG até 5MB</p>
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Código</Label>
-          <Input {...reg("codigo")} placeholder="Código interno" />
-        </div>
-      </div>
 
-      {/* Segmento - Multi Select */}
-      <div className="space-y-1.5">
-        <Label>Segmento</Label>
-        <div className="flex flex-wrap gap-4 mt-1">
-          {SEGMENTOS_OPTIONS.map((s) => (
-            <label key={s.value} className="flex items-center gap-2 cursor-pointer text-sm">
-              <Checkbox
-                checked={segmentoVal.includes(s.value)}
-                onCheckedChange={(checked) => {
-                  const next = checked
-                    ? [...segmentoVal, s.value]
-                    : segmentoVal.filter((v) => v !== s.value);
-                  set("segmentos_atuacao", next as any);
-                }}
-              />
-              {s.label}
-            </label>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Nome Fantasia *</Label>
+            <Input {...reg("nome_fantasia")} placeholder="Castor Colchões" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Razão Social *</Label>
+            <Input {...reg("razao_social")} placeholder="Castor Colchões Ltda" required />
+          </div>
         </div>
-      </div>
 
-      {/* Gestão - Multi Select */}
-      <div className="space-y-1.5">
-        <Label>
-          Gestão Responsável
-          {(statusVal === "ativo" || statusVal === "prospecção") && <span className="text-red-500 ml-1">*</span>}
-        </Label>
-        {(statusVal === "encerrado" || statusVal === "inativo") ? (
-          <p className="text-xs text-muted-foreground italic mt-1">Sem gestão para fornecedores com status {statusVal}.</p>
-        ) : (
-          <div className="flex gap-4 mt-1">
-            {["G1", "G2", "G3", "G4"].map((g) => (
-              <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>CNPJ *</Label>
+            <Input {...reg("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required onChange={(e) => set("cnpj", applyMaskCNPJ(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Código</Label>
+            <Input {...reg("codigo")} placeholder="Código interno" />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Segmento</Label>
+          <div className="flex flex-wrap gap-4 mt-1">
+            {SEGMENTOS_OPTIONS.map((s) => (
+              <label key={s.value} className="flex items-center gap-2 cursor-pointer text-sm">
                 <Checkbox
-                  checked={gestaoVal.includes(g)}
+                  checked={segmentoVal.includes(s.value)}
                   onCheckedChange={(checked) => {
-                    const next = checked
-                      ? [...gestaoVal, g]
-                      : gestaoVal.filter((v) => v !== g);
-                    set("gestao", next as any);
+                    const next = checked ? [...segmentoVal, s.value] : segmentoVal.filter((v) => v !== s.value);
+                    set("segmentos_atuacao", next as any);
                   }}
                 />
-                {g}
+                {s.label}
               </label>
             ))}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Tipo de Layout do Orçamento */}
-      <div className="space-y-1.5">
-        <Label>Tipo de Layout do Orçamento</Label>
-        <select
-          {...reg("tipo_layout")}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="padrao">Padrão (genérico)</option>
-          <option value="castor">Castor (código dividido, sem box extra)</option>
-          <option value="midea">Midea (código normal, com box termos)</option>
-        </select>
-        <p className="text-xs text-muted-foreground mt-1">
-          Define como o orçamento será apresentado visualmente
-        </p>
-      </div>
-
-      {/* Defaults para Orçamento */}
-      <div className="border-t border-border pt-4 mt-2">
-        <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Padrões para Orçamento</Label>
-        <div className="grid grid-cols-2 gap-4 mt-3">
-          <div className="space-y-1.5">
-            <Label>Prazo de Entrega Padrão</Label>
-            <Input {...reg("prazo_entrega_padrao")} placeholder="Ex: 45/60 dias" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Validade da Proposta (dias)</Label>
-            <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />
-          </div>
-        </div>
-        <div className="space-y-1.5 mt-3">
-          <Label>Condições de Pagamento Padrão</Label>
-          <Textarea
-            {...reg("condicoes_pagamento_padrao")}
-            placeholder="Ex: ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO&#10;Em 2x (30/60 dias) com acréscimo de 2,5%..."
-            rows={3}
-          />
-        </div>
-        <div className="space-y-1.5 mt-3">
-          <Label>Termos do Fabricante (Orçamento)</Label>
-          <Textarea
-            {...reg("termos_fabricante")}
-            placeholder="Termos legais/comerciais do fornecedor que devem aparecer no orçamento"
-            rows={4}
-          />
-        </div>
-        <div className="space-y-1.5 mt-3">
-          <Label>URL da Imagem Template (Marketing)</Label>
-          <Input {...reg("imagem_template_url")} placeholder="https://..." />
-          <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1.5">
-          <Label>E-mail</Label>
-          <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Telefone</Label>
-          <Input
-            {...reg("telefone")}
-            placeholder="(11) 99999-9999"
-            maxLength={15}
-            onChange={(e) => set("telefone", applyMaskTelefone(e.target.value))}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>WhatsApp</Label>
-          <Input
-            {...reg("whatsapp")}
-            placeholder="(11) 99999-9999"
-            maxLength={15}
-            onChange={(e) => set("whatsapp", applyMaskTelefone(e.target.value))}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Site</Label>
-        <Input {...reg("site")} placeholder="https://www.fornecedor.com.br" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Estado</Label>
-          <Select value={estadoVal} onValueChange={(v) => { set("estado", v); set("cidade", ""); }}>
-            <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
-            <SelectContent className="bg-card z-50 max-h-60">
-              {TODOS_ESTADOS.map((uf) => (
-                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+          <Label>
+            Gestão Responsável
+            {(statusVal === "ativo" || statusVal === "prospecção") && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          {(statusVal === "encerrado" || statusVal === "inativo") ? (
+            <p className="text-xs text-muted-foreground italic mt-1">Sem gestão para fornecedores com status {statusVal}.</p>
+          ) : (
+            <div className="flex gap-4 mt-1">
+              {["G1", "G2", "G3", "G4"].map((g) => (
+                <label key={g} className="flex items-center gap-2 cursor-pointer text-sm">
+                  <Checkbox
+                    checked={gestaoVal.includes(g)}
+                    onCheckedChange={(checked) => {
+                      const next = checked ? [...gestaoVal, g] : gestaoVal.filter((v) => v !== g);
+                      set("gestao", next as any);
+                    }}
+                  />
+                  {g}
+                </label>
               ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label>E-mail</Label>
+            <Input {...reg("email")} type="email" placeholder="contato@fornecedor.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Telefone</Label>
+            <Input {...reg("telefone")} placeholder="(11) 99999-9999" maxLength={15} onChange={(e) => set("telefone", applyMaskTelefone(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>WhatsApp</Label>
+            <Input {...reg("whatsapp")} placeholder="(11) 99999-9999" maxLength={15} onChange={(e) => set("whatsapp", applyMaskTelefone(e.target.value))} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Site</Label>
+          <Input {...reg("site")} placeholder="https://www.fornecedor.com.br" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Estado</Label>
+            <Select value={estadoVal} onValueChange={(v) => { set("estado", v); set("cidade", ""); }}>
+              <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+              <SelectContent className="bg-card z-50 max-h-60">
+                {TODOS_ESTADOS.map((uf) => (<SelectItem key={uf} value={uf}>{uf}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Cidade</Label>
+            <Select value={cidadeVal} onValueChange={(v) => set("cidade", v)} disabled={!estadoVal}>
+              <SelectTrigger><SelectValue placeholder={estadoVal ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>
+              <SelectContent className="bg-card z-50 max-h-60">
+                {estadoVal && CIDADES_POR_ESTADO[estadoVal]?.map((cidade) => (<SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Status *</Label>
+          <Select value={statusVal} onValueChange={(v) => set("status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="encerrado">Encerrado</SelectItem>
+              <SelectItem value="prospecção">Prospecção</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-1.5">
-          <Label>Cidade</Label>
-          <Select value={cidadeVal} onValueChange={(v) => set("cidade", v)} disabled={!estadoVal}>
-            <SelectTrigger><SelectValue placeholder={estadoVal ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>
-            <SelectContent className="bg-card z-50 max-h-60">
-              {estadoVal && CIDADES_POR_ESTADO[estadoVal]?.map((cidade) => (
-                <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Produtos e Serviços</Label>
+          <Textarea {...reg("produtos_servicos")} placeholder="Descreva os principais produtos e serviços oferecidos..." rows={4} />
         </div>
-      </div>
 
-      <div className="space-y-1.5">
-        <Label>Status *</Label>
-        <Select value={statusVal} onValueChange={(v) => set("status", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent className="bg-card z-50">
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="inativo">Inativo</SelectItem>
-            <SelectItem value="encerrado">Encerrado</SelectItem>
-            <SelectItem value="prospecção">Prospecção</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-1.5">
+          <Label>Comissão de Vendas (%)</Label>
+          <Input {...reg("comissao_vendas")} type="number" step="0.01" min="0" max="100" placeholder="Ex: 5.5" />
+          <p className="text-xs text-muted-foreground mt-1">Percentual de comissão sobre vendas</p>
+        </div>
 
-      {/* Produtos e Serviços */}
-      <div className="space-y-1.5">
-        <Label>Produtos e Serviços</Label>
-        <Textarea
-          {...reg("produtos_servicos")}
-          placeholder="Descreva os principais produtos e serviços oferecidos..."
-          rows={4}
-        />
-      </div>
+        <div className="space-y-1.5">
+          <Label>Observações</Label>
+          <Textarea {...reg("observacoes")} placeholder="Notas sobre o fornecedor..." rows={3} />
+        </div>
 
-      {/* Comissão */}
-      <div className="space-y-1.5">
-        <Label>Comissão de Vendas (%)</Label>
-        <Input
-          {...reg("comissao_vendas")}
-          type="number"
-          step="0.01"
-          min="0"
-          max="100"
-          placeholder="Ex: 5.5"
-        />
-        <p className="text-xs text-muted-foreground mt-1">Percentual de comissão sobre vendas</p>
-      </div>
+        <div className="border-t border-border pt-4 mt-4">
+          <Label>Catálogos e Documentos</Label>
+          <div className="mt-2">
+            <input type="file" id={uploadInputId} multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={(e) => handleUploadArquivos(e, arquivosSetter, arquivosList)} className="hidden" />
+            <Button type="button" variant="outline" onClick={() => document.getElementById(uploadInputId)?.click()} className="w-full">
+              <Upload className="w-4 h-4 mr-2" /> Fazer Upload de Arquivos
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB)</p>
+          </div>
+          {arquivosList.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium">Arquivos anexados:</p>
+              {arquivosList.map((arquivo, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border border-border rounded bg-background">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{arquivo.nome}</span>
+                    <Badge variant="secondary">{(arquivo.tamanho / 1024).toFixed(1)} KB</Badge>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removerArquivo(index, arquivosList, arquivosSetter)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </TabsContent>
 
-      <div className="space-y-1.5">
-        <Label>Observações</Label>
-        <Textarea {...reg("observacoes")} placeholder="Notas sobre o fornecedor..." rows={3} />
-      </div>
-
-      {/* Contatos */}
-      <div className="border-t border-border pt-4 mt-4">
+      {/* ── ABA CONTATOS ── */}
+      <TabsContent value="contatos" className="space-y-4 mt-0">
         <div className="flex items-center justify-between mb-3">
           <Label>Contatos da Empresa</Label>
           <Button type="button" variant="outline" size="sm" onClick={() => adicionarContato(contatosList, contatosSetter)}>
@@ -1044,78 +893,74 @@ export default function Fornecedores() {
           </div>
         ))}
         {contatosList.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">Nenhum contato adicionado</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato adicionado</p>
         )}
-      </div>
+      </TabsContent>
 
-      {/* Upload de Arquivos */}
-      <div className="border-t border-border pt-4 mt-4">
-        <Label>Catálogos e Documentos</Label>
-        <div className="mt-2">
-          <input
-            type="file"
-            id={uploadInputId}
-            multiple
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => handleUploadArquivos(e, arquivosSetter, arquivosList)}
-            className="hidden"
-          />
-          <Button type="button" variant="outline" onClick={() => document.getElementById(uploadInputId)?.click()} className="w-full">
-            <Upload className="w-4 h-4 mr-2" /> Fazer Upload de Arquivos
-          </Button>
-          <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB por arquivo)</p>
+      {/* ── ABA ORÇAMENTO ── */}
+      <TabsContent value="orcamento" className="space-y-4 mt-0">
+        <div className="space-y-1.5">
+          <Label>Tipo de Layout do Orçamento</Label>
+          <select {...reg("tipo_layout")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="padrao">Padrão (genérico)</option>
+            <option value="castor">Castor (código dividido, sem box extra)</option>
+            <option value="midea">Midea (código normal, com box termos)</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">Define como o orçamento será apresentado visualmente</p>
         </div>
-        {arquivosList.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-medium">Arquivos anexados:</p>
-            {arquivosList.map((arquivo, index) => (
-              <div key={index} className="flex items-center justify-between p-2 border border-border rounded bg-background">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{arquivo.nome}</span>
-                  <Badge variant="secondary">{(arquivo.tamanho / 1024).toFixed(1)} KB</Badge>
-                </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => removerArquivo(index, arquivosList, arquivosSetter)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Prazo de Entrega Padrão</Label>
+            <Input {...reg("prazo_entrega_padrao")} placeholder="Ex: 45/60 dias" />
           </div>
-        )}
-      </div>
-    </>
+          <div className="space-y-1.5">
+            <Label>Validade da Proposta (dias)</Label>
+            <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Condições de Pagamento Padrão</Label>
+          <Textarea {...reg("condicoes_pagamento_padrao")} placeholder="Ex: ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO&#10;Em 2x (30/60 dias) com acréscimo de 2,5%..." rows={4} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Termos do Fabricante (opcional)</Label>
+          <Textarea {...reg("termos_fabricante")} placeholder="Termos legais/comerciais do fornecedor que aparecem no orçamento. Deixe vazio se o fornecedor não possuir termos próprios." rows={5} />
+          <p className="text-xs text-muted-foreground mt-1">Se vazio, o bloco de termos do fabricante não será exibido no orçamento.</p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>URL da Imagem de Marketing</Label>
+          <Input {...reg("imagem_template_url")} placeholder="https://..." />
+          <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 
   return (
     <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Fornecedores</h1>
-          <p className="text-muted-foreground text-sm">
-            Gestão completa da base de fornecedores 3W Hotelaria
-          </p>
+          <p className="text-muted-foreground text-sm">Gestão completa da base de fornecedores 3W Hotelaria</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={() => navigate("/acoes-comerciais")} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
-            <Zap size={16} />
-            Criar Ação
+            <Zap size={16} /> Criar Ação
           </Button>
           <Button onClick={() => setModalNovo(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
-            <Plus size={16} />
-            Novo Fornecedor
+            <Plus size={16} /> Novo Fornecedor
           </Button>
         </div>
       </div>
 
-      {/* Card + Filters row */}
       <div className="flex gap-3 items-start">
-        {/* Total card */}
         <Card className="border-border/50 bg-[#c4942c] shrink-0 min-w-[220px]">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-white/20">
-              <Users size={22} className="text-white" />
-            </div>
+            <div className="p-3 rounded-xl bg-white/20"><Users size={22} className="text-white" /></div>
             <div>
               <p className="text-xs text-white/80 font-medium">Total de Fornecedores</p>
               <p className="text-2xl font-bold text-white">{total.toLocaleString("pt-BR")}</p>
@@ -1123,62 +968,26 @@ export default function Fornecedores() {
           </CardContent>
         </Card>
 
-        {/* Filters */}
         <div className="flex-1 space-y-2">
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, razão social ou CNPJ..."
-                value={filtros.busca}
-                onChange={(e) => handleBuscaChange(e.target.value)}
-                className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]"
-              />
+              <Input placeholder="Buscar por nome, razão social ou CNPJ..." value={filtros.busca} onChange={(e) => handleBuscaChange(e.target.value)} className="pl-9 bg-[#fcfcfc] border-[#e8e8e8]" />
             </div>
             {temFiltrosAtivos && (
               <Button variant="outline" onClick={limparFiltros} className="gap-2 shrink-0 bg-[#fcfcfc] border-[#e8e8e8]">
-                <X size={14} />
-                Limpar Filtros
+                <X size={14} /> Limpar Filtros
               </Button>
             )}
           </div>
-
           <div className="grid grid-cols-3 gap-3">
-            <MultiSelectFilter
-              label="Status"
-              selected={filtros.status}
-              options={[
-                { value: "ativo", label: "Ativo" },
-                { value: "inativo", label: "Inativo" },
-                { value: "encerrado", label: "Encerrado" },
-                { value: "prospecção", label: "Prospecção" },
-              ]}
-              onToggle={(v) => toggleFiltro("status", v)}
-            />
-
-            <MultiSelectFilter
-              label="Segmento"
-              selected={filtros.segmento}
-              options={SEGMENTOS_OPTIONS}
-              onToggle={(v) => toggleFiltro("segmento", v)}
-            />
-
-            <MultiSelectFilter
-              label="Gestão"
-              selected={filtros.gestao}
-              options={[
-                { value: "G1", label: "G1" },
-                { value: "G2", label: "G2" },
-                { value: "G3", label: "G3" },
-                { value: "G4", label: "G4" },
-              ]}
-              onToggle={(v) => toggleFiltro("gestao", v)}
-            />
+            <MultiSelectFilter label="Status" selected={filtros.status} options={[{ value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }, { value: "encerrado", label: "Encerrado" }, { value: "prospecção", label: "Prospecção" }]} onToggle={(v) => toggleFiltro("status", v)} />
+            <MultiSelectFilter label="Segmento" selected={filtros.segmento} options={SEGMENTOS_OPTIONS} onToggle={(v) => toggleFiltro("segmento", v)} />
+            <MultiSelectFilter label="Gestão" selected={filtros.gestao} options={[{ value: "G1", label: "G1" }, { value: "G2", label: "G2" }, { value: "G3", label: "G3" }, { value: "G4", label: "G4" }]} onToggle={(v) => toggleFiltro("gestao", v)} />
           </div>
         </div>
       </div>
 
-      {/* Table */}
       <Card className="border-[#e8e8e8] bg-[#fcfcfc]">
         <CardContent className="p-0">
           <Table>
@@ -1196,18 +1005,10 @@ export default function Fornecedores() {
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
+                  <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>))}</TableRow>
                 ))
               ) : fornecedores.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Nenhum fornecedor encontrado.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Nenhum fornecedor encontrado.</TableCell></TableRow>
               ) : (
                 fornecedores.map((f) => (
                   <TableRow key={f.id} className="cursor-pointer hover:bg-muted/50">
@@ -1215,58 +1016,34 @@ export default function Fornecedores() {
                       {f.logotipo_url ? (
                         <img src={f.logotipo_url} alt={f.nome_fantasia} className="w-10 h-10 rounded-md object-contain border border-border bg-white" />
                       ) : (
-                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                          {f.nome_fantasia?.substring(0, 2).toUpperCase()}
-                        </div>
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">{f.nome_fantasia?.substring(0, 2).toUpperCase()}</div>
                       )}
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{f.nome_fantasia}</p>
-                        {f.tipo && f.tipo.toLowerCase().includes("vip") && (
-                          <Badge variant="outline" className={tipoColors.vip}>VIP</Badge>
-                        )}
+                        {f.tipo && f.tipo.toLowerCase().includes("vip") && (<Badge variant="outline" className={tipoColors.vip}>VIP</Badge>)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>
-                      {f.codigo || "-"}
-                    </TableCell>
+                    <TableCell className="text-sm font-mono text-muted-foreground" onClick={() => verDetalhes(f)}>{f.codigo || "-"}</TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       {f.segmentos_atuacao && f.segmentos_atuacao.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {f.segmentos_atuacao.map((s, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                        <div className="flex flex-wrap gap-1">{f.segmentos_atuacao.map((s, i) => (<Badge key={i} variant="outline" className="text-xs">{s}</Badge>))}</div>
+                      ) : (<span className="text-muted-foreground">-</span>)}
                     </TableCell>
                     <TableCell onClick={() => verDetalhes(f)}>
                       {f.gestao ? (
-                        <div className="flex flex-wrap gap-1">
-                          {f.gestao.split(", ").filter(Boolean).map((g, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">{g}</Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                        <div className="flex flex-wrap gap-1">{f.gestao.split(", ").filter(Boolean).map((g, i) => (<Badge key={i} variant="secondary" className="text-xs">{g}</Badge>))}</div>
+                      ) : (<span className="text-muted-foreground">-</span>)}
                     </TableCell>
                     <TableCell className="text-center" onClick={() => verDetalhes(f)}>
                       <Badge variant="outline" className={statusColors[f.status?.toLowerCase()] || ""}>{statusLabels[f.status?.toLowerCase()] || f.status}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => verDetalhes(f)}>
-                          <Eye size={15} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => abrirEditar(f)}>
-                          <Pencil size={15} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deletar(f.id)}>
-                          <Trash2 size={15} className="text-destructive" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => verDetalhes(f)}><Eye size={15} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => abrirEditar(f)}><Pencil size={15} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => deletar(f.id)}><Trash2 size={15} className="text-destructive" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1277,22 +1054,13 @@ export default function Fornecedores() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       {!loading && total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} de {total} fornecedores
-          </p>
+          <p className="text-xs text-muted-foreground">{((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} de {total} fornecedores</p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Anterior
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Página {page} de {totalPages}
-            </span>
-            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Próxima
-            </Button>
+            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
+            <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
+            <Button variant="outline" size="sm" className="bg-[#fcfcfc] border-[#e8e8e8]" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent className="bg-card z-50">
@@ -1318,7 +1086,6 @@ export default function Fornecedores() {
           </DialogHeader>
           {modalVer && (
             <div className="space-y-5 pt-1">
-              {/* Dados Gerais */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dados Gerais</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -1330,21 +1097,11 @@ export default function Fornecedores() {
                   <Info label="Gestão" value={modalVer.gestao} />
                   <Info label="Comissão" value={modalVer.comissao_vendas ? `${modalVer.comissao_vendas}%` : null} />
                   <div className="flex gap-2 items-start flex-col">
-                    <p className="text-xs text-muted-foreground">Tipo</p>
-                    <Badge variant="outline" className={tipoColors[modalVer.tipo] || tipoColors.regular}>
-                      {modalVer.tipo?.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2 items-start flex-col">
                     <p className="text-xs text-muted-foreground">Status</p>
-                    <Badge variant="outline" className={statusColors[modalVer.status?.toLowerCase()] || ""}>
-                      {statusLabels[modalVer.status?.toLowerCase()] || modalVer.status}
-                    </Badge>
+                    <Badge variant="outline" className={statusColors[modalVer.status?.toLowerCase()] || ""}>{statusLabels[modalVer.status?.toLowerCase()] || modalVer.status}</Badge>
                   </div>
                 </div>
               </div>
-
-              {/* Contato */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contato</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -1352,98 +1109,34 @@ export default function Fornecedores() {
                   <Info label="Telefone" value={modalVer.telefone} />
                   <Info label="WhatsApp" value={modalVer.whatsapp} />
                   <Info label="Site" value={modalVer.site} />
-                  {modalVer.site_2 && <Info label="Site 2" value={modalVer.site_2} />}
                 </div>
               </div>
-
-              {/* Localização */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Localização</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Info label="Endereço" value={modalVer.endereco ? `${modalVer.endereco}${modalVer.numero ? `, ${modalVer.numero}` : ""}` : null} />
-                  <Info label="Complemento" value={modalVer.complemento} />
-                  <Info label="Bairro" value={modalVer.bairro} />
                   <Info label="Cidade" value={modalVer.cidade} />
                   <Info label="Estado" value={modalVer.estado} />
-                  <Info label="CEP" value={modalVer.cep} />
                 </div>
               </div>
-
-              {/* Linhas de Produtos */}
-              {modalVer.linhas_produtos && modalVer.linhas_produtos.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Linhas de Produtos</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {modalVer.linhas_produtos.map((linha, i) => (
-                      <Badge key={i} variant="secondary">{linha}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Segmentos de Atuação */}
-              {modalVer.segmentos_atuacao && modalVer.segmentos_atuacao.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Segmentos de Atuação</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {modalVer.segmentos_atuacao.map((seg, i) => (
-                      <Badge key={i} variant="outline">{seg}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Dados Comerciais */}
-              {(modalVer.num_orcamentos || modalVer.num_vendas || modalVer.volume_vendas) && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dados Comerciais</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Info label="Nº Orçamentos" value={modalVer.num_orcamentos?.toString()} />
-                    <Info label="Vol. Orçamentos" value={formatCurrency(modalVer.volume_orcamentos)} />
-                    <Info label="Orçamento Médio" value={formatCurrency(modalVer.orcamento_medio)} />
-                    <Info label="Nº Vendas" value={modalVer.num_vendas?.toString()} />
-                    <Info label="Vol. Vendas" value={formatCurrency(modalVer.volume_vendas)} />
-                    <Info label="Venda Média" value={formatCurrency(modalVer.venda_media)} />
-                    <Info label="A Receber" value={formatCurrency(modalVer.a_receber)} />
-                    <Info label="Pendentes" value={modalVer.pendentes?.toString()} />
-                  </div>
-                </div>
-              )}
-
-              {/* Contrato */}
-              {(modalVer.data_inicio || modalVer.contrato) && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contrato</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Info label="Data Início" value={modalVer.data_inicio} />
-                    <Info label="Contrato" value={modalVer.contrato} />
-                  </div>
-                </div>
-              )}
-
-              {/* Observações */}
               {modalVer.observacoes && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Observações</p>
                   <p className="text-sm text-foreground bg-muted/40 rounded-md p-3">{modalVer.observacoes}</p>
                 </div>
               )}
-              {/* Produtos e Serviços */}
               {modalVer.produtos_servicos && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Produtos e Serviços</p>
                   <p className="text-sm text-foreground bg-muted/40 rounded-md p-3">{modalVer.produtos_servicos}</p>
                 </div>
               )}
-
-              {/* Contatos da Empresa */}
               {modalVer.contatos && (() => {
-                const contatosParsed = typeof modalVer.contatos === 'string' ? JSON.parse(modalVer.contatos) : modalVer.contatos;
-                return Array.isArray(contatosParsed) && contatosParsed.length > 0 ? (
+                const cp = typeof modalVer.contatos === 'string' ? JSON.parse(modalVer.contatos) : modalVer.contatos;
+                return Array.isArray(cp) && cp.length > 0 ? (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contatos</p>
                     <div className="space-y-3">
-                      {contatosParsed.map((c: any, i: number) => (
+                      {cp.map((c: any, i: number) => (
                         <div key={i} className="border-l-4 border-primary pl-3">
                           <p className="font-medium text-sm">{c.nome}</p>
                           {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
@@ -1457,22 +1150,14 @@ export default function Fornecedores() {
                   </div>
                 ) : null;
               })()}
-
-              {/* Catálogos e Documentos */}
               {modalVer.catalogos && (() => {
-                const catalogosParsed = typeof modalVer.catalogos === 'string' ? JSON.parse(modalVer.catalogos) : modalVer.catalogos;
-                return Array.isArray(catalogosParsed) && catalogosParsed.length > 0 ? (
+                const cp = typeof modalVer.catalogos === 'string' ? JSON.parse(modalVer.catalogos) : modalVer.catalogos;
+                return Array.isArray(cp) && cp.length > 0 ? (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Catálogos e Documentos</p>
                     <div className="space-y-2">
-                      {catalogosParsed.map((doc: any, i: number) => (
-                        <a
-                          key={i}
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-2 border border-border rounded hover:bg-muted/50"
-                        >
+                      {cp.map((doc: any, i: number) => (
+                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 border border-border rounded hover:bg-muted/50">
                           <FileText className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm flex-1">{doc.nome}</span>
                           <ExternalLink className="w-4 h-4 text-muted-foreground" />
@@ -1482,7 +1167,6 @@ export default function Fornecedores() {
                   </div>
                 ) : null;
               })()}
-
               <DialogFooter>
                 <Button variant="outline" onClick={() => setModalVer(null)}>Fechar</Button>
               </DialogFooter>
@@ -1501,17 +1185,8 @@ export default function Fornecedores() {
           <form onSubmit={subNovo(salvarNovo)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
             {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
             <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setModalNovo(false); resetNovo(); }}
-                disabled={salvando}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar Fornecedor"}
-              </Button>
+              <Button type="button" variant="outline" onClick={() => { setModalNovo(false); resetNovo(); }} disabled={salvando}>Cancelar</Button>
+              <Button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar Fornecedor"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1527,21 +1202,12 @@ export default function Fornecedores() {
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
             {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => modalEditar && deletar(modalEditar.id)}
-              >
+              <Button type="button" variant="destructive" size="sm" onClick={() => modalEditar && deletar(modalEditar.id)}>
                 <Trash2 size={14} className="mr-1" /> Deletar
               </Button>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setModalEditar(null)} disabled={salvando}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={salvando}>
-                  {salvando ? "Salvando..." : "Salvar"}
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setModalEditar(null)} disabled={salvando}>Cancelar</Button>
+                <Button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</Button>
               </div>
             </DialogFooter>
           </form>
