@@ -8,6 +8,7 @@ interface Props {
   orcamento: Orcamento
   itens: OrcamentoItem[]
   emailUsuario?: string
+  enderecoEntrega: string
 }
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
@@ -30,8 +31,9 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
   )
 }
 
-export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
+export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega }: Props) {
   const emailExibicao = emailUsuario || 'comercial1@3whotelaria.com.br'
+  const enderecoEntregaFinal = String(enderecoEntrega || '').trim()
 
   // All supplier data comes from props (set by carregarOrcamentoCompleto via buscarFornecedorLayout)
   // No independent fetch needed — prevents data mixing between suppliers
@@ -49,7 +51,6 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
     imagemTemplateFornecedor,
     layoutMidea
   )
-  // Use terms from the budget record first, then fall back to supplier's terms
   const termosFornecedorExibicao = resolverTermosFornecedor(
     orcamento.termos_fornecedor || termosFabricante,
     layoutMidea
@@ -238,7 +239,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
-                  <span>{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</span>
+                  <span>{enderecoEntregaFinal || '—'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <Phone className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
@@ -249,7 +250,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
               {/* Endereço de Entrega - Direita */}
               <div className="text-right space-y-1">
                 <p className="font-bold text-base text-[#1a4168] mb-3">Endereço de Entrega</p>
-                <p className="text-sm">{orcamento.cliente_endereco || 'Alameda Armenio Mendes, 70  Santos SP  CEP 11035-260'}</p>
+                <p className="text-sm">{enderecoEntregaFinal || '—'}</p>
               </div>
             </div>
             
