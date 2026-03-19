@@ -1,17 +1,8 @@
 import { Orcamento, OrcamentoItem } from '@/lib/types'
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { useState, useEffect } from 'react'
 import { formatDateBR } from '@/lib/date'
 import { extrairTextoCondicoesPagamento } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea, resolverImagemMarketing, resolverTermosFornecedor } from '@/lib/fornecedorTerms'
-
-interface FornecedorLayout {
-  tipo_layout: string | null
-  nome_fantasia: string
-  logotipo_url: string | null
-  imagem_template_url: string | null
-}
 
 interface Props {
   orcamento: Orcamento
@@ -41,125 +32,28 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
 
 export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
   const emailExibicao = emailUsuario || 'comercial1@3whotelaria.com.br'
-  const fornecedorInicialTipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null
-  const fornecedorInicialNome = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
-  const fornecedorInicialLogo = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
-  const fornecedorInicialImagemTemplate = ((orcamento as any).fornecedor_imagem_template_url ?? null) as string | null
 
-  const fornecedorInicial: FornecedorLayout | null =
-    fornecedorInicialTipoLayout || fornecedorInicialLogo || fornecedorInicialNome || fornecedorInicialImagemTemplate
-      ? {
-          tipo_layout: fornecedorInicialTipoLayout,
-          nome_fantasia: fornecedorInicialNome,
-          logotipo_url: fornecedorInicialLogo,
-          imagem_template_url: fornecedorInicialImagemTemplate,
-        }
-      : null
+  // All supplier data comes from props (set by carregarOrcamentoCompleto via buscarFornecedorLayout)
+  // No independent fetch needed — prevents data mixing between suppliers
+  const tipoLayout = ((orcamento as any).fornecedor_tipo_layout ?? null) as string | null || 'padrao'
+  const logotipoFornecedor = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null
+  const nomeFornecedorExibicao = String((orcamento as any).fornecedor_nome_fantasia || orcamento.fornecedor_nome || orcamento.operacao || '').trim()
+  const imagemTemplateFornecedor = ((orcamento as any).fornecedor_imagem_template_url ?? null) as string | null
+  const corPrimaria = ((orcamento as any).fornecedor_cor_primaria ?? '#C8962E') as string
+  const corSecundaria = ((orcamento as any).fornecedor_cor_secundaria ?? '#1a4168') as string
+  const termosFabricante = ((orcamento as any).fornecedor_termos_fabricante ?? null) as string | null
 
-  const [fornecedor, setFornecedor] = useState<FornecedorLayout | null>(fornecedorInicial)
-
-  useEffect(() => {
-    let ativo = true
-    setFornecedor(fornecedorInicial)
-
-
-    async function buscarFornecedor() {
-      // 1) Buscar por ID direto (fonte mais confiável)
-      if (orcamento.fornecedor_id) {
-        const { data } = await supabase
-          .from('fornecedores')
-          .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
-          .eq('id', orcamento.fornecedor_id)
-          .maybeSingle()
-
-        if (data && ativo) {
-          setFornecedor(data as FornecedorLayout)
-          return
-        }
-      }
-
-      // 2) Fallback estrito por nome (prioriza fornecedor_nome do orçamento)
-      const nomeBusca = (orcamento.fornecedor_nome || orcamento.operacao || '').trim()
-      if (!nomeBusca) return
-
-      // tenta igualdade exata
-      const { data: exato } = await supabase
-        .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
-        .eq('nome_fantasia', nomeBusca)
-        .maybeSingle()
-
-      if (exato && ativo) {
-        setFornecedor(exato as FornecedorLayout)
-        return
-      }
-
-      // tenta case-insensitive, ainda com match exato (sem %)
-      const { data: candidatos } = await supabase
-        .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
-        .ilike('nome_fantasia', nomeBusca)
-        .limit(10)
-
-      const encontrado = (candidatos || []).find((f: any) =>
-        String(f.nome_fantasia || '').trim().toUpperCase() === nomeBusca.toUpperCase()
-      )
-
-      if (encontrado && ativo) {
-        setFornecedor(encontrado as FornecedorLayout)
-        return
-      }
-
-      // tenta busca parcial (nome contém o termo buscado)
-      const { data: parciais } = await supabase
-        .from('fornecedores')
-        .select('tipo_layout, nome_fantasia, logotipo_url, imagem_template_url')
-        .ilike('nome_fantasia', `%${nomeBusca}%`)
-        .limit(5)
-
-      if (parciais && parciais.length > 0 && ativo) {
-        setFornecedor(parciais[0] as FornecedorLayout)
-      }
-    }
-
-    buscarFornecedor()
-    return () => {
-      ativo = false
-    }
-  }, [
-    orcamento.id,
-    orcamento.fornecedor_id,
-    orcamento.fornecedor_nome,
-    orcamento.operacao,
-    fornecedorInicialTipoLayout,
-    fornecedorInicialNome,
-    fornecedorInicialLogo,
-    fornecedorInicialImagemTemplate,
-  ])
-
-  const tipoLayout = fornecedor?.tipo_layout || fornecedorInicialTipoLayout || 'padrao'
-  const logotipoFornecedor = fornecedor?.logotipo_url || fornecedorInicialLogo
-  const nomeFornecedorExibicao = fornecedor?.nome_fantasia || fornecedorInicialNome || orcamento.fornecedor_nome || orcamento.operacao || ''
   const layoutMidea = isMideaLayout(tipoLayout, nomeFornecedorExibicao)
   const imagemMarketingExibicao = resolverImagemMarketing(
     orcamento.imagem_marketing_url,
-    fornecedor?.imagem_template_url || fornecedorInicialImagemTemplate,
+    imagemTemplateFornecedor,
     layoutMidea
   )
-  const termosFornecedorExibicao = resolverTermosFornecedor(orcamento.termos_fornecedor, layoutMidea) || ''
-  console.log('📊 numero:', orcamento.numero)
-  console.log('📊 subtotal:', orcamento.subtotal, '| tipo:', typeof orcamento.subtotal)
-  console.log('📊 impostos:', orcamento.impostos, '| tipo:', typeof orcamento.impostos)
-  console.log('📊 impostos_percentual:', orcamento.impostos_percentual)
-  console.log('📊 desconto:', orcamento.desconto, '| tipo:', typeof orcamento.desconto)
-  console.log('📊 desconto_valor:', orcamento.desconto_valor)
-  console.log('📊 total:', orcamento.total, '| tipo:', typeof orcamento.total)
-  console.log('📊 frete:', orcamento.frete, '| tipo:', typeof orcamento.frete)
-  console.log('📊 fornecedor_id:', orcamento.fornecedor_id)
-  console.log('📊 itens_count:', itens.length)
-  itens.forEach((i, idx) => console.log(`📊 Item ${idx+1}: qty=${i.quantidade} price=${i.preco_unitario} total=${i.total}`))
-  console.log('📊 TODAS AS KEYS:', Object.keys(orcamento).join(', '))
-  console.log('📊 JSON COMPLETO:', JSON.stringify(orcamento))
+  // Use terms from the budget record first, then fall back to supplier's terms
+  const termosFornecedorExibicao = resolverTermosFornecedor(
+    orcamento.termos_fornecedor || termosFabricante,
+    layoutMidea
+  ) || ''
   const toNumber = (value: unknown) => {
     if (value === null || value === undefined) return 0
     if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -610,9 +504,9 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario }: Props) {
             {termosFornecedorExibicao && (
               <div className="mt-8 mb-8 p-6 bg-blue-50 border-2 border-[#1a4168] rounded-lg page-break-inside-avoid">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-[#1a4168]">
-                  {fornecedor?.logotipo_url && (
+                  {logotipoFornecedor && (
                     <img
-                      src={fornecedor.logotipo_url}
+                      src={logotipoFornecedor}
                       alt={nomeFornecedorExibicao || 'Fornecedor'}
                       className="h-16"
                     />
