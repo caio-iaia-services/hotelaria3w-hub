@@ -13,7 +13,12 @@ interface Props {
   itens: OrcamentoItem[];
   emailUsuario?: string;
   enderecoEntrega: string;
-  enderecoCadastral?: string;
+  enderecoCadastral?: string   
+  clienteLogradouro?: string   
+  clienteNumero?: string   
+  clienteComplemento?: string   
+  clienteBairro?: string   clienteCidade?: string   
+  clienteEstado?: string   clienteCep?: string;
 }
 
 function normalizarNomeFornecedor(nome: string | null | undefined) {
@@ -36,7 +41,14 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
   );
 }
 
-export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega, enderecoCadastral }: Props) {
+export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega, enderecoCadastral }: Props) {   
+  const enderecoCadastralMontado = enderecoCadastral || [     
+    [String((orcamento as any).cliente_logradouro || ''), 
+     String((orcamento as any).cliente_numero || '')].filter(Boolean).join(', '),     
+    (orcamento as any).cliente_complemento,     
+    (orcamento as any).cliente_bairro,     
+    [(orcamento as any).cliente_cidade, (orcamento as any).cliente_estado
+  ].filter(Boolean).join(' - '),     (orcamento as any).cliente_cep ? `CEP: ${(orcamento as any).cliente_cep}` : null,   ].filter(Boolean).join(', ')   const enderecoCadastralMontado = enderecoCadastral || [     [String((orcamento as any).cliente_logradouro || ''), String((orcamento as any).cliente_numero || '')].filter(Boolean).join(', '),     (orcamento as any).cliente_complemento,     (orcamento as any).cliente_bairro,     [(orcamento as any).cliente_cidade, (orcamento as any).cliente_estado].filter(Boolean).join(' - '),     (orcamento as any).cliente_cep ? `CEP: ${(orcamento as any).cliente_cep}` : null,   ].filter(Boolean).join(', ')
   const emailExibicao = emailUsuario || "comercial1@3whotelaria.com.br";
   const enderecoEntregaFinal = String(enderecoEntrega || "").trim();
 
