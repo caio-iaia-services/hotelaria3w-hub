@@ -607,6 +607,8 @@ export default function Fornecedores() {
       const allCatalogos = [...existingCatalogos, ...catalogosUrls];
       let logotipoUrl = modalEditar.logotipo_url || null;
       if (logoFileEdit) logotipoUrl = await uploadLogo(logoFileEdit);
+      let imagemMarketingUrl: string | null = (modalEditar as any).imagem_template_url || null;
+      if (imagemMarketingFileEdit) imagemMarketingUrl = await uploadMarketingImage(imagemMarketingFileEdit);
 
       const { error } = await supabase.from("fornecedores").update({
         nome_fantasia: dados.nome_fantasia,
@@ -634,7 +636,7 @@ export default function Fornecedores() {
         frete_tipo_padrao: dados.frete_tipo_padrao || null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
-        imagem_template_url: dados.imagem_template_url || null,
+        imagem_template_url: imagemMarketingUrl || null,
       }).eq("id", modalEditar.id);
       if (error) throw error;
       toast({ title: "Fornecedor atualizado com sucesso!" });
