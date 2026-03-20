@@ -638,6 +638,7 @@ export default function AcoesComerciais() {
       ...prev,
       prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
       validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
+      frete_tipo: fornecedor.frete_tipo_padrao || prev.frete_tipo,
       condicoes_pagamento: isMidea
         ? resolverCondicoesPagamentoMidea(fornecedor.condicoes_pagamento_padrao)
         : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
