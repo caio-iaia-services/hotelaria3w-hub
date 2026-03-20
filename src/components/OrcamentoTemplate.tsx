@@ -255,7 +255,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
-                  <span>{enderecoCadastralMontado || enderecoEntregaFinal || "—"}</span> || "—"}</span>
+                  <span>{enderecoCadastralMontado || enderecoEntregaFinal || "—"}</span> 
                 </p>
                 <p className="flex items-center gap-2 text-sm">
                   <Phone className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
