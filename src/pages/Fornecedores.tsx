@@ -406,6 +406,18 @@ export default function Fornecedores() {
     return urlData.publicUrl;
   };
 
+  const uploadMarketingImage = async (file: File): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const path = `marketing/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await cloudSupabase.storage
+      .from('fornecedores-documentos')
+      .upload(path, file, { upsert: true, contentType: file.type || undefined });
+    if (error) throw new Error(`Falha no upload da imagem de marketing: ${error.message}`);
+    const { data: urlData } = cloudSupabase.storage.from('fornecedores-documentos').getPublicUrl(path);
+    if (!urlData?.publicUrl) throw new Error('Falha ao gerar URL pública da imagem de marketing');
+    return urlData.publicUrl;
+  };
+
   const fetchFornecedores = useCallback(async () => {
     setLoading(true);
     let query = supabase
