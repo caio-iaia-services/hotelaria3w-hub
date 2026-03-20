@@ -223,28 +223,36 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
         <div className="bg-[#c4942c] p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-start mb-4">
-              {/* Dados do Cliente - Esquerda (endereço CADASTRAL) */}
+              {/* Dados do Cliente - Esquerda */}
               <div className="space-y-1">
-                <p className="font-bold text-xl text-[#1a4168] mb-3">
-                  {orcamento.cliente_cnpj || ""} {orcamento.cliente_nome || ""}
+                {/* Linha 1: CNPJ | Razão Social */}
+                <p className="font-bold text-xl text-[#1a4168] mb-1">
+                  {orcamento.cliente_cnpj || ""} |{" "}
+                  {(orcamento as any).cliente_razao_social || orcamento.cliente_nome || ""}
                 </p>
-                <p className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
+                {/* Linha 2: Nome Fantasia */}
+                <p className="font-semibold text-base text-[#1a4168] mb-2">{orcamento.cliente_nome || ""}</p>
+                {/* Linha 3: Endereço cadastral */}
+                <p className="flex items-center gap-2 text-sm text-white">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span>{enderecoCadastralMontado || "—"}</span>
+                </p>
+                {/* Linha 4: Email */}
+                <p className="flex items-center gap-2 text-sm text-white">
+                  <Mail className="w-4 h-4 flex-shrink-0" />
                   <span>{orcamento.cliente_email || "—"}</span>
                 </p>
-                <p className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
-                  <span>{enderecoCadastralMontado || enderecoEntregaFinal || "—"}</span>
-                </p>
-                <p className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-[#1a4168] flex-shrink-0" />
+                {/* Linha 5: Telefone */}
+                <p className="flex items-center gap-2 text-sm text-white">
+                  <Phone className="w-4 h-4 flex-shrink-0" />
                   <span>{orcamento.cliente_telefone || "—"}</span>
                 </p>
               </div>
-              {/* Endereço de Entrega - Direita (endereço EDITÁVEL) */}
+
+              {/* Endereço de Entrega - Direita */}
               <div className="text-right space-y-1">
                 <p className="font-bold text-base text-[#1a4168] mb-3">Endereço de Entrega</p>
-                <p className="text-sm">{enderecoEntregaFinal || "—"}</p>
+                <p className="text-sm text-white">{enderecoEntregaFinal || "—"}</p>
               </div>
             </div>
             <div className="text-center border-t border-[#1a4168]/30 pt-4">
