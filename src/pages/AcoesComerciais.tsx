@@ -886,7 +886,7 @@ export default function AcoesComerciais() {
         cliente_nome: clienteCompleto.nome_fantasia || cardSelecionado.cliente_nome,
         cliente_razao_social: clienteCompleto.razao_social,
         cliente_cnpj: clienteCompleto.cnpj || cardSelecionado.cliente_cnpj,
-        cliente_endereco: enderecoCadastralCliente,
+        cliente_endereco: dadosOrcamento.endereco_entrega || enderecoCadastralCliente,
         cliente_email: clienteCompleto.email,
         cliente_telefone: clienteCompleto.telefone,
         fornecedor_id: fornecedorSelecionado?.id || null,
