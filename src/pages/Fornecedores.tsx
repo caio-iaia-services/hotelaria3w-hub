@@ -924,18 +924,7 @@ export default function Fornecedores() {
         )}
       </TabsContent>
 
-      {/* ── ABA ORÇAMENTO ── */}
       <TabsContent value="orcamento" className="space-y-4 mt-0">
-        <div className="space-y-1.5">
-          <Label>Tipo de Layout do Orçamento</Label>
-          <select {...reg("tipo_layout")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="padrao">Padrão (genérico)</option>
-            <option value="castor">Castor (código dividido, sem box extra)</option>
-            <option value="midea">Midea (código normal, com box termos)</option>
-          </select>
-          <p className="text-xs text-muted-foreground mt-1">Define como o orçamento será apresentado visualmente</p>
-        </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Prazo de Entrega Padrão</Label>
@@ -945,6 +934,12 @@ export default function Fornecedores() {
             <Label>Validade da Proposta (dias)</Label>
             <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Tipo de Frete Padrão</Label>
+          <Input {...reg("frete_tipo_padrao")} placeholder="Ex: CIF (Incluso no preço)" />
+          <p className="text-xs text-muted-foreground mt-1">Ex: CIF (frete incluso), FOB (por conta do cliente)</p>
         </div>
 
         <div className="space-y-1.5">
@@ -958,10 +953,25 @@ export default function Fornecedores() {
           <p className="text-xs text-muted-foreground mt-1">Se vazio, o bloco de termos do fabricante não será exibido no orçamento.</p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label>URL da Imagem de Marketing</Label>
-          <Input {...reg("imagem_template_url")} placeholder="https://..." />
-          <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
+        <div className="space-y-2">
+          <Label>Imagem de Marketing</Label>
+          <div className="flex items-center gap-4">
+            {currentMarketingPreview ? (
+              <div className="relative">
+                <img src={currentMarketingPreview} alt="Marketing" className="w-32 h-20 rounded-lg object-contain border border-border bg-white" />
+                <Button type="button" variant="destructive" size="sm" className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full" onClick={onMarketingRemove}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-32 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground mt-1">Banner</span>
+                <input type="file" accept="image/*" className="hidden" onChange={onMarketingChange} />
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground">PNG, JPG até 5MB — Imagem padrão usada como banner nos orçamentos</p>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
