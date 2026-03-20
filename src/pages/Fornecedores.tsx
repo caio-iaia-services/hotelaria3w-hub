@@ -1237,7 +1237,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button type="button" variant="destructive" size="sm" onClick={() => modalEditar && deletar(modalEditar.id)}>
                 <Trash2 size={14} className="mr-1" /> Deletar
