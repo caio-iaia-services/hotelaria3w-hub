@@ -331,6 +331,7 @@ interface FornecedorLocal {
   condicoes_pagamento_padrao: string | null
   imagem_template_url: string | null
   tipo_layout: string | null
+  frete_tipo_padrao: string | null
 }
 
 // ─── ImagemMarketing type ────────────────────────────────────────────────────
