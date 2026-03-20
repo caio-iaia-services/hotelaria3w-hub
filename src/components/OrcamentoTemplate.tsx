@@ -51,7 +51,8 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       (orcamento as any).cliente_cep ? `CEP: ${(orcamento as any).cliente_cep}` : null,
     ]
       .filter(Boolean)
-      .join(", ");
+      .join(", ") ||
+    enderecoEntregaFinal;
 
   const tipoLayout = (((orcamento as any).fornecedor_tipo_layout ?? null) as string | null) || "padrao";
   const logotipoFornecedor = ((orcamento as any).fornecedor_logotipo_url ?? null) as string | null;
@@ -225,25 +226,25 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
             <div className="flex justify-between items-start mb-4">
               {/* Dados do Cliente - Esquerda */}
               <div className="space-y-1">
-                {/* Linha 1: CNPJ | Razão Social */}
-                <p className="font-bold text-xl text-[#1a4168] mb-1">
+                {/* Linha 1: CNPJ | Razão Social — branco */}
+                <p className="font-bold text-xl text-white mb-1">
                   {orcamento.cliente_cnpj || ""} |{" "}
                   {(orcamento as any).cliente_razao_social || orcamento.cliente_nome || ""}
                 </p>
-                {/* Linha 2: Nome Fantasia */}
-                <p className="font-semibold text-base text-[#1a4168] mb-2">{orcamento.cliente_nome || ""}</p>
-                {/* Linha 3: Endereço cadastral */}
-                <p className="flex items-center gap-2 text-sm text-white">
+                {/* Linha 2: Nome Fantasia — branco */}
+                <p className="font-semibold text-base text-white mb-2">{orcamento.cliente_nome || ""}</p>
+                {/* Linha 3: Endereço cadastral — azul escuro */}
+                <p className="flex items-center gap-2 text-sm text-[#1a4168]">
                   <MapPin className="w-4 h-4 flex-shrink-0" />
                   <span>{enderecoCadastralMontado || "—"}</span>
                 </p>
-                {/* Linha 4: Email */}
-                <p className="flex items-center gap-2 text-sm text-white">
+                {/* Linha 4: Email — azul escuro */}
+                <p className="flex items-center gap-2 text-sm text-[#1a4168]">
                   <Mail className="w-4 h-4 flex-shrink-0" />
                   <span>{orcamento.cliente_email || "—"}</span>
                 </p>
-                {/* Linha 5: Telefone */}
-                <p className="flex items-center gap-2 text-sm text-white">
+                {/* Linha 5: Telefone — azul escuro */}
+                <p className="flex items-center gap-2 text-sm text-[#1a4168]">
                   <Phone className="w-4 h-4 flex-shrink-0" />
                   <span>{orcamento.cliente_telefone || "—"}</span>
                 </p>
@@ -252,7 +253,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
               {/* Endereço de Entrega - Direita */}
               <div className="text-right space-y-1">
                 <p className="font-bold text-base text-[#1a4168] mb-3">Endereço de Entrega</p>
-                <p className="text-sm text-white">{enderecoEntregaFinal || "—"}</p>
+                <p className="text-sm text-[#1a4168]">{enderecoEntregaFinal || "—"}</p>
               </div>
             </div>
             <div className="text-center border-t border-[#1a4168]/30 pt-4">
