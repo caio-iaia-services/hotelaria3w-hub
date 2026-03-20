@@ -558,7 +558,7 @@ export default function Fornecedores() {
       segmentos_atuacao: fc.segmentos_atuacao || [],
       produtos_servicos: fc.produtos_servicos || "",
       comissao_vendas: fc.comissao_vendas?.toString() || "",
-      tipo_layout: undefined,
+      prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
       prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
       validade_dias_padrao: (fc as any).validade_dias_padrao?.toString() || "",
       frete_tipo_padrao: (fc as any).frete_tipo_padrao || "",
