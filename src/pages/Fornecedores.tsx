@@ -93,9 +93,9 @@ type FornecedorForm = {
   segmentos_atuacao: string[];
   produtos_servicos: string;
   comissao_vendas: string;
-  tipo_layout: string;
   prazo_entrega_padrao: string;
   validade_dias_padrao: string;
+  frete_tipo_padrao: string;
   condicoes_pagamento_padrao: string;
   termos_fabricante: string;
   imagem_template_url: string;
@@ -272,12 +272,16 @@ export default function Fornecedores() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFileEdit, setLogoFileEdit] = useState<File | null>(null);
   const [logoPreviewEdit, setLogoPreviewEdit] = useState<string | null>(null);
+  const [imagemMarketingFile, setImagemMarketingFile] = useState<File | null>(null);
+  const [imagemMarketingPreview, setImagemMarketingPreview] = useState<string | null>(null);
+  const [imagemMarketingFileEdit, setImagemMarketingFileEdit] = useState<File | null>(null);
+  const [imagemMarketingPreviewEdit, setImagemMarketingPreviewEdit] = useState<string | null>(null);
 
   // Forms
   const {
     register: regNovo, handleSubmit: subNovo, reset: resetNovo,
     setValue: setNovo, watch: watchNovo,
-  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], tipo_layout: "padrao", prazo_entrega_padrao: "", validade_dias_padrao: "", condicoes_pagamento_padrao: "", termos_fabricante: "", imagem_template_url: "" } });
+  } = useForm<FornecedorForm>({ defaultValues: { status: "ativo", gestao: [], segmentos_atuacao: [], prazo_entrega_padrao: "", validade_dias_padrao: "", frete_tipo_padrao: "", condicoes_pagamento_padrao: "", termos_fabricante: "", imagem_template_url: "" } });
 
   const {
     register: regEdit, handleSubmit: subEdit, reset: resetEdit,
@@ -402,6 +406,18 @@ export default function Fornecedores() {
     return urlData.publicUrl;
   };
 
+  const uploadMarketingImage = async (file: File): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const path = `marketing/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await cloudSupabase.storage
+      .from('fornecedores-documentos')
+      .upload(path, file, { upsert: true, contentType: file.type || undefined });
+    if (error) throw new Error(`Falha no upload da imagem de marketing: ${error.message}`);
+    const { data: urlData } = cloudSupabase.storage.from('fornecedores-documentos').getPublicUrl(path);
+    if (!urlData?.publicUrl) throw new Error('Falha ao gerar URL pública da imagem de marketing');
+    return urlData.publicUrl;
+  };
+
   const fetchFornecedores = useCallback(async () => {
     setLoading(true);
     let query = supabase
@@ -478,6 +494,8 @@ export default function Fornecedores() {
       if (arquivos.length > 0) catalogosUrls = await uploadArquivosStorage(arquivos);
       let logotipoUrl: string | null = null;
       if (logoFile) logotipoUrl = await uploadLogo(logoFile);
+      let imagemMarketingUrl: string | null = null;
+      if (imagemMarketingFile) imagemMarketingUrl = await uploadMarketingImage(imagemMarketingFile);
 
       const { error } = await supabase.from("fornecedores").insert({
         nome_fantasia: dados.nome_fantasia,
@@ -500,12 +518,12 @@ export default function Fornecedores() {
         contatos: contatos.length > 0 ? JSON.parse(JSON.stringify(contatos)) : null,
         catalogos: catalogosUrls.length > 0 ? JSON.parse(JSON.stringify(catalogosUrls)) : null,
         logotipo_url: logotipoUrl,
-        tipo_layout: dados.tipo_layout || 'padrao',
         prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
         validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+        frete_tipo_padrao: dados.frete_tipo_padrao || null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
-        imagem_template_url: dados.imagem_template_url || null,
+        imagem_template_url: imagemMarketingUrl || dados.imagem_template_url || null,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
@@ -515,6 +533,8 @@ export default function Fornecedores() {
       setArquivos([]);
       setLogoFile(null);
       setLogoPreview(null);
+      setImagemMarketingFile(null);
+      setImagemMarketingPreview(null);
       fetchFornecedores();
       fetchMetrics();
     } catch (err: any) {
@@ -554,9 +574,9 @@ export default function Fornecedores() {
       segmentos_atuacao: fc.segmentos_atuacao || [],
       produtos_servicos: fc.produtos_servicos || "",
       comissao_vendas: fc.comissao_vendas?.toString() || "",
-      tipo_layout: (fc as any).tipo_layout || "padrao",
       prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
       validade_dias_padrao: (fc as any).validade_dias_padrao?.toString() || "",
+      frete_tipo_padrao: (fc as any).frete_tipo_padrao || "",
       condicoes_pagamento_padrao: (fc as any).condicoes_pagamento_padrao || "",
       termos_fabricante: (fc as any).termos_fabricante || "",
       imagem_template_url: (fc as any).imagem_template_url || "",
@@ -568,6 +588,8 @@ export default function Fornecedores() {
     setArquivosEdit([]);
     setLogoFileEdit(null);
     setLogoPreviewEdit(fc.logotipo_url || null);
+    setImagemMarketingFileEdit(null);
+    setImagemMarketingPreviewEdit((fc as any).imagem_template_url || null);
     setModalEditar(fc);
   };
 
@@ -587,6 +609,8 @@ export default function Fornecedores() {
       const allCatalogos = [...existingCatalogos, ...catalogosUrls];
       let logotipoUrl = modalEditar.logotipo_url || null;
       if (logoFileEdit) logotipoUrl = await uploadLogo(logoFileEdit);
+      let imagemMarketingUrl: string | null = (modalEditar as any).imagem_template_url || null;
+      if (imagemMarketingFileEdit) imagemMarketingUrl = await uploadMarketingImage(imagemMarketingFileEdit);
 
       const { error } = await supabase.from("fornecedores").update({
         nome_fantasia: dados.nome_fantasia,
@@ -609,12 +633,12 @@ export default function Fornecedores() {
         contatos: contatosEdit.length > 0 ? JSON.parse(JSON.stringify(contatosEdit)) : null,
         catalogos: allCatalogos.length > 0 ? JSON.parse(JSON.stringify(allCatalogos)) : null,
         logotipo_url: logotipoUrl,
-        tipo_layout: dados.tipo_layout || 'padrao',
         prazo_entrega_padrao: dados.prazo_entrega_padrao || null,
         validade_dias_padrao: dados.validade_dias_padrao ? parseInt(dados.validade_dias_padrao) : null,
+        frete_tipo_padrao: dados.frete_tipo_padrao || null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
-        imagem_template_url: dados.imagem_template_url || null,
+        imagem_template_url: imagemMarketingUrl || null,
       }).eq("id", modalEditar.id);
       if (error) throw error;
       toast({ title: "Fornecedor atualizado com sucesso!" });
@@ -661,6 +685,9 @@ export default function Fornecedores() {
     currentLogoPreview: string | null,
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
     onLogoRemove: () => void,
+    currentMarketingPreview: string | null,
+    onMarketingChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    onMarketingRemove: () => void,
   ) => (
     <Tabs defaultValue="geral" className="w-full">
       <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -897,18 +924,7 @@ export default function Fornecedores() {
         )}
       </TabsContent>
 
-      {/* ── ABA ORÇAMENTO ── */}
       <TabsContent value="orcamento" className="space-y-4 mt-0">
-        <div className="space-y-1.5">
-          <Label>Tipo de Layout do Orçamento</Label>
-          <select {...reg("tipo_layout")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="padrao">Padrão (genérico)</option>
-            <option value="castor">Castor (código dividido, sem box extra)</option>
-            <option value="midea">Midea (código normal, com box termos)</option>
-          </select>
-          <p className="text-xs text-muted-foreground mt-1">Define como o orçamento será apresentado visualmente</p>
-        </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Prazo de Entrega Padrão</Label>
@@ -918,6 +934,12 @@ export default function Fornecedores() {
             <Label>Validade da Proposta (dias)</Label>
             <Input {...reg("validade_dias_padrao")} type="number" min="1" placeholder="Ex: 30" />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Tipo de Frete Padrão</Label>
+          <Input {...reg("frete_tipo_padrao")} placeholder="Ex: CIF (Incluso no preço)" />
+          <p className="text-xs text-muted-foreground mt-1">Ex: CIF (frete incluso), FOB (por conta do cliente)</p>
         </div>
 
         <div className="space-y-1.5">
@@ -931,10 +953,25 @@ export default function Fornecedores() {
           <p className="text-xs text-muted-foreground mt-1">Se vazio, o bloco de termos do fabricante não será exibido no orçamento.</p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label>URL da Imagem de Marketing</Label>
-          <Input {...reg("imagem_template_url")} placeholder="https://..." />
-          <p className="text-xs text-muted-foreground mt-1">Imagem padrão usada como banner nos orçamentos deste fornecedor</p>
+        <div className="space-y-2">
+          <Label>Imagem de Marketing</Label>
+          <div className="flex items-center gap-4">
+            {currentMarketingPreview ? (
+              <div className="relative">
+                <img src={currentMarketingPreview} alt="Marketing" className="w-32 h-20 rounded-lg object-contain border border-border bg-white" />
+                <Button type="button" variant="destructive" size="sm" className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full" onClick={onMarketingRemove}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-32 h-20 cursor-pointer rounded-lg border-2 border-dashed border-border bg-muted/50 hover:bg-muted transition-colors">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground mt-1">Banner</span>
+                <input type="file" accept="image/*" className="hidden" onChange={onMarketingChange} />
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground">PNG, JPG até 5MB — Imagem padrão usada como banner nos orçamentos</p>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
@@ -1183,7 +1220,7 @@ export default function Fornecedores() {
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); })}
+            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); }, imagemMarketingPreview, (e) => handleLogoUpload(e, setImagemMarketingFile, setImagemMarketingPreview), () => { setImagemMarketingFile(null); setImagemMarketingPreview(null); })}
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => { setModalNovo(false); resetNovo(); }} disabled={salvando}>Cancelar</Button>
               <Button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar Fornecedor"}</Button>
@@ -1200,7 +1237,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); })}
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); })}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button type="button" variant="destructive" size="sm" onClick={() => modalEditar && deletar(modalEditar.id)}>
                 <Trash2 size={14} className="mr-1" /> Deletar

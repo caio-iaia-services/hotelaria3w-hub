@@ -274,6 +274,7 @@ export type Database = {
           email: string | null
           endereco: string | null
           estado: string | null
+          frete_tipo_padrao: string | null
           gestao: string | null
           id: string
           imagem_template_url: string | null
@@ -325,6 +326,7 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           estado?: string | null
+          frete_tipo_padrao?: string | null
           gestao?: string | null
           id?: string
           imagem_template_url?: string | null
@@ -376,6 +378,7 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           estado?: string | null
+          frete_tipo_padrao?: string | null
           gestao?: string | null
           id?: string
           imagem_template_url?: string | null
