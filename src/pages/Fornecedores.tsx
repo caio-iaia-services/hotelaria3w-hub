@@ -521,6 +521,8 @@ export default function Fornecedores() {
       setArquivos([]);
       setLogoFile(null);
       setLogoPreview(null);
+      setImagemMarketingFile(null);
+      setImagemMarketingPreview(null);
       fetchFornecedores();
       fetchMetrics();
     } catch (err: any) {
