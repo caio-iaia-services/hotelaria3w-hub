@@ -641,7 +641,7 @@ export default function AcoesComerciais() {
       frete_tipo: fornecedor.frete_tipo_padrao || prev.frete_tipo,
       condicoes_pagamento: isMidea
         ? resolverCondicoesPagamentoMidea(fornecedor.condicoes_pagamento_padrao)
-        : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
+        : (fornecedor.condicoes_pagamento_padrao || 'A combinar'),
     }))
 
     const imagemPadrao = resolverImagemMarketing(null, fornecedor.imagem_template_url, isMidea)
