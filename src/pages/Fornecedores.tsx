@@ -511,7 +511,7 @@ export default function Fornecedores() {
         frete_tipo_padrao: dados.frete_tipo_padrao || null,
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
-        imagem_template_url: dados.imagem_template_url || null,
+        imagem_template_url: imagemMarketingUrl || dados.imagem_template_url || null,
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
