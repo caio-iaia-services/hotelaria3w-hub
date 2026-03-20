@@ -559,7 +559,6 @@ export default function Fornecedores() {
       produtos_servicos: fc.produtos_servicos || "",
       comissao_vendas: fc.comissao_vendas?.toString() || "",
       prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
-      prazo_entrega_padrao: (fc as any).prazo_entrega_padrao || "",
       validade_dias_padrao: (fc as any).validade_dias_padrao?.toString() || "",
       frete_tipo_padrao: (fc as any).frete_tipo_padrao || "",
       condicoes_pagamento_padrao: (fc as any).condicoes_pagamento_padrao || "",
