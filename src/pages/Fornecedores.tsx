@@ -482,6 +482,8 @@ export default function Fornecedores() {
       if (arquivos.length > 0) catalogosUrls = await uploadArquivosStorage(arquivos);
       let logotipoUrl: string | null = null;
       if (logoFile) logotipoUrl = await uploadLogo(logoFile);
+      let imagemMarketingUrl: string | null = null;
+      if (imagemMarketingFile) imagemMarketingUrl = await uploadMarketingImage(imagemMarketingFile);
 
       const { error } = await supabase.from("fornecedores").insert({
         nome_fantasia: dados.nome_fantasia,
