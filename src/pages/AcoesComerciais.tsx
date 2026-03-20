@@ -822,8 +822,19 @@ export default function AcoesComerciais() {
       const dataEmissaoIso = getLocalDateString()
       const dataValidadeIso = addDaysToLocalDateString(dadosOrcamento.validade_dias)
 
-      // 4. Usar endereço de entrega editável (do campo do modal)
-      const enderecoCompleto = dadosOrcamento.endereco_entrega || ''
+      // 4. Montar endereço cadastral do cliente (para o lado esquerdo do orçamento)
+      const partesEndCadastral: string[] = []
+      if (clienteCompleto?.logradouro) {
+        let rua = clienteCompleto.logradouro
+        if (clienteCompleto.numero) rua += `, ${clienteCompleto.numero}`
+        if (clienteCompleto.complemento) rua += ` - ${clienteCompleto.complemento}`
+        partesEndCadastral.push(rua)
+      }
+      if (clienteCompleto?.bairro) partesEndCadastral.push(clienteCompleto.bairro)
+      const cidadeUfCadastral = [clienteCompleto?.cidade, clienteCompleto?.estado].filter(Boolean).join(' - ')
+      if (cidadeUfCadastral) partesEndCadastral.push(cidadeUfCadastral)
+      if (clienteCompleto?.cep) partesEndCadastral.push(`CEP: ${clienteCompleto.cep}`)
+      const enderecoCadastralCliente = partesEndCadastral.join(', ')
 
       // 5. Preparar termos 3W
       const termos3w = TERMOS_3W.replace('[VALIDADE]', String(dadosOrcamento.validade_dias))
