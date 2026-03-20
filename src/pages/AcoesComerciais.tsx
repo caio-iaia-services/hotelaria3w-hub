@@ -331,6 +331,7 @@ interface FornecedorLocal {
   condicoes_pagamento_padrao: string | null
   imagem_template_url: string | null
   tipo_layout: string | null
+  frete_tipo_padrao: string | null
 }
 
 // ─── ImagemMarketing type ────────────────────────────────────────────────────
@@ -599,7 +600,7 @@ export default function AcoesComerciais() {
   async function buscarFornecedoresDisponiveis(): Promise<FornecedorLocal[]> {
     const { data, error } = await supabase
       .from('fornecedores')
-      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url, tipo_layout')
+      .select('id, nome_fantasia, codigo, gestao, termos_fabricante, produtos_servicos, prazo_entrega_padrao, validade_dias_padrao, condicoes_pagamento_padrao, imagem_template_url, tipo_layout, frete_tipo_padrao')
       .eq('status', 'ativo')
       .order('nome_fantasia')
 
@@ -637,6 +638,7 @@ export default function AcoesComerciais() {
       ...prev,
       prazo_entrega: fornecedor.prazo_entrega_padrao || prev.prazo_entrega,
       validade_dias: fornecedor.validade_dias_padrao || prev.validade_dias,
+      frete_tipo: fornecedor.frete_tipo_padrao || prev.frete_tipo,
       condicoes_pagamento: isMidea
         ? resolverCondicoesPagamentoMidea(fornecedor.condicoes_pagamento_padrao)
         : (fornecedor.condicoes_pagamento_padrao || prev.condicoes_pagamento),
@@ -1244,15 +1246,11 @@ export default function AcoesComerciais() {
               </div>
               <div>
                 <Label>Tipo de Frete</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                <Input
+                  placeholder="Ex: CIF (Incluso no preço)"
                   value={dadosOrcamento.frete_tipo}
                   onChange={(e) => setDadosOrcamento(prev => ({ ...prev, frete_tipo: e.target.value }))}
-                >
-                  <option value="CIF (Incluso)">CIF (Incluso)</option>
-                  <option value="FOB">FOB</option>
-                  <option value="A calcular">A calcular</option>
-                </select>
+                />
               </div>
             </div>
 
