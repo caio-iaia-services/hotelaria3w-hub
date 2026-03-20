@@ -272,6 +272,10 @@ export default function Fornecedores() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFileEdit, setLogoFileEdit] = useState<File | null>(null);
   const [logoPreviewEdit, setLogoPreviewEdit] = useState<string | null>(null);
+  const [imagemMarketingFile, setImagemMarketingFile] = useState<File | null>(null);
+  const [imagemMarketingPreview, setImagemMarketingPreview] = useState<string | null>(null);
+  const [imagemMarketingFileEdit, setImagemMarketingFileEdit] = useState<File | null>(null);
+  const [imagemMarketingPreviewEdit, setImagemMarketingPreviewEdit] = useState<string | null>(null);
 
   // Forms
   const {
