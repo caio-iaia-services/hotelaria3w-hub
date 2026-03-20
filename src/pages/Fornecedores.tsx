@@ -685,6 +685,9 @@ export default function Fornecedores() {
     currentLogoPreview: string | null,
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
     onLogoRemove: () => void,
+    currentMarketingPreview: string | null,
+    onMarketingChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    onMarketingRemove: () => void,
   ) => (
     <Tabs defaultValue="geral" className="w-full">
       <TabsList className="grid w-full grid-cols-3 mb-4">
