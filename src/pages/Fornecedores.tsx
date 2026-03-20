@@ -588,6 +588,8 @@ export default function Fornecedores() {
     setArquivosEdit([]);
     setLogoFileEdit(null);
     setLogoPreviewEdit(fc.logotipo_url || null);
+    setImagemMarketingFileEdit(null);
+    setImagemMarketingPreviewEdit((fc as any).imagem_template_url || null);
     setModalEditar(fc);
   };
 
