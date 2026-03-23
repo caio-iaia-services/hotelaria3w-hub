@@ -83,14 +83,14 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
 
     const timer = setTimeout(async () => {
       setLoading(true);
-      const buscaDigits = busca.replace(/\D/g, "");
-      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${busca}%`;
+      // Remover pontuação para buscar CNPJ com ou sem máscara
+      const termoLimpo = busca.replace(/[.\-\/]/g, "");
       const { data } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, segmento, status, tipo")
-        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,${cnpjFilter},cidade.ilike.%${busca}%`)
+        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${termoLimpo}%,cidade.ilike.%${busca}%`)
         .order("nome_fantasia", { ascending: true })
-        .limit(50);
+        .limit(10);
 
       setClientes(data || []);
       setLoading(false);
