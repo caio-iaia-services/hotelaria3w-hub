@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
-import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from "lucide-react";
+import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe, MessageCircle, CheckCircle, Loader2 } from "lucide-react";
 import { formatDateBR } from "@/lib/date";
 import { extrairTextoCondicoesPagamento } from "@/lib/condicoesPagamento";
 import {
@@ -36,6 +37,35 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
 }
 
 export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega, enderecoCadastral }: Props) {
+  const [aprovando, setAprovando] = useState(false);
+
+  async function confirmarPedido(orcamentoId: string) {
+    if (!confirm('Deseja confirmar este pedido? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    setAprovando(true);
+    try {
+      const response = await fetch('https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/aprovar-orcamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orcamento_id: orcamentoId }),
+      });
+      if (!response.ok) throw new Error('Erro ao aprovar pedido');
+      const resultado = await response.json();
+      if (resultado.success) {
+        alert('Pedido confirmado com sucesso! O orçamento foi aprovado.');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        throw new Error(resultado.error || 'Erro desconhecido');
+      }
+    } catch (error: any) {
+      console.error('Erro ao confirmar pedido:', error);
+      alert('Erro ao confirmar pedido: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setAprovando(false);
+    }
+  }
+
   const emailExibicao = emailUsuario || "comercial1@3whotelaria.com.br";
   const enderecoEntregaFinal = String(enderecoEntrega || "").trim();
 
@@ -495,14 +525,32 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
               </div>
             </div>
 
-            <div className="mt-6 grid md:grid-cols-2 gap-4 page-break-inside-avoid">
-              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Phone className="w-6 h-6" />
+            <div className="mt-6 grid md:grid-cols-2 gap-4 page-break-inside-avoid no-print">
+              <a
+                href={`https://wa.me/5511519757779?text=Olá, gostaria de falar sobre o orçamento ${orcamento.numero}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors"
+              >
+                <MessageCircle className="w-6 h-6" />
                 <span>Clique aqui para falar com o Vendedor</span>
-              </button>
-              <button className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors">
-                <Package className="w-6 h-6" />
-                <span>Clique aqui para confirmar o pedido</span>
+              </a>
+              <button
+                onClick={() => confirmarPedido(orcamento.id)}
+                disabled={aprovando}
+                className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {aprovando ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Processando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-6 h-6" />
+                    <span>Clique aqui para confirmar o pedido</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
