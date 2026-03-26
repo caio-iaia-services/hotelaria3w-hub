@@ -1,0 +1,1 @@
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS oportunidade_id UUID;
