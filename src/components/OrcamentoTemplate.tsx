@@ -38,12 +38,11 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
 
 export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega, enderecoCadastral }: Props) {
   const [aprovando, setAprovando] = useState(false);
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
 
-  async function confirmarPedido(orcamentoId: string) {
-    if (!confirm('Deseja confirmar este pedido? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+  async function executarAprovacao(orcamentoId: string) {
     setAprovando(true);
+    setMostrarConfirmacao(false);
     try {
       const response = await fetch('https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/aprovar-orcamento', {
         method: 'POST',
@@ -53,18 +52,21 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       if (!response.ok) throw new Error('Erro ao aprovar pedido');
       const resultado = await response.json();
       if (resultado.success) {
-        alert('Pedido confirmado com sucesso! O orçamento foi aprovado.');
+        setMensagemSucesso('Pedido confirmado com sucesso! O orçamento foi aprovado.');
         setTimeout(() => window.location.reload(), 2000);
       } else {
         throw new Error(resultado.error || 'Erro desconhecido');
       }
     } catch (error: any) {
       console.error('Erro ao confirmar pedido:', error);
-      alert('Erro ao confirmar pedido: ' + (error.message || 'Erro desconhecido'));
+      setMensagemErro('Erro ao confirmar pedido: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setAprovando(false);
     }
   }
+
+  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
+  const [mensagemErro, setMensagemErro] = useState<string | null>(null);
 
   const emailExibicao = emailUsuario || "comercial1@3whotelaria.com.br";
   const enderecoEntregaFinal = String(enderecoEntrega || "").trim();
@@ -525,20 +527,54 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
               </div>
             </div>
 
-            <div className="mt-6 grid md:grid-cols-2 gap-4 page-break-inside-avoid no-print">
+            {/* Mensagens de feedback */}
+            {mensagemSucesso && (
+              <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-800 rounded-lg text-center font-semibold">
+                ✅ {mensagemSucesso}
+              </div>
+            )}
+            {mensagemErro && (
+              <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-800 rounded-lg text-center font-semibold">
+                ❌ {mensagemErro}
+              </div>
+            )}
+
+            {/* Confirmação inline */}
+            {mostrarConfirmacao && (
+              <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center space-y-3">
+                <p className="font-bold text-gray-800">Deseja confirmar este pedido? Esta ação não pode ser desfeita.</p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => executarAprovacao(orcamento.id)}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                  >
+                    Sim, confirmar
+                  </button>
+                  <button
+                    onClick={() => setMostrarConfirmacao(false)}
+                    className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 grid md:grid-cols-2 gap-4 page-break-inside-avoid no-print relative z-50">
               <a
-                href={`https://wa.me/5511519757779?text=Olá, gostaria de falar sobre o orçamento ${orcamento.numero}`}
+                href={`https://wa.me/5511519757779?text=${encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors cursor-pointer"
               >
                 <MessageCircle className="w-6 h-6" />
                 <span>Clique aqui para falar com o Vendedor</span>
               </a>
               <button
-                onClick={() => confirmarPedido(orcamento.id)}
-                disabled={aprovando}
-                className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMostrarConfirmacao(true); }}
+                disabled={aprovando || !!mensagemSucesso}
+                className="bg-[#c4942c] hover:bg-[#a87d24] text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {aprovando ? (
                   <>
