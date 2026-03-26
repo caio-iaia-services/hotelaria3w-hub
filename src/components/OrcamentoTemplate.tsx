@@ -38,12 +38,11 @@ function isMideaLayout(tipoLayout: string | null | undefined, nomeFornecedor: st
 
 export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntrega, enderecoCadastral }: Props) {
   const [aprovando, setAprovando] = useState(false);
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
 
-  async function confirmarPedido(orcamentoId: string) {
-    if (!confirm('Deseja confirmar este pedido? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+  async function executarAprovacao(orcamentoId: string) {
     setAprovando(true);
+    setMostrarConfirmacao(false);
     try {
       const response = await fetch('https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/aprovar-orcamento', {
         method: 'POST',
@@ -53,18 +52,21 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       if (!response.ok) throw new Error('Erro ao aprovar pedido');
       const resultado = await response.json();
       if (resultado.success) {
-        alert('Pedido confirmado com sucesso! O orçamento foi aprovado.');
+        setMensagemSucesso('Pedido confirmado com sucesso! O orçamento foi aprovado.');
         setTimeout(() => window.location.reload(), 2000);
       } else {
         throw new Error(resultado.error || 'Erro desconhecido');
       }
     } catch (error: any) {
       console.error('Erro ao confirmar pedido:', error);
-      alert('Erro ao confirmar pedido: ' + (error.message || 'Erro desconhecido'));
+      setMensagemErro('Erro ao confirmar pedido: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setAprovando(false);
     }
   }
+
+  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
+  const [mensagemErro, setMensagemErro] = useState<string | null>(null);
 
   const emailExibicao = emailUsuario || "comercial1@3whotelaria.com.br";
   const enderecoEntregaFinal = String(enderecoEntrega || "").trim();
