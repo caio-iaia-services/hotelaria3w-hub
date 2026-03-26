@@ -752,16 +752,9 @@ export default function Orcamentos() {
     return `${window.location.origin}/${url.replace(/^\/+/, "")}`;
   }
 
-  function svgDataUri(svg: string) {
-    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-  }
-  function svgImage(
-    svg: string,
-    width: number,
-    height: number,
-    extraStyle = "vertical-align:middle;margin-right:6px;display:inline-block;",
-  ) {
-    return `<img src="${svgDataUri(svg)}" width="${width}" height="${height}" alt="" style="${extraStyle}"/>`;
+  // Unicode icons for maximum email client compatibility (SVG data URIs are blocked by Gmail/Outlook)
+  function emailIcon(unicode: string, color = "#ffffff") {
+    return `<span style="font-size:14px;color:${color};margin-right:6px;vertical-align:middle;">${unicode}</span>`;
   }
 
   const F = "font-family:Arial,Helvetica,sans-serif;";
