@@ -895,12 +895,20 @@ export default function Orcamentos() {
     const iconCheck = `<span style="font-size:16px;color:#ffffff;margin-right:6px;vertical-align:middle;">✅</span>`;
     const termosFornecedorTitulo = `TERMOS LEGAIS ${fornecedorNome.toUpperCase()}`;
 
-    return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Orçamento ${esc(orcamento.numero)}</title></head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;${F}">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;"><tr><td align="center" style="padding:0;">
-<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">
+    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<meta name="format-detection" content="telephone=no,address=no,email=no,date=no"/>
+<title>Orcamento ${esc(orcamento.numero)}</title>
+<!--[if mso]><style type="text/css">body,table,td,th{font-family:Arial,Helvetica,sans-serif !important;}table{border-collapse:collapse;}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;${F}-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td align="center" style="padding:0;">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;mso-table-lspace:0pt;mso-table-rspace:0pt;">
   <tr><td style="background-color:${esc(corSecundaria)};padding:24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
