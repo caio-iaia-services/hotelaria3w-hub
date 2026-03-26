@@ -1017,6 +1017,7 @@ export default function Orcamentos() {
     </table>
   </td></tr>
 </table>
+<!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table>
 </body>
 </html>`;
