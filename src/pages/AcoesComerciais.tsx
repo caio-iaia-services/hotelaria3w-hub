@@ -1057,6 +1057,7 @@ export default function AcoesComerciais() {
         ),
         imagem_marketing_url: imagemMarketingUrl,
         status: "rascunho",
+        oportunidade_id: cardSelecionado.oportunidade_id || null,
       };
 
       console.log("🔑 PAYLOAD COMPLETO:", JSON.stringify(orcamentoPayload, null, 2));

@@ -499,6 +499,7 @@ export type Database = {
           observacoes: string | null
           observacoes_gerais: string | null
           operacao: string | null
+          oportunidade_id: string | null
           pdf_url: string | null
           prazo_entrega: string | null
           status: string
@@ -546,6 +547,7 @@ export type Database = {
           observacoes?: string | null
           observacoes_gerais?: string | null
           operacao?: string | null
+          oportunidade_id?: string | null
           pdf_url?: string | null
           prazo_entrega?: string | null
           status?: string
@@ -593,6 +595,7 @@ export type Database = {
           observacoes?: string | null
           observacoes_gerais?: string | null
           operacao?: string | null
+          oportunidade_id?: string | null
           pdf_url?: string | null
           prazo_entrega?: string | null
           status?: string
