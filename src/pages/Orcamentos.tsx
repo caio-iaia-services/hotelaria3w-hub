@@ -752,16 +752,9 @@ export default function Orcamentos() {
     return `${window.location.origin}/${url.replace(/^\/+/, "")}`;
   }
 
-  function svgDataUri(svg: string) {
-    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-  }
-  function svgImage(
-    svg: string,
-    width: number,
-    height: number,
-    extraStyle = "vertical-align:middle;margin-right:6px;display:inline-block;",
-  ) {
-    return `<img src="${svgDataUri(svg)}" width="${width}" height="${height}" alt="" style="${extraStyle}"/>`;
+  // Unicode icons for maximum email client compatibility (SVG data URIs are blocked by Gmail/Outlook)
+  function emailIcon(unicode: string, color = "#ffffff") {
+    return `<span style="font-size:14px;color:${color};margin-right:6px;vertical-align:middle;">${unicode}</span>`;
   }
 
   const F = "font-family:Arial,Helvetica,sans-serif;";
@@ -889,82 +882,42 @@ export default function Orcamentos() {
       })
       .join("");
 
-    const svgGlobe = (color: string) =>
-      svgImage(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
-        14,
-        14,
-      );
-    const svgPhone = (color: string) =>
-      svgImage(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 9.81 19.79 19.79 0 0 1 .22 1.18 2 2 0 0 1 2.18 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L6.91 7.09a16 16 0 0 0 6 6l.56-.56a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 14.92z"/></svg>`,
-        14,
-        14,
-      );
-    const svgEnvelope = (color: string) =>
-      svgImage(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
-        14,
-        14,
-      );
-    const svgPin = (color: string) =>
-      svgImage(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
-        14,
-        14,
-      );
-    const svgTruck = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
-      14,
-      14,
-      "vertical-align:middle;margin-right:4px;display:inline-block;",
-    );
-    const svgBox = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
-      14,
-      14,
-      "vertical-align:middle;margin-right:4px;display:inline-block;",
-    );
-    const svgDollar = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-      14,
-      14,
-      "vertical-align:middle;margin-right:4px;display:inline-block;",
-    );
-    const svgCard = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
-      14,
-      14,
-      "vertical-align:middle;margin-right:4px;display:inline-block;",
-    );
-    const svgAlert = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-      20,
-      20,
-      "vertical-align:middle;display:inline-block;",
-    );
-    const svgCheck = svgImage(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-      16,
-      16,
-    );
+    // Unicode icons — compatible with all email clients (Gmail, Outlook, Apple Mail, Yahoo)
+    const iconGlobe = (c: string) => emailIcon("🌐", c);
+    const iconPhone = (c: string) => emailIcon("📞", c);
+    const iconEnvelope = (c: string) => emailIcon("✉️", c);
+    const iconPin = (c: string) => emailIcon("📍", c);
+    const iconTruck = emailIcon("🚚", "#111827");
+    const iconBox = emailIcon("📦", "#111827");
+    const iconDollar = emailIcon("💲", "#111827");
+    const iconCard = emailIcon("💳", "#111827");
+    const iconAlert = `<span style="font-size:20px;vertical-align:middle;">⚠️</span>`;
+    const iconCheck = `<span style="font-size:16px;color:#ffffff;margin-right:6px;vertical-align:middle;">✅</span>`;
     const termosFornecedorTitulo = `TERMOS LEGAIS ${fornecedorNome.toUpperCase()}`;
 
-    return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Orçamento ${esc(orcamento.numero)}</title></head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;${F}">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;"><tr><td align="center" style="padding:0;">
-<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">
+    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<meta name="format-detection" content="telephone=no,address=no,email=no,date=no"/>
+<title>Orcamento ${esc(orcamento.numero)}</title>
+<!--[if mso]><style type="text/css">body,table,td,th{font-family:Arial,Helvetica,sans-serif !important;}table{border-collapse:collapse;}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;${F}-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td align="center" style="padding:0;">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;mso-table-lspace:0pt;mso-table-rspace:0pt;">
   <tr><td style="background-color:${esc(corSecundaria)};padding:24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td style="vertical-align:top;width:55%;">
           ${logo3w ? `<img src="${esc(logo3w)}" alt="3W Hotelaria" style="display:block;height:70px;width:auto;margin-bottom:12px;"/>` : ""}
           <table cellpadding="0" cellspacing="0" border="0" style="padding-left:8px;">
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgGlobe("#ffffff")}www.3whotelaria.com.br</td></tr>
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgPhone("#ffffff")}+55 (11) 5197-5779</td></tr>
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgEnvelope("#ffffff")}${esc(emailExib)}</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconGlobe("#ffffff")}www.3whotelaria.com.br</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconPhone("#ffffff")}+55 (11) 5197-5779</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconEnvelope("#ffffff")}${esc(emailExib)}</td></tr>
           </table>
         </td>
         <td style="vertical-align:top;text-align:right;width:45%;">
@@ -976,16 +929,16 @@ export default function Orcamentos() {
       </tr>
     </table>
   </td></tr>
-  ${marketingUrl ? `<tr><td style="padding:0;background-color:#f3f4f6;"><img src="${esc(marketingUrl)}" alt="Marketing" style="display:block;width:100%;height:auto;"/></td></tr>` : `<tr><td style="padding:40px 24px;background:linear-gradient(135deg,#eff6ff,#f5f3ff,#fdf2f8);text-align:center;"><div style="${F}font-size:28px;font-weight:700;color:${esc(corSecundaria)};margin-bottom:8px;">${esc(fornecedorNome)}</div><div style="${F}font-size:18px;color:#6b7280;">é na 3W Hotelaria!</div></td></tr>`}
+  ${marketingUrl ? `<tr><td style="padding:0;background-color:#f3f4f6;"><img src="${esc(marketingUrl)}" alt="Marketing" style="display:block;width:100%;height:auto;"/></td></tr>` : `<tr><td style="padding:40px 24px;background-color:#eff6ff;text-align:center;"><div style="${F}font-size:28px;font-weight:700;color:${esc(corSecundaria)};margin-bottom:8px;">${esc(fornecedorNome)}</div><div style="${F}font-size:18px;color:#6b7280;">é na 3W Hotelaria!</div></td></tr>`}
   <tr><td style="background-color:${esc(corPrimaria)};padding:20px 24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td style="vertical-align:top;width:60%;">
           <div style="${F}font-size:16px;font-weight:700;color:#ffffff;margin-bottom:10px;">${esc(orcamento.cliente_cnpj || "")} &nbsp; ${esc(orcamento.cliente_nome || "")}</div>
           <table cellpadding="0" cellspacing="0" border="0">
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgEnvelope("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_email || "—")}</td></tr>
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPin("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(enderecoEntregaFinal || "—")}</td></tr>
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPhone("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_telefone || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconEnvelope("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_email || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconPin("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(enderecoEntregaFinal || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconPhone("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_telefone || "—")}</td></tr>
           </table>
         </td>
         <td style="vertical-align:top;text-align:right;width:40%;">
@@ -1008,7 +961,7 @@ export default function Orcamentos() {
         <td width="48%" style="vertical-align:top;padding-right:10px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;border:2px solid #d1d5db;border-radius:8px;">
             <tr><td style="padding:16px;">
-              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;"><tr><td style="width:36px;height:36px;background-color:${esc(corPrimaria)};border-radius:50%;text-align:center;vertical-align:middle;">${svgAlert}</td><td style="padding-left:10px;${F}font-size:16px;font-weight:700;color:#111827;">Atenção</td></tr></table>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;"><tr><td style="width:36px;height:36px;background-color:${esc(corPrimaria)};border-radius:50%;text-align:center;vertical-align:middle;">${iconAlert}</td><td style="padding-left:10px;${F}font-size:16px;font-weight:700;color:#111827;">Atenção</td></tr></table>
               <div style="${F}font-size:12px;color:#374151;line-height:18px;">Antes de confirmar o pedido, recomendamos:<br/><br/>• Confira todos os itens do orçamento, em especial a descrição e quantidade.<br/>• Verifique as condições e forma de pagamento, informações sobre o frete, entrega e Difal.<br/>• Leia atentamente as observações do orçamento.<br/>• Veja os Termos Gerais da 3W Hotelaria.</div>
             </td></tr>
           </table>
@@ -1030,15 +983,15 @@ export default function Orcamentos() {
         <td width="35%" style="vertical-align:top;padding-right:10px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
             <tr>
-              <td width="50%" style="border-right:1px solid #d1d5db;border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgTruck}Frete</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.frete_tipo || "CIF (Incluso)")}</div></td>
-              <td width="50%" style="border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgBox}Entrega</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.prazo_entrega || "45/60 dias")}</div></td>
+              <td width="50%" style="border-right:1px solid #d1d5db;border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${iconTruck}Frete</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.frete_tipo || "CIF (Incluso)")}</div></td>
+              <td width="50%" style="border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${iconBox}Entrega</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.prazo_entrega || "45/60 dias")}</div></td>
             </tr>
-            <tr><td colspan="2"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgDollar}Difal</strong></div><div style="padding:10px;background-color:#eff6ff;${F}font-size:11px;color:#374151;line-height:16px;">${nl2br(orcamento.difal_texto || "Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.")}</div></td></tr>
+            <tr><td colspan="2"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${iconDollar}Difal</strong></div><div style="padding:10px;background-color:#eff6ff;${F}font-size:11px;color:#374151;line-height:16px;">${nl2br(orcamento.difal_texto || "Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.")}</div></td></tr>
           </table>
         </td>
         <td width="65%" style="vertical-align:top;padding-left:10px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
-            <tr><td style="background-color:#f3f4f6;padding:10px;text-align:center;border-bottom:2px solid #d1d5db;"><strong style="${F}font-size:13px;color:#111827;">${svgCard}Condições e Forma de Pagamento</strong></td></tr>
+            <tr><td style="background-color:#f3f4f6;padding:10px;text-align:center;border-bottom:2px solid #d1d5db;"><strong style="${F}font-size:13px;color:#111827;">${iconCard}Condições e Forma de Pagamento</strong></td></tr>
             <tr><td style="padding:14px;${F}font-size:12px;line-height:18px;color:#374151;">${nl2br(condicoesPag)}</td></tr>
           </table>
         </td>
@@ -1058,12 +1011,13 @@ export default function Orcamentos() {
   <tr><td style="padding:0 24px 32px 24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td width="48%" align="center" style="padding-right:8px;"><a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#22c55e;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">${svgPhone("#ffffff")}Falar com o Vendedor</a></td>
-        <td width="48%" align="center" style="padding-left:8px;"><a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:${esc(corPrimaria)};color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">${svgCheck}Confirmar Pedido</a></td>
+        <td width="48%" align="center" style="padding-right:8px;"><a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#22c55e;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;text-align:center;">${iconPhone("#ffffff")}Falar com o Vendedor</a></td>
+        <td width="48%" align="center" style="padding-left:8px;"><a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:${esc(corPrimaria)};color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;text-align:center;">${iconCheck}Confirmar Pedido</a></td>
       </tr>
     </table>
   </td></tr>
 </table>
+<!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table>
 </body>
 </html>`;
