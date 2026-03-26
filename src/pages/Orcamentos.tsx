@@ -907,9 +907,9 @@ export default function Orcamentos() {
         <td style="vertical-align:top;width:55%;">
           ${logo3w ? `<img src="${esc(logo3w)}" alt="3W Hotelaria" style="display:block;height:70px;width:auto;margin-bottom:12px;"/>` : ""}
           <table cellpadding="0" cellspacing="0" border="0" style="padding-left:8px;">
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgGlobe("#ffffff")}www.3whotelaria.com.br</td></tr>
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgPhone("#ffffff")}+55 (11) 5197-5779</td></tr>
-            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${svgEnvelope("#ffffff")}${esc(emailExib)}</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconGlobe("#ffffff")}www.3whotelaria.com.br</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconPhone("#ffffff")}+55 (11) 5197-5779</td></tr>
+            <tr><td style="padding:3px 0;${F}font-size:14px;color:#ffffff;">${iconEnvelope("#ffffff")}${esc(emailExib)}</td></tr>
           </table>
         </td>
         <td style="vertical-align:top;text-align:right;width:45%;">
@@ -921,16 +921,16 @@ export default function Orcamentos() {
       </tr>
     </table>
   </td></tr>
-  ${marketingUrl ? `<tr><td style="padding:0;background-color:#f3f4f6;"><img src="${esc(marketingUrl)}" alt="Marketing" style="display:block;width:100%;height:auto;"/></td></tr>` : `<tr><td style="padding:40px 24px;background:linear-gradient(135deg,#eff6ff,#f5f3ff,#fdf2f8);text-align:center;"><div style="${F}font-size:28px;font-weight:700;color:${esc(corSecundaria)};margin-bottom:8px;">${esc(fornecedorNome)}</div><div style="${F}font-size:18px;color:#6b7280;">é na 3W Hotelaria!</div></td></tr>`}
+  ${marketingUrl ? `<tr><td style="padding:0;background-color:#f3f4f6;"><img src="${esc(marketingUrl)}" alt="Marketing" style="display:block;width:100%;height:auto;"/></td></tr>` : `<tr><td style="padding:40px 24px;background-color:#eff6ff;text-align:center;"><div style="${F}font-size:28px;font-weight:700;color:${esc(corSecundaria)};margin-bottom:8px;">${esc(fornecedorNome)}</div><div style="${F}font-size:18px;color:#6b7280;">é na 3W Hotelaria!</div></td></tr>`}
   <tr><td style="background-color:${esc(corPrimaria)};padding:20px 24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td style="vertical-align:top;width:60%;">
           <div style="${F}font-size:16px;font-weight:700;color:#ffffff;margin-bottom:10px;">${esc(orcamento.cliente_cnpj || "")} &nbsp; ${esc(orcamento.cliente_nome || "")}</div>
           <table cellpadding="0" cellspacing="0" border="0">
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgEnvelope("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_email || "—")}</td></tr>
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPin("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(enderecoEntregaFinal || "—")}</td></tr>
-            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${svgPhone("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_telefone || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconEnvelope("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_email || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconPin("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(enderecoEntregaFinal || "—")}</td></tr>
+            <tr><td style="padding:3px 0;vertical-align:middle;width:22px;">${iconPhone("#ffffff")}</td><td style="padding:3px 0;padding-left:2px;${F}font-size:13px;color:#ffffff;vertical-align:middle;">${esc(orcamento.cliente_telefone || "—")}</td></tr>
           </table>
         </td>
         <td style="vertical-align:top;text-align:right;width:40%;">
@@ -953,7 +953,7 @@ export default function Orcamentos() {
         <td width="48%" style="vertical-align:top;padding-right:10px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;border:2px solid #d1d5db;border-radius:8px;">
             <tr><td style="padding:16px;">
-              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;"><tr><td style="width:36px;height:36px;background-color:${esc(corPrimaria)};border-radius:50%;text-align:center;vertical-align:middle;">${svgAlert}</td><td style="padding-left:10px;${F}font-size:16px;font-weight:700;color:#111827;">Atenção</td></tr></table>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;"><tr><td style="width:36px;height:36px;background-color:${esc(corPrimaria)};border-radius:50%;text-align:center;vertical-align:middle;">${iconAlert}</td><td style="padding-left:10px;${F}font-size:16px;font-weight:700;color:#111827;">Atenção</td></tr></table>
               <div style="${F}font-size:12px;color:#374151;line-height:18px;">Antes de confirmar o pedido, recomendamos:<br/><br/>• Confira todos os itens do orçamento, em especial a descrição e quantidade.<br/>• Verifique as condições e forma de pagamento, informações sobre o frete, entrega e Difal.<br/>• Leia atentamente as observações do orçamento.<br/>• Veja os Termos Gerais da 3W Hotelaria.</div>
             </td></tr>
           </table>
@@ -978,12 +978,12 @@ export default function Orcamentos() {
               <td width="50%" style="border-right:1px solid #d1d5db;border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgTruck}Frete</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.frete_tipo || "CIF (Incluso)")}</div></td>
               <td width="50%" style="border-bottom:2px solid #d1d5db;"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgBox}Entrega</strong></div><div style="padding:10px;text-align:center;${F}font-size:12px;font-weight:600;color:#111827;">${esc(orcamento.prazo_entrega || "45/60 dias")}</div></td>
             </tr>
-            <tr><td colspan="2"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${svgDollar}Difal</strong></div><div style="padding:10px;background-color:#eff6ff;${F}font-size:11px;color:#374151;line-height:16px;">${nl2br(orcamento.difal_texto || "Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.")}</div></td></tr>
+            <tr><td colspan="2"><div style="background-color:#f3f4f6;padding:8px;text-align:center;border-bottom:1px solid #d1d5db;"><strong style="${F}font-size:12px;color:#111827;">${iconDollar}Difal</strong></div><div style="padding:10px;background-color:#eff6ff;${F}font-size:11px;color:#374151;line-height:16px;">${nl2br(orcamento.difal_texto || "Este Orçamento tem como premissa que o cliente tem inscrição estadual ativa. Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.")}</div></td></tr>
           </table>
         </td>
         <td width="65%" style="vertical-align:top;padding-left:10px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #d1d5db;border-radius:8px;overflow:hidden;">
-            <tr><td style="background-color:#f3f4f6;padding:10px;text-align:center;border-bottom:2px solid #d1d5db;"><strong style="${F}font-size:13px;color:#111827;">${svgCard}Condições e Forma de Pagamento</strong></td></tr>
+            <tr><td style="background-color:#f3f4f6;padding:10px;text-align:center;border-bottom:2px solid #d1d5db;"><strong style="${F}font-size:13px;color:#111827;">${iconCard}Condições e Forma de Pagamento</strong></td></tr>
             <tr><td style="padding:14px;${F}font-size:12px;line-height:18px;color:#374151;">${nl2br(condicoesPag)}</td></tr>
           </table>
         </td>
@@ -1003,8 +1003,8 @@ export default function Orcamentos() {
   <tr><td style="padding:0 24px 32px 24px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td width="48%" align="center" style="padding-right:8px;"><a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#22c55e;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">${svgPhone("#ffffff")}Falar com o Vendedor</a></td>
-        <td width="48%" align="center" style="padding-left:8px;"><a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:${esc(corPrimaria)};color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;border-radius:8px;text-align:center;">${svgCheck}Confirmar Pedido</a></td>
+        <td width="48%" align="center" style="padding-right:8px;"><a href="${esc(whatsHref)}" target="_blank" style="display:block;background-color:#22c55e;color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;text-align:center;">${iconPhone("#ffffff")}Falar com o Vendedor</a></td>
+        <td width="48%" align="center" style="padding-left:8px;"><a href="${esc(confirmHref)}" target="_blank" style="display:block;background-color:${esc(corPrimaria)};color:#ffffff;${F}font-size:14px;font-weight:700;text-decoration:none;padding:14px 10px;text-align:center;">${iconCheck}Confirmar Pedido</a></td>
       </tr>
     </table>
   </td></tr>
