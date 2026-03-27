@@ -54,6 +54,7 @@ import {
   resolverImagemMarketing,
   resolverTermosFornecedor,
 } from "@/lib/fornecedorTerms";
+import { gerarHtmlOrcamento } from "@/components/orcamentos/OrcamentoEmailTemplate";
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
