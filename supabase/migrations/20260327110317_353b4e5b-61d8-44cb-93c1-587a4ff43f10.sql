@@ -1,0 +1,1 @@
+ALTER TABLE orcamentos DROP CONSTRAINT IF EXISTS orcamentos_oportunidade_id_fkey;
