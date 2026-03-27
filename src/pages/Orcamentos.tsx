@@ -770,17 +770,19 @@ export default function Orcamentos() {
         return;
       }
 
-      const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento", {
+      const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento-multi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          html_content: htmlContent,
+          html_corpo: htmlContent,
           orcamento_id: orcamentoEnviar.id,
           numero: orcamentoEnviar.numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
           mensagem: emailMensagem,
           from_email: config.email,
+          user_id: user?.id,
+          incluir_pdf: true,
         }),
       });
 
