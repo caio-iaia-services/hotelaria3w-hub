@@ -570,7 +570,7 @@ export default function Orcamentos() {
 
       const opt = {
         margin: 0,
-        image: { type: "jpeg", quality: 0.98 },
+        image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: {
           scale: 2,
           useCORS: true,
@@ -621,10 +621,25 @@ export default function Orcamentos() {
   async function imprimirOrcamento(o?: Orcamento) {
     const containerOriginal = await obterConteudoParaExportacao(o);
     if (!containerOriginal) return;
-    const { clone, cleanup } = criarCloneParaExportacao(containerOriginal);
+
+    const A4_WIDTH_PX = 794;
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.left = "-200vw";
+    host.style.top = "0";
+    host.style.pointerEvents = "none";
+    const clone = containerOriginal.cloneNode(true) as HTMLElement;
+    clone.style.width = `${A4_WIDTH_PX}px`;
+    clone.style.maxWidth = `${A4_WIDTH_PX}px`;
+    clone.style.overflow = "visible";
+    clone.style.background = "#ffffff";
+    clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+    host.appendChild(clone);
+    document.body.appendChild(host);
     await aguardarConteudoEstavel(clone);
     const conteudo = clone.innerHTML;
-    cleanup();
+    host.remove();
+
     const printWindow = window.open("", "_blank", "width=1200,height=900");
     if (!printWindow) {
       toast.error("Permita pop-ups para imprimir o orçamento");
