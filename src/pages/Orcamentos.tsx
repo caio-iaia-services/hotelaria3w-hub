@@ -744,25 +744,8 @@ export default function Orcamentos() {
     if (!orcamentoEnviar) return;
     setEnviandoEmail(true);
     try {
-      const {
-        data: { user },
-      } = await cloudSupabase.auth.getUser();
-      const { data: configEmail, error: errorConfig } = await cloudSupabase
-        .from("usuarios_email_config" as any)
-        .select("*")
-        .eq("user_id", user?.id)
-        .eq("ativo", true)
-        .single();
+      const fromEmail = "sac@3whotelaria.com.br";
 
-      if (!configEmail || errorConfig) {
-        toast.error("Configure suas credenciais de e-mail", {
-          description: "Acesse Admin → Config. E-mail para configurar",
-          action: { label: "Ir para Configurações", onClick: () => (window.location.href = "/admin/email") },
-        });
-        return;
-      }
-
-      const config = configEmail as any;
       toast.info("Preparando orçamento para envio...");
       const htmlContent = await capturarHtmlOrcamento();
       if (!htmlContent) {
@@ -770,19 +753,16 @@ export default function Orcamentos() {
         return;
       }
 
-      const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento-multi", {
+      const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          html_corpo: htmlContent,
           orcamento_id: orcamentoEnviar.id,
           numero: orcamentoEnviar.numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
           mensagem: emailMensagem,
-          from_email: config.email,
-          user_id: user?.id,
-          incluir_pdf: true,
+          from_email: fromEmail,
         }),
       });
 
@@ -799,11 +779,11 @@ export default function Orcamentos() {
         await supabase.from("acoes_comerciais_log").insert({
           card_id: orcamentoEnviar.card_id,
           acao: "orcamento_enviado",
-          descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios} via ${config.email}`,
+          descricao: `Orçamento ${orcamentoEnviar.numero} enviado para ${emailDestinatarios} via ${fromEmail}`,
         });
       }
 
-      toast.success("E-mail enviado com sucesso!", { description: `Enviado de ${config.email}` });
+      toast.success("E-mail enviado com sucesso!", { description: `Enviado de ${fromEmail}` });
       setModalEnviar(false);
       buscarOrcamentos();
       buscarContadores();
