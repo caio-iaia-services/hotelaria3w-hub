@@ -513,23 +513,22 @@ export default function Orcamentos() {
     return elemento;
   }
 
-  function criarCloneParaExportacao(containerOriginal: HTMLElement) {
+  async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
+    const containerOriginal = await obterConteudoParaExportacao(orcamento);
+    if (!containerOriginal) return null;
+    toast.info("Gerando PDF...");
+
     const A4_WIDTH_PX = 794;
-    const A4_HEIGHT_PX = 1123;
     const host = document.createElement("div");
-    host.id = "orcamento-export-host";
     host.style.position = "fixed";
     host.style.left = "-200vw";
     host.style.top = "0";
     host.style.width = "100vw";
     host.style.height = "100vh";
     host.style.overflow = "auto";
-    host.style.opacity = "1";
     host.style.pointerEvents = "none";
-    host.style.zIndex = "0";
     host.style.background = "#ffffff";
     const clone = containerOriginal.cloneNode(true) as HTMLElement;
-    clone.id = "orcamento-export-clone";
     clone.style.width = `${A4_WIDTH_PX}px`;
     clone.style.maxWidth = `${A4_WIDTH_PX}px`;
     clone.style.minWidth = `${A4_WIDTH_PX}px`;
@@ -537,141 +536,72 @@ export default function Orcamentos() {
     clone.style.overflow = "visible";
     clone.style.margin = "0 auto";
     clone.style.background = "#ffffff";
+
+    // Remove no-print elements
+    clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+
     const style = document.createElement("style");
     style.textContent = `
-      #orcamento-export-clone, #orcamento-export-clone * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-      #orcamento-export-clone .max-w-7xl { max-width: 100% !important; }
-      #orcamento-export-clone .bg-\\[\\#1a4168\\] { background-color: #1a4168 !important; color: #ffffff !important; }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] { background-color: #c4942c !important; color: #ffffff !important; }
-      #orcamento-export-clone .bg-\\[\\#c4942c\\] * { color: #ffffff !important; }
-      #orcamento-export-clone > .page-break { width: ${A4_WIDTH_PX}px !important; margin: 0 auto !important; break-after: auto; page-break-after: auto; overflow: visible !important; box-sizing: border-box; }
-      #orcamento-export-clone > .page-break:first-child { min-height: ${A4_HEIGHT_PX}px !important; break-after: page; page-break-after: always; }
-      #orcamento-export-clone > .page-break:nth-child(2) { min-height: auto !important; height: auto !important; break-after: auto; page-break-after: auto; }
-      #orcamento-export-clone > .page-break:nth-child(2) > .flex-1 { flex: 0 0 auto !important; }
-      #orcamento-export-clone > .page-break:nth-child(n + 3) { min-height: ${A4_HEIGHT_PX}px !important; break-before: page; page-break-before: always; }
-      #orcamento-export-clone table { width: 100% !important; page-break-inside: auto; }
-      #orcamento-export-clone thead { display: table-header-group; }
-      #orcamento-export-clone tfoot { display: table-footer-group; }
-      #orcamento-export-clone tr, #orcamento-export-clone img, #orcamento-export-clone .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+      .max-w-7xl { max-width: 100% !important; }
+      table { width: 100% !important; border-collapse: collapse; page-break-inside: auto; }
+      thead { display: table-header-group; }
+      tr, img, .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
     `;
     host.appendChild(style);
     host.appendChild(clone);
     document.body.appendChild(host);
-    return {
-      clone,
-      cleanup: () => {
-        host.remove();
-      },
-    };
-  }
 
-  function obterPaginasExportacao(container: HTMLElement): HTMLElement[] {
-    const paginas = Array.from(container.querySelectorAll<HTMLElement>(".page-break"));
-    if (paginas.length > 0) return paginas;
-    const primeiroElemento = container.firstElementChild as HTMLElement | null;
-    return primeiroElemento ? [primeiroElemento] : [container];
-  }
-
-  function desenharNumeroOrcamentoNoPdf(
-    pagina: HTMLElement,
-    pdf: jsPDF,
-    ratio: number,
-    offsetX: number,
-    offsetY: number,
-    domToCanvasScale: number,
-  ) {
-    const marcadores = Array.from(pagina.querySelectorAll<HTMLElement>("[data-pdf-orcamento-numero]"));
-    if (marcadores.length === 0) return;
-    const pageRect = pagina.getBoundingClientRect();
-    marcadores.forEach((marcador) => {
-      const texto = marcador.textContent?.trim();
-      if (!texto) return;
-      const markerRect = marcador.getBoundingClientRect();
-      const estilo = window.getComputedStyle(marcador);
-      const fontPx = parseFloat(estilo.fontSize || "16");
-      const xMm = offsetX + (markerRect.left - pageRect.left + 6) * domToCanvasScale * ratio;
-      const yMm = offsetY + (markerRect.top - pageRect.top + markerRect.height * 0.72) * domToCanvasScale * ratio;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(Math.max(9, fontPx * 0.75));
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(texto, xMm, yMm);
-    });
-  }
-
-  function adicionarCanvasPaginadoAoPdf(
-    pdf: jsPDF,
-    pagina: HTMLElement,
-    canvas: HTMLCanvasElement,
-    captureWidth: number,
-    primeiraPaginaPdf: boolean,
-  ) {
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const ratio = pageWidth / canvas.width;
-    const sliceHeightPx = Math.max(1, Math.floor(pageHeight / ratio));
-    const domToCanvasScale = canvas.width / captureWidth;
-    let offsetYpx = 0;
-    let sliceIndex = 0;
-    while (offsetYpx < canvas.height) {
-      const currentSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetYpx);
-      const sliceCanvas = document.createElement("canvas");
-      sliceCanvas.width = canvas.width;
-      sliceCanvas.height = currentSliceHeight;
-      const context = sliceCanvas.getContext("2d");
-      if (!context) throw new Error("Não foi possível preparar a página do PDF");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-      context.drawImage(canvas, 0, offsetYpx, canvas.width, currentSliceHeight, 0, 0, canvas.width, currentSliceHeight);
-      if (!primeiraPaginaPdf || sliceIndex > 0) pdf.addPage();
-      const renderHeight = currentSliceHeight * ratio;
-      const imgData = sliceCanvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, renderHeight, undefined, "FAST");
-      if (sliceIndex === 0) desenharNumeroOrcamentoNoPdf(pagina, pdf, ratio, 0, 0, domToCanvasScale);
-      offsetYpx += currentSliceHeight;
-      sliceIndex += 1;
-    }
-  }
-
-  async function gerarPDFBlob(orcamento?: Orcamento): Promise<Blob | null> {
-    const containerOriginal = await obterConteudoParaExportacao(orcamento);
-    if (!containerOriginal) return null;
-    toast.info("Gerando PDF...");
-    const { clone, cleanup } = criarCloneParaExportacao(containerOriginal);
     try {
-      await aguardarConteudoEstavel(clone);
-      const paginas = obterPaginasExportacao(clone);
-      const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
-      let primeiraPaginaPdf = true;
-      for (const pagina of paginas) {
-        const captureWidth = Math.max(
-          794,
-          Math.ceil(pagina.scrollWidth || 0),
-          Math.ceil(pagina.getBoundingClientRect().width || 0),
-        );
-        const canvas = await html2canvas(pagina, {
+      // Wait for images to load
+      const images = clone.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) return resolve();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(resolve, 5000);
+            }),
+        ),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const opt = {
+        margin: 0,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
           scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
           backgroundColor: "#ffffff",
-          width: captureWidth,
-          height: pagina.scrollHeight,
-          windowWidth: captureWidth,
-          windowHeight: pagina.scrollHeight,
-          scrollX: 0,
-          scrollY: 0,
+          width: A4_WIDTH_PX,
+          windowWidth: A4_WIDTH_PX,
           imageTimeout: 10000,
-        });
-        adicionarCanvasPaginadoAoPdf(pdf, pagina, canvas, captureWidth, primeiraPaginaPdf);
-        primeiraPaginaPdf = false;
-      }
-      return pdf.output("blob");
+        },
+        jsPDF: {
+          unit: "mm" as const,
+          format: "a4" as const,
+          orientation: "portrait" as const,
+          compress: true,
+        },
+        pagebreak: {
+          mode: ["avoid-all", "css", "legacy"],
+          before: ".page-break-before",
+          after: ".page-break-after",
+        },
+      };
+
+      const blob: Blob = await html2pdf().set(opt).from(clone).outputPdf("blob");
+      return blob;
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
       toast.error("Erro ao gerar PDF");
       return null;
     } finally {
-      cleanup();
+      host.remove();
     }
   }
 
