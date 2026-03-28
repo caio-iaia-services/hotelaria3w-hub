@@ -761,7 +761,7 @@ export default function Orcamentos() {
           numero: orcamentoEnviar.numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
-          mensagem: emailMensagem,
+          html_content: htmlContent,
           from_email: fromEmail,
         }),
       });
