@@ -172,6 +172,7 @@ export default function Orcamentos() {
   const [emailAssunto, setEmailAssunto] = useState("");
   const [emailMensagem, setEmailMensagem] = useState("");
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [gerandoPDF, setGerandoPDF] = useState(false);
   // ── NOVO: state para endereço editável no modal de envio ──
   const [enderecoEntregaEditado, setEnderecoEntregaEditado] = useState("");
 
@@ -606,15 +607,92 @@ export default function Orcamentos() {
   }
 
   async function baixarPDF(o: Orcamento) {
-    const blob = await gerarPDFBlob(o);
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Orcamento_${o.numero}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("PDF baixado com sucesso!");
+    try {
+      setGerandoPDF(true);
+      toast.loading("Gerando PDF profissional...", { id: "pdf-loading" });
+
+      // Buscar dados completos do orçamento com cliente e fornecedor
+      const { data: orcamentoCompleto } = await supabase
+        .from("orcamentos")
+        .select("*")
+        .eq("id", o.id)
+        .single();
+
+      if (!orcamentoCompleto) {
+        toast.dismiss("pdf-loading");
+        toast.error("Orçamento não encontrado");
+        return;
+      }
+
+      let fornecedorData = null;
+      if (orcamentoCompleto.fornecedor_id) {
+        const { data: forn } = await supabase
+          .from("fornecedores")
+          .select("*")
+          .eq("id", orcamentoCompleto.fornecedor_id)
+          .single();
+        fornecedorData = forn;
+      }
+
+      let clienteData = null;
+      if (orcamentoCompleto.cliente_id) {
+        const { data: cli } = await supabase
+          .from("clientes")
+          .select("*")
+          .eq("id", orcamentoCompleto.cliente_id)
+          .single();
+        clienteData = cli;
+      }
+
+      // Buscar itens do orçamento
+      const { data: itensData } = await supabase
+        .from("orcamento_itens")
+        .select("*")
+        .eq("orcamento_id", o.id)
+        .order("ordem");
+
+      const orcamentoComItens = {
+        ...orcamentoCompleto,
+        itens: itensData || [],
+      };
+
+      // Gerar HTML do orçamento
+      const htmlContent = gerarHtmlOrcamento(orcamentoComItens as any, fornecedorData, clienteData);
+
+      // Chamar webhook n8n para gerar PDF
+      const response = await fetch(
+        "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/gerar-pdf-orcamento",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            html_content: htmlContent,
+            numero: o.numero,
+            orcamento_id: o.id,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar PDF");
+      }
+
+      const result = await response.json();
+
+      toast.dismiss("pdf-loading");
+
+      if (result.success && result.pdf_url) {
+        window.open(result.pdf_url, "_blank");
+        toast.success("PDF gerado com sucesso!");
+      } else {
+        throw new Error(result.message || "Erro ao gerar PDF");
+      }
+    } catch (error: any) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.dismiss("pdf-loading");
+      toast.error("Erro ao gerar PDF", { description: error?.message });
+    } finally {
+      setGerandoPDF(false);
     }
   }
 
