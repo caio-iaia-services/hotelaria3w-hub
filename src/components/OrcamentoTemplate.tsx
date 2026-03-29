@@ -350,7 +350,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       </div>
 
       {/* PÁGINA 2 */}
-      <div className="min-h-screen flex flex-col page-break">
+      <div className="pagina-2 min-h-screen flex flex-col">
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
             <table className="w-full border-collapse">
@@ -645,7 +645,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       </div>
 
       {orcamento.imagem_publicidade_url && (
-        <div className="min-h-screen flex flex-col page-break">
+        <div className="pagina-3 min-h-screen flex flex-col">
           <div className="bg-[#1a4168] text-white p-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
