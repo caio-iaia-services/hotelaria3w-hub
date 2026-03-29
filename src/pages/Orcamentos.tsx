@@ -657,7 +657,25 @@ export default function Orcamentos() {
       };
 
       // Gerar HTML do orçamento
-      const htmlContent = gerarHtmlOrcamento(orcamentoComItens as any, fornecedorData, clienteData);
+      const orcamentoParaHtml = {
+        ...orcamentoComItens,
+        fornecedor_nome_fantasia: fornecedorData?.nome_fantasia,
+        fornecedor_tipo_layout: fornecedorData?.tipo_layout,
+        fornecedor_cor_primaria: fornecedorData?.cor_primaria,
+        fornecedor_cor_secundaria: fornecedorData?.cor_secundaria,
+        fornecedor_logotipo_url: fornecedorData?.logotipo_url,
+        fornecedor_imagem_template_url: fornecedorData?.imagem_template_url,
+        fornecedor_termos_fabricante: fornecedorData?.termos_fabricante,
+        fornecedor_prazo_entrega_padrao: fornecedorData?.prazo_entrega_padrao,
+        fornecedor_validade_dias_padrao: fornecedorData?.validade_dias_padrao,
+        fornecedor_condicoes_pagamento_padrao: fornecedorData?.condicoes_pagamento_padrao,
+        fornecedor_frete_tipo_padrao: fornecedorData?.frete_tipo_padrao,
+      };
+      const htmlContent = gerarHtmlOrcamento({
+        orcamento: orcamentoParaHtml as any,
+        itens: itensData || [],
+        enderecoEntrega: orcamentoCompleto.cliente_endereco || "",
+      });
 
       // Chamar webhook n8n para gerar PDF
       const response = await fetch(
