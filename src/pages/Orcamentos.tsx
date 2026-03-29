@@ -21,7 +21,8 @@ import {
   RotateCcw,
   Loader2,
 } from "lucide-react";
-import html2pdf from "html2pdf.js";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -520,13 +521,13 @@ export default function Orcamentos() {
     toast.info("Gerando PDF...");
 
     const A4_WIDTH_PX = 794;
+    const A4_HEIGHT_PX = 1123;
     const host = document.createElement("div");
     host.style.position = "fixed";
     host.style.left = "-200vw";
     host.style.top = "0";
-    host.style.width = "100vw";
-    host.style.height = "100vh";
-    host.style.overflow = "auto";
+    host.style.width = `${A4_WIDTH_PX}px`;
+    host.style.overflow = "visible";
     host.style.pointerEvents = "none";
     host.style.background = "#ffffff";
     const clone = containerOriginal.cloneNode(true) as HTMLElement;
@@ -535,21 +536,12 @@ export default function Orcamentos() {
     clone.style.minWidth = `${A4_WIDTH_PX}px`;
     clone.style.maxHeight = "none";
     clone.style.overflow = "visible";
-    clone.style.margin = "0 auto";
+    clone.style.margin = "0";
     clone.style.background = "#ffffff";
 
     // Remove no-print elements
     clone.querySelectorAll(".no-print").forEach((el) => el.remove());
 
-    const style = document.createElement("style");
-    style.textContent = `
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-      .max-w-7xl { max-width: 100% !important; }
-      table { width: 100% !important; border-collapse: collapse; page-break-inside: auto; }
-      thead { display: table-header-group; }
-      tr, img, .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
-    `;
-    host.appendChild(style);
     host.appendChild(clone);
     document.body.appendChild(host);
 
@@ -567,35 +559,45 @@ export default function Orcamentos() {
             }),
         ),
       );
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const opt = {
-        margin: 0,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
+      // Find all pages (.pagina-1, .pagina-2, .pagina-3)
+      const paginas = clone.querySelectorAll(".pagina-1, .pagina-2, .pagina-3");
+      
+      if (paginas.length === 0) {
+        throw new Error("Nenhuma página encontrada no template");
+      }
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [A4_WIDTH_PX, A4_HEIGHT_PX],
+      });
+
+      for (let i = 0; i < paginas.length; i++) {
+        const pagina = paginas[i] as HTMLElement;
+        
+        const canvas = await html2canvas(pagina, {
           scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
           backgroundColor: "#ffffff",
           width: A4_WIDTH_PX,
+          height: A4_HEIGHT_PX,
           windowWidth: A4_WIDTH_PX,
-          imageTimeout: 10000,
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-          compress: true,
-        },
-        pagebreak: {
-          mode: ["avoid-all", "css", "legacy"],
-          before: ".page-break-before",
-          after: ".page-break-after",
-        },
-      };
+        });
 
-      const blob: Blob = await html2pdf().set(opt).from(clone).outputPdf("blob");
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, "JPEG", 0, 0, A4_WIDTH_PX, A4_HEIGHT_PX);
+      }
+
+      const blob = pdf.output("blob");
       return blob;
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
@@ -611,99 +613,26 @@ export default function Orcamentos() {
       setGerandoPDF(true);
       toast.loading("Gerando PDF profissional...", { id: "pdf-loading" });
 
-      // Buscar dados completos do orçamento com cliente e fornecedor
-      const { data: orcamentoCompleto } = await supabase
-        .from("orcamentos")
-        .select("*")
-        .eq("id", o.id)
-        .single();
-
-      if (!orcamentoCompleto) {
-        toast.dismiss("pdf-loading");
-        toast.error("Orçamento não encontrado");
-        return;
+      // Ensure orcamento is visualized
+      if (!modalVisualizar || orcamentoVisualizar?.id !== o.id) {
+        await visualizarOrcamento(o);
+        // Wait for modal to render
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      let fornecedorData = null;
-      if (orcamentoCompleto.fornecedor_id) {
-        const { data: forn } = await supabase
-          .from("fornecedores")
-          .select("*")
-          .eq("id", orcamentoCompleto.fornecedor_id)
-          .single();
-        fornecedorData = forn;
-      }
-
-      let clienteData = null;
-      if (orcamentoCompleto.cliente_id) {
-        const { data: cli } = await supabase
-          .from("clientes")
-          .select("*")
-          .eq("id", orcamentoCompleto.cliente_id)
-          .single();
-        clienteData = cli;
-      }
-
-      // Buscar itens do orçamento
-      const { data: itensData } = await supabase
-        .from("orcamento_itens")
-        .select("*")
-        .eq("orcamento_id", o.id)
-        .order("ordem");
-
-      const orcamentoComItens = {
-        ...orcamentoCompleto,
-        itens: itensData || [],
-      };
-
-      // Gerar HTML do orçamento
-      const orcamentoParaHtml = {
-        ...orcamentoComItens,
-        fornecedor_nome_fantasia: fornecedorData?.nome_fantasia,
-        fornecedor_tipo_layout: fornecedorData?.tipo_layout,
-        fornecedor_cor_primaria: fornecedorData?.cor_primaria,
-        fornecedor_cor_secundaria: fornecedorData?.cor_secundaria,
-        fornecedor_logotipo_url: fornecedorData?.logotipo_url,
-        fornecedor_imagem_template_url: fornecedorData?.imagem_template_url,
-        fornecedor_termos_fabricante: fornecedorData?.termos_fabricante,
-        fornecedor_prazo_entrega_padrao: fornecedorData?.prazo_entrega_padrao,
-        fornecedor_validade_dias_padrao: fornecedorData?.validade_dias_padrao,
-        fornecedor_condicoes_pagamento_padrao: fornecedorData?.condicoes_pagamento_padrao,
-        fornecedor_frete_tipo_padrao: fornecedorData?.frete_tipo_padrao,
-      };
-      const htmlContent = gerarHtmlOrcamento({
-        orcamento: orcamentoParaHtml as any,
-        itens: itensData || [],
-        enderecoEntrega: orcamentoCompleto.cliente_endereco || "",
-      });
-
-      // Chamar webhook n8n para gerar PDF
-      const response = await fetch(
-        "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/gerar-pdf-orcamento",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            html_content: htmlContent,
-            numero: o.numero,
-            orcamento_id: o.id,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao gerar PDF");
-      }
-
-      const result = await response.json();
-
+      const blob = await gerarPDFBlob(o);
       toast.dismiss("pdf-loading");
 
-      if (result.success && result.pdf_url) {
-        window.open(result.pdf_url, "_blank");
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Orcamento_${o.numero}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
         toast.success("PDF gerado com sucesso!");
-      } else {
-        throw new Error(result.message || "Erro ao gerar PDF");
       }
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
