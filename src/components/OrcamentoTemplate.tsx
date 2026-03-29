@@ -162,8 +162,59 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
 
   return (
     <div className="bg-white font-sans">
+      <style>{`
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            width: 210mm;
+            height: 297mm;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+          }
+          .pagina-1 {
+            width: 210mm;
+            height: 297mm;
+            page-break-after: always;
+            break-after: page;
+            position: relative;
+            overflow: hidden;
+          }
+          .pagina-2 {
+            width: 210mm;
+            min-height: 297mm;
+            page-break-before: always;
+            break-before: page;
+            position: relative;
+          }
+          .pagina-3 {
+            width: 210mm;
+            height: 297mm;
+            page-break-before: always;
+            break-before: page;
+            position: relative;
+            overflow: hidden;
+          }
+          .no-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .no-print, button, .cursor-pointer {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* PÁGINA 1 */}
-      <div className="min-h-screen flex flex-col page-break">
+      <div className="pagina-1 min-h-screen flex flex-col">
         {/* HEADER */}
         <div className="bg-[#1a4168] text-white p-6">
           <div className="max-w-7xl mx-auto flex items-start justify-between">
@@ -299,7 +350,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       </div>
 
       {/* PÁGINA 2 */}
-      <div className="min-h-screen flex flex-col page-break">
+      <div className="pagina-2 min-h-screen flex flex-col">
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
             <table className="w-full border-collapse">
@@ -594,7 +645,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
       </div>
 
       {orcamento.imagem_publicidade_url && (
-        <div className="min-h-screen flex flex-col page-break">
+        <div className="pagina-3 min-h-screen flex flex-col">
           <div className="bg-[#1a4168] text-white p-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <img src="/logo_3Whotelaria.jpeg" alt="3W" className="h-10" />
