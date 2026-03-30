@@ -613,26 +613,43 @@ export default function Orcamentos() {
       setGerandoPDF(true);
       toast.loading("Gerando PDF profissional...", { id: "pdf-loading" });
 
-      // Ensure orcamento is visualized
+      // Ensure orcamento is visualized to get HTML content
       if (!modalVisualizar || orcamentoVisualizar?.id !== o.id) {
         await visualizarOrcamento(o);
-        // Wait for modal to render
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const blob = await gerarPDFBlob(o);
+      // Capture HTML content from rendered template
+      const elemento = document.getElementById("orcamento-conteudo");
+      const htmlContent = elemento?.outerHTML || "";
+
+      // Send to n8n webhook
+      const response = await fetch(
+        "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/gerar-pdf-orcamento",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            html_content: htmlContent,
+            numero: o.numero,
+            orcamento_id: o.id,
+          }),
+        }
+      );
+
       toast.dismiss("pdf-loading");
 
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Orcamento_${o.numero}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      if (!response.ok) {
+        throw new Error("Erro ao gerar PDF no servidor");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.pdf_url) {
+        window.open(result.pdf_url, "_blank");
         toast.success("PDF gerado com sucesso!");
+      } else {
+        throw new Error(result.error || "Erro ao gerar PDF");
       }
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
