@@ -608,105 +608,36 @@ export default function Orcamentos() {
     }
   }
 
-  function baixarPDF(o?: Orcamento) {
-    const orcAtual = o || orcamentoVisualizar;
-    const conteudo = document.getElementById('orcamento-conteudo');
-    if (!conteudo) {
-      toast.error('Erro ao gerar PDF');
-      return;
-    }
+  async function baixarPDF(o?: Orcamento) {
+    const orcAtual = o || orcamentoVisualizar || undefined;
+    const conteudo = await obterConteudoParaExportacao(orcAtual);
+    if (!conteudo) return;
+
+    const estilosAtuais = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((node) => node.outerHTML)
+      .join("\n");
 
     const htmlCompleto = `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="${document.documentElement.className}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orçamento ${orcAtual?.numero || 'PDF'}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <style>
-    @page {
-      size: A4 portrait;
-      margin: 0;
-    }
-    
-    * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-      box-sizing: border-box;
-    }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      width: 210mm;
-      font-family: Arial, sans-serif;
-      background: white;
-    }
-    
-    .pagina-1, .pagina-2 {
-      width: 210mm;
-      height: 297mm;
-      max-height: 297mm;
-      overflow: hidden;
-      position: relative;
-      page-break-after: always;
-      page-break-inside: avoid;
-    }
-    
-    .pagina-1 > *, .pagina-2 > * {
-      max-width: 100%;
-    }
-    
-    .pagina-2 .mt-8 { margin-top: 1rem !important; }
-    .pagina-2 .mt-6 { margin-top: 0.75rem !important; }
-    .pagina-2 .mb-8 { margin-bottom: 1rem !important; }
-    .pagina-2 .mb-6 { margin-bottom: 0.75rem !important; }
-    .pagina-2 .p-8 { padding: 1rem !important; }
-    .pagina-2 .p-6 { padding: 0.75rem !important; }
-    
-    button, 
-    .cursor-pointer, 
-    a[href^="https://wa.me"],
-    .no-print {
-      display: none !important;
-    }
-    
-    @media screen {
-      body {
-        background: #f5f5f5;
-        padding: 20px;
-      }
-      .pagina-1, .pagina-2 {
-        margin: 0 auto 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      }
-    }
-  </style>
+  <base href="${window.location.origin}/">
+  <title>Orçamento ${orcAtual?.numero || "PDF"}</title>
+  ${estilosAtuais}
 </head>
-<body>
-${conteudo.innerHTML}
-<script>
-  window.onload = () => {
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        if (!window.matchMedia('print').matches) {
-          alert('Configure a impressão:\\n\\n✓ Destino: Salvar como PDF\\n✓ Layout: Retrato\\n✓ Margens: Nenhuma\\n✗ DESMARCAR "Cabeçalhos e rodapés"');
-        }
-      }, 500);
-    }, 1000);
-  };
-<\/script>
+<body class="${document.body.className}">
+${conteudo.outerHTML}
 </body>
 </html>`;
 
-    const janela = window.open('', '_blank');
+    const janela = window.open("", "_blank");
     if (janela) {
       janela.document.write(htmlCompleto);
       janela.document.close();
+      janela.focus();
     } else {
-      toast.error('Pop-up bloqueado. Permita pop-ups e tente novamente.');
+      toast.error("Pop-up bloqueado. Permita pop-ups e tente novamente.");
     }
   }
 
