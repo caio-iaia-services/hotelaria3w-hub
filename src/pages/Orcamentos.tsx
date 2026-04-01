@@ -608,59 +608,7 @@ export default function Orcamentos() {
     }
   }
 
-  async function baixarPDF(o: Orcamento) {
-    try {
-      setGerandoPDF(true);
-      toast.loading("Gerando PDF profissional...", { id: "pdf-loading" });
-
-      // Ensure orcamento is visualized to get HTML content
-      if (!modalVisualizar || orcamentoVisualizar?.id !== o.id) {
-        await visualizarOrcamento(o);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      // Capture HTML content from rendered template
-      const elemento = document.getElementById("orcamento-conteudo");
-      const htmlContent = elemento?.outerHTML || "";
-
-      // Send to n8n webhook
-      const response = await fetch(
-        "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/gerar-pdf-orcamento",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            html_content: htmlContent,
-            numero: o.numero,
-            orcamento_id: o.id,
-          }),
-        }
-      );
-
-      toast.dismiss("pdf-loading");
-
-      if (!response.ok) {
-        throw new Error("Erro ao gerar PDF no servidor");
-      }
-
-      const result = await response.json();
-
-      if (result.success && result.pdf_url) {
-        window.open(result.pdf_url, "_blank");
-        toast.success("PDF gerado com sucesso!");
-      } else {
-        throw new Error(result.error || "Erro ao gerar PDF");
-      }
-    } catch (error: any) {
-      console.error("Erro ao gerar PDF:", error);
-      toast.dismiss("pdf-loading");
-      toast.error("Erro ao gerar PDF", { description: error?.message });
-    } finally {
-      setGerandoPDF(false);
-    }
-  }
-
-  async function imprimirOrcamento(o?: Orcamento) {
+  function baixarPDF(o?: Orcamento) {
     const orcAtual = o || orcamentoVisualizar;
     const conteudo = document.getElementById('orcamento-conteudo');
     if (!conteudo) {
@@ -685,6 +633,7 @@ export default function Orcamentos() {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
+      box-sizing: border-box;
     }
     
     body {
@@ -695,22 +644,32 @@ export default function Orcamentos() {
       background: white;
     }
     
-    @media print {
-      .no-print, 
-      button, 
-      .cursor-pointer, 
-      a[href^="https://wa.me"],
-      [class*="hover:"],
-      [onclick] {
-        display: none !important;
-      }
-      
-      .pagina-1, .pagina-2 {
-        page-break-after: always;
-        break-after: page;
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
+    .pagina-1, .pagina-2 {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      overflow: hidden;
+      position: relative;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+    
+    .pagina-1 > *, .pagina-2 > * {
+      max-width: 100%;
+    }
+    
+    .pagina-2 .mt-8 { margin-top: 1rem !important; }
+    .pagina-2 .mt-6 { margin-top: 0.75rem !important; }
+    .pagina-2 .mb-8 { margin-bottom: 1rem !important; }
+    .pagina-2 .mb-6 { margin-bottom: 0.75rem !important; }
+    .pagina-2 .p-8 { padding: 1rem !important; }
+    .pagina-2 .p-6 { padding: 0.75rem !important; }
+    
+    button, 
+    .cursor-pointer, 
+    a[href^="https://wa.me"],
+    .no-print {
+      display: none !important;
     }
     
     @media screen {
@@ -719,9 +678,7 @@ export default function Orcamentos() {
         padding: 20px;
       }
       .pagina-1, .pagina-2 {
-        width: 210mm;
         margin: 0 auto 20px;
-        background: white;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       }
     }
@@ -733,6 +690,11 @@ ${conteudo.innerHTML}
   window.onload = () => {
     setTimeout(() => {
       window.print();
+      setTimeout(() => {
+        if (!window.matchMedia('print').matches) {
+          alert('Configure a impressão:\\n\\n✓ Destino: Salvar como PDF\\n✓ Layout: Retrato\\n✓ Margens: Nenhuma\\n✗ DESMARCAR "Cabeçalhos e rodapés"');
+        }
+      }, 500);
     }, 1000);
   };
 <\/script>
@@ -1108,10 +1070,6 @@ ${conteudo.innerHTML}
           <div className="bg-muted border-b p-4 flex items-center justify-between">
             <h3 className="font-bold text-lg">Orçamento {orcamentoVisualizar?.numero}</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => imprimirOrcamento()}>
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
-              </Button>
               {orcamentoVisualizar && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => baixarPDF(orcamentoVisualizar)}>
