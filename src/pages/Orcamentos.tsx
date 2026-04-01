@@ -661,39 +661,91 @@ export default function Orcamentos() {
   }
 
   async function imprimirOrcamento(o?: Orcamento) {
-    const containerOriginal = await obterConteudoParaExportacao(o);
-    if (!containerOriginal) return;
-
-    const A4_WIDTH_PX = 794;
-    const host = document.createElement("div");
-    host.style.position = "fixed";
-    host.style.left = "-200vw";
-    host.style.top = "0";
-    host.style.pointerEvents = "none";
-    const clone = containerOriginal.cloneNode(true) as HTMLElement;
-    clone.style.width = `${A4_WIDTH_PX}px`;
-    clone.style.maxWidth = `${A4_WIDTH_PX}px`;
-    clone.style.overflow = "visible";
-    clone.style.background = "#ffffff";
-    clone.querySelectorAll(".no-print").forEach((el) => el.remove());
-    host.appendChild(clone);
-    document.body.appendChild(host);
-    await aguardarConteudoEstavel(clone);
-    const conteudo = clone.innerHTML;
-    host.remove();
-
-    const printWindow = window.open("", "_blank", "width=1200,height=900");
-    if (!printWindow) {
-      toast.error("Permita pop-ups para imprimir o orçamento");
+    const orcAtual = o || orcamentoVisualizar;
+    const conteudo = document.getElementById('orcamento-conteudo');
+    if (!conteudo) {
+      toast.error('Erro ao gerar PDF');
       return;
     }
-    const estilos = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-      .map((node) => node.outerHTML)
-      .join("\n");
-    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Orçamento</title>${estilos}<style>@page{size:A4;margin:10mm 8mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;}html,body{margin:0;padding:0;background:#fff!important;}#print-root{width:100%;max-width:194mm;margin:0 auto;background:#fff;}#print-root>.page-break{width:100%!important;break-after:auto;page-break-after:auto;overflow:visible!important;}#print-root>.page-break:first-child{min-height:277mm!important;break-after:page;page-break-after:always;}#print-root>.page-break:nth-child(2){min-height:auto!important;height:auto!important;break-after:auto!important;page-break-after:auto!important;}#print-root>.page-break:nth-child(2)>.flex-1{flex:0 0 auto!important;}#print-root>.page-break:nth-child(n+3){min-height:277mm!important;break-before:page;page-break-before:always;}#print-root table{width:100%!important;border-collapse:collapse;page-break-inside:auto;}#print-root thead{display:table-header-group;}#print-root tfoot{display:table-footer-group;}#print-root tr,#print-root img,#print-root .page-break-inside-avoid{break-inside:avoid;page-break-inside:avoid;}#print-root img{max-width:100%!important;height:auto!important;}</style></head><body><div id="print-root">${conteudo}</div><script>window.addEventListener('load',()=>{setTimeout(()=>{window.print();window.close();},350);});<\/script></body></html>`;
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+
+    const htmlCompleto = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orçamento ${orcAtual?.numero || 'PDF'}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      width: 210mm;
+      font-family: Arial, sans-serif;
+      background: white;
+    }
+    
+    @media print {
+      .no-print, 
+      button, 
+      .cursor-pointer, 
+      a[href^="https://wa.me"],
+      [class*="hover:"],
+      [onclick] {
+        display: none !important;
+      }
+      
+      .pagina-1, .pagina-2 {
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+    
+    @media screen {
+      body {
+        background: #f5f5f5;
+        padding: 20px;
+      }
+      .pagina-1, .pagina-2 {
+        width: 210mm;
+        margin: 0 auto 20px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+    }
+  </style>
+</head>
+<body>
+${conteudo.innerHTML}
+<script>
+  window.onload = () => {
+    setTimeout(() => {
+      window.print();
+    }, 1000);
+  };
+<\/script>
+</body>
+</html>`;
+
+    const janela = window.open('', '_blank');
+    if (janela) {
+      janela.document.write(htmlCompleto);
+      janela.document.close();
+    } else {
+      toast.error('Pop-up bloqueado. Permita pop-ups e tente novamente.');
+    }
   }
 
   function gerarMensagemPadrao(orcamento: Orcamento) {
