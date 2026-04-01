@@ -1070,10 +1070,6 @@ ${conteudo.innerHTML}
           <div className="bg-muted border-b p-4 flex items-center justify-between">
             <h3 className="font-bold text-lg">Orçamento {orcamentoVisualizar?.numero}</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => imprimirOrcamento()}>
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
-              </Button>
               {orcamentoVisualizar && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => baixarPDF(orcamentoVisualizar)}>
