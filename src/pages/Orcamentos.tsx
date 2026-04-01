@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { OrcamentoTemplate } from "@/components/OrcamentoTemplate";
+import { OrcamentoTemplatePDF } from "@/components/OrcamentoTemplatePDF";
 import { EditarOrcamentoModal } from "@/components/orcamentos/EditarOrcamentoModal";
 import { extrairTextoCondicoesPagamento } from "@/lib/condicoesPagamento";
 import { formatDateBR } from "@/lib/date";
