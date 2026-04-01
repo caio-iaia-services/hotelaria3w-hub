@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
+import ReactDOM from "react-dom/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { OrcamentoTemplate } from "@/components/OrcamentoTemplate";
+import { OrcamentoTemplatePDF } from "@/components/OrcamentoTemplatePDF";
 import { EditarOrcamentoModal } from "@/components/orcamentos/EditarOrcamentoModal";
 import { extrairTextoCondicoesPagamento } from "@/lib/condicoesPagamento";
 import { formatDateBR } from "@/lib/date";
@@ -610,34 +613,88 @@ export default function Orcamentos() {
 
   async function baixarPDF(o?: Orcamento) {
     const orcAtual = o || orcamentoVisualizar || undefined;
-    const conteudo = await obterConteudoParaExportacao(orcAtual);
-    if (!conteudo) return;
+    if (!orcAtual) {
+      toast.error("Nenhum orçamento selecionado");
+      return;
+    }
 
-    const estilosAtuais = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'))
-      .map((node) => node.outerHTML)
-      .join("\n");
+    setGerandoPDF(true);
+    toast.info("Gerando PDF...");
 
-    const htmlCompleto = `<!DOCTYPE html>
-<html lang="pt-BR" class="${document.documentElement.className}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="${window.location.origin}/">
-  <title>Orçamento ${orcAtual?.numero || "PDF"}</title>
-  ${estilosAtuais}
-</head>
-<body class="${document.body.className}">
-${conteudo.outerHTML}
-</body>
-</html>`;
+    try {
+      const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcAtual);
+      const enderecoEntrega = String(orcCompleto.cliente_endereco || "").trim();
 
-    const janela = window.open("", "_blank");
-    if (janela) {
-      janela.document.write(htmlCompleto);
-      janela.document.close();
-      janela.focus();
-    } else {
-      toast.error("Pop-up bloqueado. Permita pop-ups e tente novamente.");
+      // Criar div temporária invisível
+      const tempDiv = document.createElement("div");
+      tempDiv.style.position = "absolute";
+      tempDiv.style.left = "-9999px";
+      tempDiv.style.top = "0";
+      tempDiv.style.width = "210mm";
+      tempDiv.style.background = "white";
+      document.body.appendChild(tempDiv);
+
+      // Renderizar componente PDF na div temporária
+      const root = ReactDOM.createRoot(tempDiv);
+      root.render(
+        <OrcamentoTemplatePDF
+          orcamento={orcCompleto}
+          itens={itens}
+          emailUsuario={user?.email}
+          enderecoEntrega={enderecoEntrega}
+        />
+      );
+
+      // Aguardar render e imagens
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const images = tempDiv.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) return resolve();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(resolve, 5000);
+            }),
+        ),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const opt = {
+        margin: 0,
+        filename: `Orcamento_${orcCompleto.numero}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          width: 794,
+          windowWidth: 794,
+          logging: false,
+        },
+        jsPDF: {
+          unit: "mm" as const,
+          format: "a4" as const,
+          orientation: "portrait" as const,
+        },
+        pagebreak: {
+          mode: ["css"] as string[],
+          before: [".pagina-2", ".pagina-3"],
+        },
+      };
+
+      await html2pdf().set(opt).from(tempDiv.firstChild as HTMLElement).save();
+      toast.success("PDF baixado!");
+
+      // Cleanup
+      root.unmount();
+      document.body.removeChild(tempDiv);
+    } catch (error: any) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar PDF: " + (error?.message || "Erro desconhecido"));
+    } finally {
+      setGerandoPDF(false);
     }
   }
 
