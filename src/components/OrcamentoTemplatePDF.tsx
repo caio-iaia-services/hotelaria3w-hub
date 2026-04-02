@@ -255,8 +255,8 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
         className="pagina-2"
         style={{
           width: '210mm',
-          minHeight: '297mm',
-          pageBreakBefore: 'always',
+          height: '297mm',
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
         }}
