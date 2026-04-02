@@ -685,22 +685,8 @@ export default function Orcamentos() {
 
         if (i > 0) pdf.addPage();
 
-        // Adiciona imagem da página
+        // Adiciona imagem da página (o número do orçamento já está renderizado pelo html2canvas)
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
-
-        // Escreve o número do orçamento diretamente no PDF (página 1 e 2)
-        if (numero) {
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(11);
-          pdf.setTextColor(255, 255, 255);
-          if (i === 0) {
-            // Caixa amarela no header (topo direito)
-            pdf.text(`Orçamento ${numero}`, 204, 15, { align: "right" });
-          } else {
-            // Rodapé da página 2
-            pdf.text(`Orçamento ${numero}`, 204, 260, { align: "right" });
-          }
-        }
       }
 
       pdf.save(`Orcamento_${numero || "orcamento"}.pdf`);
@@ -766,6 +752,7 @@ export default function Orcamentos() {
           numero: orcamentoEnviar.numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
+          mensagem: emailMensagem,
           html_content: htmlContent,
           from_email: fromEmail,
         }),
@@ -1180,32 +1167,28 @@ export default function Orcamentos() {
               />
             </div>
 
-            <div className="bg-accent/50 border border-accent rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-primary mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground">Conteúdo do E-mail</p>
-                  <p className="text-sm text-muted-foreground">
-                    O orçamento completo será enviado diretamente no corpo do e-mail em HTML.
-                  </p>
-                </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Mensagem</Label>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  onClick={() => orcamentoEnviar && setEmailMensagem(gerarMensagemPadrao(orcamentoEnviar))}
+                >
+                  Restaurar padrão
+                </button>
               </div>
+              <Textarea
+                value={emailMensagem}
+                onChange={(e) => setEmailMensagem(e.target.value)}
+                rows={8}
+                placeholder="Digite a mensagem que será enviada no corpo do e-mail..."
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                O PDF do orçamento será anexado automaticamente ao e-mail.
+              </p>
             </div>
-
-            <details className="border rounded-lg p-4">
-              <summary className="cursor-pointer font-semibold text-muted-foreground">👁️ Pré-visualizar resumo</summary>
-              <div className="mt-4 bg-muted rounded p-4 text-sm space-y-2 border">
-                <p>
-                  <strong>Para:</strong> {emailDestinatarios}
-                </p>
-                <p>
-                  <strong>Assunto:</strong> {emailAssunto}
-                </p>
-                <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
-                  O orçamento será renderizado como HTML no corpo do e-mail.
-                </p>
-              </div>
-            </details>
           </div>
 
           <DialogFooter>
