@@ -164,7 +164,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ backgroundColor: '#c4942c', color: '#1a4168', padding: '12px 32px', borderRadius: '8px', display: 'inline-block', marginBottom: '12px' }}>
+              <div data-pdf-numero="1" style={{ backgroundColor: '#c4942c', color: 'white', padding: '12px 32px', borderRadius: '8px', display: 'inline-block', marginBottom: '12px' }}>
                 <p style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>
                   Orçamento {numero}
                 </p>
@@ -505,7 +505,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
                   <Mail style={{ width: '10px', height: '10px' }} /> {emailExibicao}
                 </p>
               </div>
-              <div style={{ backgroundColor: '#c4942c', color: '#1a4168', padding: '6px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+              <div data-pdf-numero="2" style={{ backgroundColor: '#c4942c', color: 'white', padding: '6px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
                 Orçamento {numero}
               </div>
               {orcamento.fornecedor_nome && (

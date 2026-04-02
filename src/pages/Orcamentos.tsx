@@ -685,8 +685,28 @@ export default function Orcamentos() {
 
         if (i > 0) pdf.addPage();
 
-        // Adiciona imagem da página (o número do orçamento já está renderizado pelo html2canvas)
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
+
+        // Overlay: escreve o número sobre a caixa dourada (html2canvas não renderiza texto branco)
+        if (numero) {
+          const pageEl = paginas[i];
+          const boxEl = pageEl.querySelector(`[data-pdf-numero="${i + 1}"]`) as HTMLElement | null;
+          // Coordenadas de fallback (mm) caso o elemento não seja encontrado
+          let textX = 200;
+          let textY = i === 0 ? 12 : 260;
+          if (boxEl) {
+            const pr = pageEl.getBoundingClientRect();
+            const br = boxEl.getBoundingClientRect();
+            const scaleX = A4_W_MM / (pr.width || A4_W_PX);
+            const scaleY = A4_H_MM / (pr.height || A4_H_PX);
+            textY = ((br.top - pr.top + br.bottom - pr.top) / 2) * scaleY;
+            textX = (br.right - pr.left) * scaleX - 2;
+          }
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(i === 0 ? 11 : 9);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text(`Orçamento ${numero}`, textX, textY, { align: "right", baseline: "middle" });
+        }
       }
 
       pdf.save(`Orcamento_${numero || "orcamento"}.pdf`);
