@@ -160,10 +160,12 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
   const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento);
   const condicoesPagamentoMidea = resolverCondicoesPagamentoMidea(condicoesPagamentoTexto);
 
+  const numero = orcamento?.numero || '';
+
   /* ── Estilos fixos A4 ── */
   const pageStyle: React.CSSProperties = {
     width: "210mm",
-    minHeight: "297mm",
+    height: "297mm",
     margin: "0 auto",
     background: "white",
     position: "relative",
@@ -204,7 +206,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
                 borderRadius: "2mm", display: "inline-block", marginBottom: "3mm",
               }}>
                 <p style={{ fontSize: "14pt", fontWeight: "bold", margin: 0 }} data-pdf-orcamento-numero>
-                  Orçamento {orcamento.numero}
+                  Orçamento {numero}
                 </p>
               </div>
               {logotipoFornecedor ? (

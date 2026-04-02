@@ -137,10 +137,13 @@
 
   .pagina-1, .pagina-2, .pagina-3 {
     width: 210mm !important;
-    min-height: 297mm !important;
-    page-break-after: always;
-    break-after: page;
+    height: 297mm !important;
     overflow: hidden;
+  }
+
+  .pagina-1 {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 
   button,
