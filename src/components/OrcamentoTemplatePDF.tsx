@@ -128,6 +128,8 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
   const condicoesPagamentoTexto = extrairTextoCondicoesPagamento(orcamento.condicoes_pagamento);
   const condicoesPagamentoMidea = resolverCondicoesPagamentoMidea(condicoesPagamentoTexto);
 
+  const numero = orcamento?.numero || '';
+
   return (
     <div style={{ width: '210mm', margin: '0 auto', background: 'white', fontFamily: 'Arial, sans-serif' }}>
       {/* PÁGINA 1 */}
@@ -137,7 +139,6 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
           width: '210mm',
           height: '297mm',
           overflow: 'hidden',
-          pageBreakAfter: 'always',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -165,7 +166,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
             <div style={{ textAlign: 'right' }}>
               <div style={{ backgroundColor: '#c4942c', color: 'white', padding: '12px 32px', borderRadius: '8px', display: 'inline-block', marginBottom: '12px' }}>
                 <p style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>
-                  Orçamento {orcamento.numero}
+                  Orçamento {numero}
                 </p>
               </div>
               {logotipoFornecedor ? (
@@ -505,7 +506,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
                 </p>
               </div>
               <div style={{ backgroundColor: '#c4942c', color: 'white', padding: '6px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
-                Orçamento {orcamento.numero}
+                Orçamento {numero}
               </div>
               {orcamento.fornecedor_nome && (
                 <div style={{ backgroundColor: 'white', padding: '6px', borderRadius: '4px' }}>
