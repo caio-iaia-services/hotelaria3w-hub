@@ -119,13 +119,14 @@
 /* ── Page-break classes for html2pdf / print ── */
 @media print {
   @page {
-    size: A4 portrait;
+    size: 210mm 297mm;
     margin: 0;
   }
 
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   body {
@@ -134,9 +135,18 @@
     padding: 0 !important;
   }
 
+  .pagina-1, .pagina-2, .pagina-3 {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+  }
+
   button,
   a[href^="https://wa.me"],
-  .cursor-pointer {
+  .cursor-pointer,
+  .no-print {
     display: none !important;
   }
 
@@ -151,9 +161,6 @@
   .page-break-inside-avoid {
     page-break-inside: avoid;
     break-inside: avoid;
-  }
-  .no-print {
-    display: none !important;
   }
 }
 
