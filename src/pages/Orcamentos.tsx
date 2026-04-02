@@ -756,7 +756,7 @@ export default function Orcamentos() {
     if (!orcamentoEnviar) return;
     setEnviandoEmail(true);
     try {
-      const fromEmail = "sac@3whotelaria.com.br";
+      const fromEmail = user?.email || "sac@3whotelaria.com.br";
 
       toast.info("Gerando PDF para envio...");
       const { pdf, numero } = await gerarPDFComTemplate(
