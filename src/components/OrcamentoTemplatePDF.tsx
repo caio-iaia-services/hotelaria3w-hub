@@ -186,10 +186,10 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
                 <p style={{ margin: 0 }}>Emitido em {formatDate(orcamento.data_emissao) || formatDate(orcamento.created_at)}</p>
                 <p style={{ fontWeight: 600, margin: 0 }}>Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
-              <div
-                style={{ marginTop: '16px', backgroundColor: '#e5e7eb', color: '#374151', padding: '6px 16px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
-              >
-                {orcamento.status.toUpperCase()}
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ backgroundColor: '#e5e7eb', color: '#374151', padding: '6px 20px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+                  {orcamento.status.toUpperCase()}
+                </div>
               </div>
             </div>
           </div>
