@@ -699,7 +699,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
                 </p>
               </div>
               <div style={{ background: "#c4942c", color: "white", padding: "1.5mm 5mm", borderRadius: "1mm", fontWeight: "bold", fontSize: "8pt" }} data-pdf-orcamento-numero>
-                Orçamento {orcamento.numero}
+                Orçamento {numero}
               </div>
               {orcamento.fornecedor_nome && (
                 <div style={{ background: "white", padding: "1.5mm", borderRadius: "1mm" }}>
