@@ -621,24 +621,96 @@ export default function Orcamentos() {
     }
 
     setGerandoPDF(true);
+    toast.info("Gerando PDF...");
+
+    const A4_W_MM = 210;
+    const A4_H_MM = 297;
+    const A4_W_PX = 794;
+    const A4_H_PX = 1123;
+
+    const tempDiv = document.createElement("div");
+    tempDiv.style.position = "absolute";
+    tempDiv.style.top = "-20000px";
+    tempDiv.style.left = "0";
+    tempDiv.style.width = `${A4_W_PX}px`;
+    tempDiv.style.background = "white";
+    document.body.appendChild(tempDiv);
+
+    const root = ReactDOM.createRoot(tempDiv);
 
     try {
-      const blob = await gerarPDFBlob(orcAtual);
-      if (!blob) return;
+      const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcAtual);
+      const numero = orcCompleto.numero || orcAtual.numero || "";
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Orcamento_${orcAtual.numero}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      root.render(
+        <OrcamentoTemplatePDF
+          orcamento={orcCompleto}
+          itens={itens}
+          emailUsuario={user?.email}
+          enderecoEntrega={String(orcCompleto.cliente_endereco || "").trim()}
+        />
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await Promise.all(
+        Array.from(tempDiv.querySelectorAll("img")).map(
+          (img) => new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 5000);
+          })
+        )
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const paginas = Array.from(
+        tempDiv.querySelectorAll(".pagina-1, .pagina-2")
+      ) as HTMLElement[];
+      if (paginas.length === 0) throw new Error("Nenhuma página encontrada");
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+      for (let i = 0; i < paginas.length; i++) {
+        const canvas = await html2canvas(paginas[i], {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          width: A4_W_PX,
+          height: A4_H_PX,
+          windowWidth: A4_W_PX,
+        });
+
+        if (i > 0) pdf.addPage();
+
+        // Adiciona imagem da página
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
+
+        // Escreve o número do orçamento diretamente no PDF (página 1 e 2)
+        if (numero) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(11);
+          pdf.setTextColor(255, 255, 255);
+          if (i === 0) {
+            // Caixa amarela no header (topo direito)
+            pdf.text(`Orçamento ${numero}`, 204, 15, { align: "right" });
+          } else {
+            // Rodapé da página 2
+            pdf.text(`Orçamento ${numero}`, 204, 260, { align: "right" });
+          }
+        }
+      }
+
+      pdf.save(`Orcamento_${numero || "orcamento"}.pdf`);
       toast.success("PDF baixado!");
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF: " + (error?.message || "Erro desconhecido"));
     } finally {
+      root.unmount();
+      document.body.removeChild(tempDiv);
       setGerandoPDF(false);
     }
   }
