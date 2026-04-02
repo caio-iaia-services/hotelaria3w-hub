@@ -527,11 +527,13 @@ export default function Orcamentos() {
     const A4_HEIGHT_PX = 1123;
     const host = document.createElement("div");
     host.style.position = "fixed";
-    host.style.left = "-200vw";
     host.style.top = "0";
+    host.style.left = "0";
     host.style.width = `${A4_WIDTH_PX}px`;
     host.style.overflow = "visible";
     host.style.pointerEvents = "none";
+    host.style.opacity = "0";
+    host.style.zIndex = "9999";
     host.style.background = "#ffffff";
     const clone = containerOriginal.cloneNode(true) as HTMLElement;
     clone.style.width = `${A4_WIDTH_PX}px`;
@@ -542,8 +544,8 @@ export default function Orcamentos() {
     clone.style.margin = "0";
     clone.style.background = "#ffffff";
 
-    // Remove no-print elements
-    clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+    // Remove elementos interativos
+    clone.querySelectorAll("button, .no-print").forEach((el) => el.remove());
 
     host.appendChild(clone);
     document.body.appendChild(host);
@@ -619,81 +621,24 @@ export default function Orcamentos() {
     }
 
     setGerandoPDF(true);
-    toast.info("Gerando PDF...");
-
-    const A4_W = 794;
-    const A4_H = 1123;
-
-    const tempDiv = document.createElement("div");
-    tempDiv.style.position = "fixed";
-    tempDiv.style.top = "0";
-    tempDiv.style.left = "0";
-    tempDiv.style.width = `${A4_W}px`;
-    tempDiv.style.background = "white";
-    tempDiv.style.opacity = "0";
-    tempDiv.style.pointerEvents = "none";
-    tempDiv.style.zIndex = "9999";
-    document.body.appendChild(tempDiv);
-
-    const root = ReactDOM.createRoot(tempDiv);
 
     try {
-      const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcAtual);
-      const enderecoEntrega = String(orcCompleto.cliente_endereco || "").trim();
+      const blob = await gerarPDFBlob(orcAtual);
+      if (!blob) return;
 
-      root.render(
-        <OrcamentoTemplatePDF
-          orcamento={orcCompleto}
-          itens={itens}
-          emailUsuario={user?.email}
-          enderecoEntrega={enderecoEntrega}
-        />
-      );
-
-      // Aguardar render completo
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      await Promise.all(
-        Array.from(tempDiv.querySelectorAll("img")).map(
-          (img) => new Promise<void>((resolve) => {
-            if (img.complete) return resolve();
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            setTimeout(resolve, 5000);
-          })
-        )
-      );
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Capturar cada página individualmente
-      const paginas = Array.from(tempDiv.querySelectorAll(".pagina-1, .pagina-2, .pagina-3")) as HTMLElement[];
-      if (paginas.length === 0) throw new Error("Nenhuma página encontrada");
-
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [A4_W, A4_H] });
-
-      for (let i = 0; i < paginas.length; i++) {
-        const canvas = await html2canvas(paginas[i], {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          width: A4_W,
-          height: A4_H,
-          windowWidth: A4_W,
-        });
-
-        if (i > 0) pdf.addPage();
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W, A4_H);
-      }
-
-      pdf.save(`Orcamento_${orcCompleto.numero}.pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Orcamento_${orcAtual.numero}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success("PDF baixado!");
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF: " + (error?.message || "Erro desconhecido"));
     } finally {
-      root.unmount();
-      document.body.removeChild(tempDiv);
       setGerandoPDF(false);
     }
   }
