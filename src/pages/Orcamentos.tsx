@@ -613,16 +613,7 @@ export default function Orcamentos() {
     }
   }
 
-  async function baixarPDF(o?: Orcamento) {
-    const orcAtual = o || orcamentoVisualizar || undefined;
-    if (!orcAtual) {
-      toast.error("Nenhum orçamento selecionado");
-      return;
-    }
-
-    setGerandoPDF(true);
-    toast.info("Gerando PDF...");
-
+  async function gerarPDFComTemplate(orcamento: Orcamento, enderecoEntrega?: string): Promise<{ pdf: jsPDF; numero: string }> {
     const A4_W_MM = 210;
     const A4_H_MM = 297;
     const A4_W_PX = 794;
@@ -639,15 +630,16 @@ export default function Orcamentos() {
     const root = ReactDOM.createRoot(tempDiv);
 
     try {
-      const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcAtual);
-      const numero = orcCompleto.numero || orcAtual.numero || "";
+      const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcamento);
+      const numero = orcCompleto.numero || orcamento.numero || "";
+      const endereco = enderecoEntrega ?? String(orcCompleto.cliente_endereco || "").trim();
 
       root.render(
         <OrcamentoTemplatePDF
           orcamento={orcCompleto}
           itens={itens}
           emailUsuario={user?.email}
-          enderecoEntrega={String(orcCompleto.cliente_endereco || "").trim()}
+          enderecoEntrega={endereco}
         />
       );
 
@@ -664,9 +656,7 @@ export default function Orcamentos() {
       );
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const paginas = Array.from(
-        tempDiv.querySelectorAll(".pagina-1, .pagina-2")
-      ) as HTMLElement[];
+      const paginas = Array.from(tempDiv.querySelectorAll(".pagina-1, .pagina-2")) as HTMLElement[];
       if (paginas.length === 0) throw new Error("Nenhuma página encontrada");
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -684,18 +674,14 @@ export default function Orcamentos() {
         });
 
         if (i > 0) pdf.addPage();
-
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
 
-        // Overlay: escreve o número sobre a caixa dourada (html2canvas não renderiza texto branco)
         if (numero) {
-          const pageEl = paginas[i];
-          const boxEl = pageEl.querySelector(`[data-pdf-numero="${i + 1}"]`) as HTMLElement | null;
-          // Coordenadas de fallback (mm) caso o elemento não seja encontrado
+          const boxEl = paginas[i].querySelector(`[data-pdf-numero="${i + 1}"]`) as HTMLElement | null;
           let textX = 200;
           let textY = i === 0 ? 12 : 260;
           if (boxEl) {
-            const pr = pageEl.getBoundingClientRect();
+            const pr = paginas[i].getBoundingClientRect();
             const br = boxEl.getBoundingClientRect();
             const scaleX = A4_W_MM / (pr.width || A4_W_PX);
             const scaleY = A4_H_MM / (pr.height || A4_H_PX);
@@ -709,14 +695,29 @@ export default function Orcamentos() {
         }
       }
 
+      return { pdf, numero };
+    } finally {
+      root.unmount();
+      document.body.removeChild(tempDiv);
+    }
+  }
+
+  async function baixarPDF(o?: Orcamento) {
+    const orcAtual = o || orcamentoVisualizar || undefined;
+    if (!orcAtual) {
+      toast.error("Nenhum orçamento selecionado");
+      return;
+    }
+    setGerandoPDF(true);
+    toast.info("Gerando PDF...");
+    try {
+      const { pdf, numero } = await gerarPDFComTemplate(orcAtual);
       pdf.save(`Orcamento_${numero || "orcamento"}.pdf`);
       toast.success("PDF baixado!");
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF: " + (error?.message || "Erro desconhecido"));
     } finally {
-      root.unmount();
-      document.body.removeChild(tempDiv);
       setGerandoPDF(false);
     }
   }
@@ -757,23 +758,25 @@ export default function Orcamentos() {
     try {
       const fromEmail = "sac@3whotelaria.com.br";
 
-      toast.info("Preparando orçamento para envio...");
-      const htmlContent = await capturarHtmlOrcamento();
-      if (!htmlContent) {
-        toast.error("Não foi possível capturar o HTML do orçamento");
-        return;
-      }
+      toast.info("Gerando PDF para envio...");
+      const { pdf, numero } = await gerarPDFComTemplate(
+        orcamentoEnviar,
+        enderecoEntregaEditado.trim() || undefined
+      );
+      const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
+      toast.info("Enviando e-mail...");
       const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orcamento_id: orcamentoEnviar.id,
-          numero: orcamentoEnviar.numero,
+          numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
           mensagem: emailMensagem,
-          html_content: htmlContent,
+          pdf_base64: pdfBase64,
+          filename: `Orcamento_${numero}.pdf`,
           from_email: fromEmail,
         }),
       });
