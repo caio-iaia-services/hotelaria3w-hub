@@ -164,7 +164,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div data-pdf-numero="1" style={{ backgroundColor: '#c4942c', color: 'white', padding: '10px 14px 10px 10px', borderRadius: '6px', display: 'inline-block', marginBottom: '12px' }}>
+              <div data-pdf-numero="1" style={{ backgroundColor: '#c4942c', color: 'white', padding: '6px 10px 6px 8px', borderRadius: '6px', display: 'inline-block', marginBottom: '12px' }}>
                 <p style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>
                   Orçamento {numero}
                 </p>
@@ -187,7 +187,7 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
                 <p style={{ fontWeight: 600, margin: 0 }}>Expira em {formatDate(orcamento.data_validade)}</p>
               </div>
               <div
-                style={{ marginTop: '16px', backgroundColor: '#e5e7eb', color: '#374151', padding: '6px 16px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}
+                style={{ marginTop: '16px', backgroundColor: '#e5e7eb', color: '#374151', padding: '6px 16px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
               >
                 {orcamento.status.toUpperCase()}
               </div>
