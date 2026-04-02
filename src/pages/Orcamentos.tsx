@@ -621,21 +621,24 @@ export default function Orcamentos() {
     setGerandoPDF(true);
     toast.info("Gerando PDF...");
 
+    const A4_W = 794;
+    const A4_H = 1123;
+
+    const tempDiv = document.createElement("div");
+    tempDiv.style.position = "fixed";
+    tempDiv.style.left = "-9999px";
+    tempDiv.style.top = "0";
+    tempDiv.style.width = `${A4_W}px`;
+    tempDiv.style.background = "white";
+    tempDiv.style.zIndex = "-1";
+    document.body.appendChild(tempDiv);
+
+    const root = ReactDOM.createRoot(tempDiv);
+
     try {
       const { orcamento: orcCompleto, itens } = await carregarOrcamentoCompleto(orcAtual);
       const enderecoEntrega = String(orcCompleto.cliente_endereco || "").trim();
 
-      // Criar div temporária invisível
-      const tempDiv = document.createElement("div");
-      tempDiv.style.position = "absolute";
-      tempDiv.style.left = "-9999px";
-      tempDiv.style.top = "0";
-      tempDiv.style.width = "210mm";
-      tempDiv.style.background = "white";
-      document.body.appendChild(tempDiv);
-
-      // Renderizar componente PDF na div temporária
-      const root = ReactDOM.createRoot(tempDiv);
       root.render(
         <OrcamentoTemplatePDF
           orcamento={orcCompleto}
@@ -645,55 +648,50 @@ export default function Orcamentos() {
         />
       );
 
-      // Aguardar render e imagens
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const images = tempDiv.querySelectorAll("img");
+      // Aguardar render completo
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await Promise.all(
-        Array.from(images).map(
-          (img) =>
-            new Promise<void>((resolve) => {
-              if (img.complete) return resolve();
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-              setTimeout(resolve, 5000);
-            }),
-        ),
+        Array.from(tempDiv.querySelectorAll("img")).map(
+          (img) => new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 5000);
+          })
+        )
       );
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const opt = {
-        margin: 0,
-        filename: `Orcamento_${orcCompleto.numero}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
+      // Capturar cada página individualmente
+      const paginas = Array.from(tempDiv.querySelectorAll(".pagina-1, .pagina-2, .pagina-3")) as HTMLElement[];
+      if (paginas.length === 0) throw new Error("Nenhuma página encontrada");
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [A4_W, A4_H] });
+
+      for (let i = 0; i < paginas.length; i++) {
+        const canvas = await html2canvas(paginas[i], {
           scale: 2,
           useCORS: true,
-          allowTaint: false,
-          width: 794,
-          windowWidth: 794,
+          allowTaint: true,
           logging: false,
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-        pagebreak: {
-          mode: ["css"] as string[],
-          before: [".pagina-2", ".pagina-3"],
-        },
-      };
+          backgroundColor: "#ffffff",
+          width: A4_W,
+          height: A4_H,
+          windowWidth: A4_W,
+        });
 
-      await html2pdf().set(opt).from(tempDiv.firstChild as HTMLElement).save();
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W, A4_H);
+      }
+
+      pdf.save(`Orcamento_${orcCompleto.numero}.pdf`);
       toast.success("PDF baixado!");
-
-      // Cleanup
-      root.unmount();
-      document.body.removeChild(tempDiv);
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF: " + (error?.message || "Erro desconhecido"));
     } finally {
+      root.unmount();
+      document.body.removeChild(tempDiv);
       setGerandoPDF(false);
     }
   }
