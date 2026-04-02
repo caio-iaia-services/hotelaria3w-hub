@@ -626,11 +626,13 @@ export default function Orcamentos() {
 
     const tempDiv = document.createElement("div");
     tempDiv.style.position = "fixed";
-    tempDiv.style.left = "-9999px";
     tempDiv.style.top = "0";
+    tempDiv.style.left = "0";
     tempDiv.style.width = `${A4_W}px`;
     tempDiv.style.background = "white";
-    tempDiv.style.zIndex = "-1";
+    tempDiv.style.opacity = "0";
+    tempDiv.style.pointerEvents = "none";
+    tempDiv.style.zIndex = "9999";
     document.body.appendChild(tempDiv);
 
     const root = ReactDOM.createRoot(tempDiv);
