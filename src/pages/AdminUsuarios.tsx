@@ -314,13 +314,31 @@ export default function AdminUsuarios() {
 
               <div>
                 <Label>Gestão Responsável</Label>
-                <Input
-                  placeholder="Ex: G1, G2, G5 — deixe vazio para acesso total"
-                  value={perfilSelecionado.gestao || ""}
-                  onChange={e => setPerfilSelecionado(p => p ? { ...p, gestao: e.target.value.trim().toUpperCase() || null } : p)}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={99}
+                    placeholder="—"
+                    value={perfilSelecionado.gestao ? perfilSelecionado.gestao.replace("G", "") : ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPerfilSelecionado(p => p ? { ...p, gestao: val ? `G${val}` : null } : p);
+                    }}
+                    className="w-24"
+                  />
+                  {perfilSelecionado.gestao && (
+                    <span className="text-sm font-semibold text-muted-foreground">{perfilSelecionado.gestao}</span>
+                  )}
+                  {perfilSelecionado.gestao && (
+                    <button type="button" className="text-xs text-destructive underline"
+                      onClick={() => setPerfilSelecionado(p => p ? { ...p, gestao: null } : p)}>
+                      Limpar (acesso total)
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Comerciais veem apenas dados da sua gestão. Deixe vazio para acesso a todas.
+                  Deixe vazio para acesso a todas as gestões.
                 </p>
               </div>
 
@@ -421,14 +439,31 @@ export default function AdminUsuarios() {
             </div>
             <div>
               <Label>Gestão Responsável</Label>
-              <Input
-                placeholder="Ex: G1, G2, G5 — deixe vazio para acesso total"
-                value={novoUsuario.gestao || ""}
-                onChange={e => setNovoUsuario(p => ({ ...p, gestao: e.target.value.trim().toUpperCase() || null }))}
-              />
-                </SelectContent>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={99}
+                  placeholder="—"
+                  value={novoUsuario.gestao ? novoUsuario.gestao.replace("G", "") : ""}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNovoUsuario(p => ({ ...p, gestao: val ? `G${val}` : null }));
+                  }}
+                  className="w-24"
+                />
+                {novoUsuario.gestao && (
+                  <span className="text-sm font-semibold text-muted-foreground">{novoUsuario.gestao}</span>
+                )}
+                {novoUsuario.gestao && (
+                  <button type="button" className="text-xs text-destructive underline"
+                    onClick={() => setNovoUsuario(p => ({ ...p, gestao: null }))}>
+                    Limpar (acesso total)
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Comerciais veem apenas dados da sua gestão. Deixe vazio para acesso a todas.
+                Deixe vazio para acesso a todas as gestões.
               </p>
             </div>
             <div>
