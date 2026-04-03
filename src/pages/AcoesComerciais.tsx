@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { supabase as supabaseCloud } from "@/integrations/supabase/client";
 import { CRMCard, DocumentoComercial } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { gestaoOperacoes as gestaoOperacoesBase } from "@/data/mockOportunidades";
 import {
   FileText,
@@ -419,6 +420,7 @@ const TERMOS_3W = `1. Esta proposta é válida por [VALIDADE] dias.
 5. Fabricantes/Fornecedores têm políticas de "frete" e "IPI" diferentes. Consulte antecipadamente o Vendedor e atente para as condições gerais da Fatura.
 6. Embora o nosso sistema atribua automaticamente validade do Orçamento de 30 dias, os preços podem sofrer alterações por motivos de força maior, tais como variações abruptas de matéria-prima e/ou outro qualquer fator que exceda a competência direta da 3W HOTELARIA.`;
 export default function AcoesComerciais() {
+  const { gestaoFiltro } = useAuth();
   const [cards, setCards] = useState<CRMCard[]>([]);
   const [cardSelecionado, setCardSelecionado] = useState<CRMCard | null>(null);
   const [documentos, setDocumentos] = useState<DocumentoComercial[]>([]);
@@ -493,7 +495,7 @@ export default function AcoesComerciais() {
       .not("gestao", "is", null)
       .neq("gestao", "")
       .then(({ data }) => setFornecedoresDb(data || []));
-  }, []);
+  }, [gestaoFiltro]);
 
   useEffect(() => {
     if (cardSelecionado) {
@@ -503,17 +505,15 @@ export default function AcoesComerciais() {
 
   async function buscarLeadsAtivos() {
     setLoading(true);
-    const { data, error } = await supabase
+    let q = supabase
       .from("crm_cards")
       .select("*")
       .in("estagio", ["lead", "contato", "proposta", "negociacao", "fechado"])
       .order("created_at", { ascending: false });
+    if (gestaoFiltro) q = (q as any).ilike("gestao", `%${gestaoFiltro}%`);
 
-    if (error) {
-      console.error("❌ Erro ao buscar leads:", error);
-    }
+    const { data, error } = await q;
     if (!error && data) {
-      console.log("✅ Leads encontrados:", data.length);
       const cardsData = data as unknown as CRMCard[];
       setCards(cardsData);
       if (cardsData.length > 0 && !cardSelecionado) {
@@ -534,45 +534,43 @@ export default function AcoesComerciais() {
   }
 
   async function buscarMetricas() {
-    const [{ count: cotacoes }, { count: orcamentos }, { count: contratos }, { data: valores }, { count: aprovados }] =
-      await Promise.all([
-        supabase
-          .from("documentos_comerciais")
-          .select("*", { count: "exact", head: true })
-          .eq("tipo", "cotacao")
-          .eq("status", "enviado"),
-        supabase
-          .from("documentos_comerciais")
-          .select("*", { count: "exact", head: true })
-          .eq("tipo", "orcamento")
-          .eq("status", "enviado"),
-        supabase
-          .from("documentos_comerciais")
-          .select("*", { count: "exact", head: true })
-          .eq("tipo", "contrato")
-          .eq("status", "enviado"),
-        supabase
-          .from("documentos_comerciais")
-          .select("valor_total")
-          .eq("tipo", "orcamento")
-          .in("status", ["enviado", "aprovado"]),
-        supabase
-          .from("documentos_comerciais")
-          .select("*", { count: "exact", head: true })
-          .eq("tipo", "orcamento")
-          .eq("status", "aprovado"),
-      ]);
+    const withGestao = (q: any) => gestaoFiltro ? q.eq("gestao", gestaoFiltro) : q;
 
-    const valorTotal = valores?.reduce((sum, doc) => sum + (doc.valor_total || 0), 0) || 0;
-    const taxaConversao = (orcamentos ?? 0) > 0 ? Math.round(((aprovados ?? 0) / (orcamentos ?? 1)) * 100) : 0;
+    const [
+      { count: rascunhos },
+      { count: enviados },
+      { count: aprovados },
+      { data: valoresAtivos },
+      { data: temposAprovados },
+    ] = await Promise.all([
+      withGestao(supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "rascunho")),
+      withGestao(supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "enviado")),
+      withGestao(supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "aprovado")),
+      withGestao(supabase.from("orcamentos").select("total").in("status", ["enviado", "aprovado"])),
+      withGestao(supabase.from("orcamentos").select("created_at, updated_at").eq("status", "aprovado")),
+    ]);
+
+    const valorTotal = (valoresAtivos || []).reduce((s: number, o: any) => s + (parseFloat(o.total) || 0), 0);
+
+    const totalBase = (enviados ?? 0) + (aprovados ?? 0);
+    const taxaConversao = totalBase > 0 ? Math.round(((aprovados ?? 0) / totalBase) * 100) : 0;
+
+    let tempoMedio = 0;
+    if (temposAprovados && temposAprovados.length > 0) {
+      const dias = (temposAprovados as any[]).map(o => {
+        const diff = new Date(o.updated_at).getTime() - new Date(o.created_at).getTime();
+        return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)));
+      });
+      tempoMedio = Math.round(dias.reduce((s, d) => s + d, 0) / dias.length);
+    }
 
     setMetricas({
-      cotacoesPendentes: cotacoes ?? 0,
-      orcamentosEnviados: orcamentos ?? 0,
-      contratosAnalise: contratos ?? 0,
+      cotacoesPendentes: rascunhos ?? 0,
+      orcamentosEnviados: enviados ?? 0,
+      contratosAnalise: aprovados ?? 0,
       valorTotal,
       taxaConversao,
-      tempoMedio: 5,
+      tempoMedio,
     });
   }
 
@@ -1234,7 +1232,7 @@ export default function AcoesComerciais() {
       <div className="grid grid-cols-6 gap-4 px-6 py-4 border-b bg-muted/30">
         <MetricCard
           icon={<FileText className="w-5 h-5" />}
-          titulo="Cotações Pendentes"
+          titulo="Rascunhos Pendentes"
           valor={metricas.cotacoesPendentes}
           cor="blue"
         />
@@ -1246,7 +1244,7 @@ export default function AcoesComerciais() {
         />
         <MetricCard
           icon={<FileSignature className="w-5 h-5" />}
-          titulo="Contratos em Análise"
+          titulo="Aprovados"
           valor={metricas.contratosAnalise}
           cor="orange"
         />
