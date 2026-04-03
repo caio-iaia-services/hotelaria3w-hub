@@ -314,22 +314,13 @@ export default function AdminUsuarios() {
 
               <div>
                 <Label>Gestão Responsável</Label>
-                <Select
-                  value={perfilSelecionado.gestao || "todas"}
-                  onValueChange={val => setPerfilSelecionado(p => p ? { ...p, gestao: val === "todas" ? null : val } : p)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas as gestões</SelectItem>
-                    {GESTOES.map(g => (
-                      <SelectItem key={g} value={g}>{gestaoLabel[g]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  placeholder="Ex: G1, G2, G5 — deixe vazio para acesso total"
+                  value={perfilSelecionado.gestao || ""}
+                  onChange={e => setPerfilSelecionado(p => p ? { ...p, gestao: e.target.value.trim().toUpperCase() || null } : p)}
+                />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Comerciais veem apenas dados da sua gestão.
+                  Comerciais veem apenas dados da sua gestão. Deixe vazio para acesso a todas.
                 </p>
               </div>
 
@@ -430,20 +421,14 @@ export default function AdminUsuarios() {
             </div>
             <div>
               <Label>Gestão Responsável</Label>
-              <Select
-                value={novoUsuario.gestao || "todas"}
-                onValueChange={val => setNovoUsuario(p => ({ ...p, gestao: val === "todas" ? null : val }))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as gestões</SelectItem>
-                  {GESTOES.map(g => (
-                    <SelectItem key={g} value={g}>{gestaoLabel[g]}</SelectItem>
-                  ))}
+              <Input
+                placeholder="Ex: G1, G2, G5 — deixe vazio para acesso total"
+                value={novoUsuario.gestao || ""}
+                onChange={e => setNovoUsuario(p => ({ ...p, gestao: e.target.value.trim().toUpperCase() || null }))}
+              />
                 </SelectContent>
-              </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Comerciais veem apenas dados da sua gestão.
+                Comerciais veem apenas dados da sua gestão. Deixe vazio para acesso a todas.
               </p>
             </div>
             <div>
