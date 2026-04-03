@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { Plus, Search, Target, TrendingUp, Eye, Trash2, Loader2, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ const gestaoColors: Record<string, string> = {
 };
 
 export default function Oportunidades() {
+  const { gestaoFiltro } = useAuth();
   const [oportunidades, setOportunidades] = useState<OportunidadeComCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -39,7 +41,7 @@ export default function Oportunidades() {
 
   const buscarOportunidades = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("oportunidades")
       .select(`
         id,
@@ -65,13 +67,18 @@ export default function Oportunidades() {
       .eq("status", "em_andamento")
       .order("created_at", { ascending: false });
 
+    // Filtrar por gestão se for usuário comercial
+    if (gestaoFiltro) query = query.ilike("gestao", `%${gestaoFiltro}%`);
+
+    const { data, error } = await query;
+
     if (error) {
       toast.error("Erro ao carregar oportunidades");
     } else {
       setOportunidades((data as unknown as OportunidadeComCliente[]) || []);
     }
     setLoading(false);
-  }, []);
+  }, [gestaoFiltro]);
 
   useEffect(() => {
     buscarOportunidades();

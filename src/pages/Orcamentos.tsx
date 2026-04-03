@@ -147,7 +147,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 }
 
 export default function Orcamentos() {
-  const { user } = useAuth();
+  const { user, gestaoFiltro } = useAuth();
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -203,13 +203,18 @@ export default function Orcamentos() {
   );
 
   const buscarContadores = useCallback(async () => {
+    const base = () => {
+      let q = supabase.from("orcamentos").select("*", { count: "exact", head: true });
+      if (gestaoFiltro) q = q.eq("gestao", gestaoFiltro);
+      return q;
+    };
     const counts = await Promise.all([
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }),
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "rascunho"),
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "enviado"),
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "aprovado"),
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "rejeitado"),
-      supabase.from("orcamentos").select("*", { count: "exact", head: true }).eq("status", "expirado"),
+      base(),
+      base().eq("status", "rascunho"),
+      base().eq("status", "enviado"),
+      base().eq("status", "aprovado"),
+      base().eq("status", "rejeitado"),
+      base().eq("status", "expirado"),
     ]);
     setContadores({
       todos: counts[0].count || 0,
@@ -226,7 +231,12 @@ export default function Orcamentos() {
     let query = supabase.from("orcamentos").select("*", { count: "exact" });
     if (statusAtivo !== "todos") query = query.eq("status", statusAtivo);
     if (filtros.busca) query = query.or(`numero.ilike.%${filtros.busca}%`);
-    if (filtros.gestao) query = query.eq("gestao", filtros.gestao);
+    // Filtro por gestão: preferencia do perfil do usuário, depois filtro manual
+    if (gestaoFiltro) {
+      query = query.eq("gestao", gestaoFiltro);
+    } else if (filtros.gestao) {
+      query = query.eq("gestao", filtros.gestao);
+    }
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, to);
@@ -324,7 +334,7 @@ export default function Orcamentos() {
       }
     }
     setLoading(false);
-  }, [page, pageSize, filtros, statusAtivo]);
+  }, [page, pageSize, filtros, statusAtivo, gestaoFiltro]);
 
   useEffect(() => {
     buscarContadores();
