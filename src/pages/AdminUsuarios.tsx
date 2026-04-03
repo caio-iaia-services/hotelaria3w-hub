@@ -50,6 +50,16 @@ export default function AdminUsuarios() {
   const [salvando, setSalvando] = useState<string | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [perfilSelecionado, setPerfilSelecionado] = useState<PerfilEditavel | null>(null);
+  const [modalNovoAberto, setModalNovoAberto] = useState(false);
+  const [criando, setCriando] = useState(false);
+  const [novoUsuario, setNovoUsuario] = useState({
+    email: "",
+    senha: "",
+    nome: "",
+    role: "comercial" as UserProfile["role"],
+    gestao: null as string | null,
+    modulos: MODULOS_COMERCIAL_PADRAO,
+  });
 
   // Redireciona se não tiver permissão
   useEffect(() => {
@@ -121,10 +131,51 @@ export default function AdminUsuarios() {
 
   const salvarModal = async () => {
     if (!perfilSelecionado) return;
-    // Atualiza o estado local
     setPerfis(prev => prev.map(p => p.id === perfilSelecionado.id ? { ...perfilSelecionado, _dirty: false } : p));
     await salvarPerfil(perfilSelecionado);
     setModalAberto(false);
+  };
+
+  const criarNovoUsuario = async () => {
+    if (!novoUsuario.email || !novoUsuario.senha || !novoUsuario.nome) {
+      toast.error("Preencha nome, e-mail e senha");
+      return;
+    }
+    setCriando(true);
+    try {
+      // Cria o usuário no Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: novoUsuario.email,
+        password: novoUsuario.senha,
+        email_confirm: true,
+      });
+
+      if (error) throw error;
+      const userId = data.user?.id;
+      if (!userId) throw new Error("Usuário criado mas ID não retornado");
+
+      // Cria o perfil
+      const { error: perfilError } = await supabase.from("user_profiles").insert({
+        id: userId,
+        email: novoUsuario.email,
+        nome: novoUsuario.nome,
+        role: novoUsuario.role,
+        gestao: novoUsuario.gestao,
+        modulos: novoUsuario.modulos,
+        ativo: true,
+      });
+
+      if (perfilError) throw perfilError;
+
+      toast.success(`Usuário ${novoUsuario.nome} criado com sucesso!`);
+      setModalNovoAberto(false);
+      setNovoUsuario({ email: "", senha: "", nome: "", role: "comercial", gestao: null, modulos: MODULOS_COMERCIAL_PADRAO });
+      await buscarPerfis();
+    } catch (err: any) {
+      toast.error("Erro ao criar usuário: " + (err.message || "Tente novamente"));
+    } finally {
+      setCriando(false);
+    }
   };
 
   if (loading) {
@@ -147,6 +198,10 @@ export default function AdminUsuarios() {
             Controle de acesso, gestões e módulos liberados por usuário.
           </p>
         </div>
+        <Button onClick={() => setModalNovoAberto(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Usuário
+        </Button>
       </div>
 
       <div className="grid gap-4">
@@ -312,6 +367,116 @@ export default function AdminUsuarios() {
             <Button variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Button>
             <Button onClick={salvarModal} disabled={!!salvando}>
               {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Novo Usuário */}
+      <Dialog open={modalNovoAberto} onOpenChange={setModalNovoAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Novo Usuário
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input
+                placeholder="Ex: João Silva"
+                value={novoUsuario.nome}
+                onChange={e => setNovoUsuario(p => ({ ...p, nome: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                placeholder="Ex: comercial2@3whotelaria.com.br"
+                value={novoUsuario.email}
+                onChange={e => setNovoUsuario(p => ({ ...p, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Senha inicial</Label>
+              <Input
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={novoUsuario.senha}
+                onChange={e => setNovoUsuario(p => ({ ...p, senha: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Perfil de Acesso</Label>
+              <Select
+                value={novoUsuario.role}
+                onValueChange={val => {
+                  const role = val as UserProfile["role"];
+                  setNovoUsuario(p => ({
+                    ...p,
+                    role,
+                    modulos: role === "admin" || role === "tecnico" ? MODULOS_ADMIN_PADRAO : MODULOS_COMERCIAL_PADRAO,
+                  }));
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="tecnico">Técnico</SelectItem>
+                  <SelectItem value="comercial">Comercial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Gestão Responsável</Label>
+              <Select
+                value={novoUsuario.gestao || "todas"}
+                onValueChange={val => setNovoUsuario(p => ({ ...p, gestao: val === "todas" ? null : val }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as gestões</SelectItem>
+                  {GESTOES.map(g => (
+                    <SelectItem key={g} value={g}>{gestaoLabel[g]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Comerciais veem apenas dados da sua gestão.
+              </p>
+            </div>
+            <div>
+              <Label className="mb-2 block">Módulos Liberados</Label>
+              <div className="flex flex-wrap gap-2">
+                {TODOS_MODULOS.map(m => {
+                  const tem = novoUsuario.modulos.includes(m.key);
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setNovoUsuario(p => ({
+                        ...p,
+                        modulos: tem ? p.modulos.filter(mod => mod !== m.key) : [...p.modulos, m.key],
+                      }))}
+                      className={`text-xs px-2 py-1 rounded-full border transition-colors font-medium ${
+                        tem
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-muted-foreground/20"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalNovoAberto(false)}>Cancelar</Button>
+            <Button onClick={criarNovoUsuario} disabled={criando}>
+              {criando ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+              Criar Usuário
             </Button>
           </DialogFooter>
         </DialogContent>
