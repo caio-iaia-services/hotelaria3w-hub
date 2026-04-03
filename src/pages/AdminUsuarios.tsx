@@ -321,12 +321,12 @@ export default function AdminUsuarios() {
 
       {/* ── Seção de Comissões ── */}
       {gestoesComerciais.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/30">
+        <Card className="border-[#c4942c]/40 bg-[#c4942c]/10">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Percent className="w-4 h-4 text-amber-600" />
+                  <Percent className="w-4 h-4 text-[#c4942c]" />
                   Configuração de Comissões
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -337,7 +337,7 @@ export default function AdminUsuarios() {
                 size="sm"
                 onClick={salvarComissoes}
                 disabled={salvandoComissoes}
-                className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                className="gap-2 bg-[#c4942c] hover:bg-[#b8841e] text-white border-0"
               >
                 {salvandoComissoes
                   ? <Loader2 className="w-3 h-3 animate-spin" />
