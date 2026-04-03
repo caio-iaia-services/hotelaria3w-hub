@@ -37,7 +37,14 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
         let query = supabase.from('produtos_castor_view').select('*')
 
         if (campo === 'codigo') {
-          query = query.ilike('codigo', `%${trimmed}%`)
+          // Remove zeros à esquerda para cobrir códigos armazenados como número
+          const semZeros = trimmed.replace(/^0+/, '') || trimmed
+          if (semZeros !== trimmed) {
+            // Busca com e sem o zero inicial (ex: "035298" e "35298")
+            query = query.or(`codigo.ilike.%${trimmed}%,codigo.ilike.%${semZeros}%`)
+          } else {
+            query = query.ilike('codigo', `%${trimmed}%`)
+          }
         } else {
           query = query.or(`descricao.ilike.%${trimmed}%,especificacao.ilike.%${trimmed}%`)
         }
