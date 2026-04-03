@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "./ThemeProvider";
+import { useAuth } from "./AuthProvider";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -39,6 +40,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { perfil } = useAuth();
+
+  const iniciais = perfil?.nome
+    ? perfil.nome.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : perfil?.email?.slice(0, 2).toUpperCase() ?? "??";
+
+  const nomeExibido = perfil?.nome
+    ? perfil.nome.split(" ").slice(0, 2).join(" ")
+    : perfil?.email ?? "Usuário";
 
   const pageTitle = pageTitles[location.pathname] || "3W Hotelaria";
 
@@ -78,11 +88,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="hidden sm:flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-[#1a4168] text-white font-heading text-xs font-bold">
-                  AD
+                  {iniciais}
                 </AvatarFallback>
               </Avatar>
               <span className="text-sm font-medium text-white">
-                Administrador
+                {nomeExibido}
               </span>
             </div>
           </div>

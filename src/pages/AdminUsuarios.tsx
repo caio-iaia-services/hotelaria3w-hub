@@ -17,7 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { UserCog, Plus, Pencil, Shield, User, Loader2 } from "lucide-react";
+import { UserCog, Plus, Pencil, Shield, User, Loader2, Percent, Save } from "lucide-react";
 
 const roleLabel: Record<string, string> = {
   admin: "Admin",
@@ -52,6 +52,12 @@ export default function AdminUsuarios() {
   const [perfilSelecionado, setPerfilSelecionado] = useState<PerfilEditavel | null>(null);
   const [modalNovoAberto, setModalNovoAberto] = useState(false);
   const [criando, setCriando] = useState(false);
+
+  // Comissões por gestão
+  const [comissoes, setComissoes] = useState<Record<string, string>>({}); // gestao -> pct (string p/ input)
+  const [gestoesComerciais, setGestoesComerciais] = useState<string[]>([]);
+  const [salvandoComissoes, setSalvandoComissoes] = useState(false);
+
   const [novoUsuario, setNovoUsuario] = useState({
     email: "",
     senha: "",
@@ -81,6 +87,46 @@ export default function AdminUsuarios() {
   }, []);
 
   useEffect(() => { buscarPerfis(); }, [buscarPerfis]);
+
+  // Carrega gestões comerciais + comissões existentes
+  const buscarComissoes = useCallback(async () => {
+    // Gestões dos usuários comerciais
+    const { data: profiles } = await supabase
+      .from("user_profiles")
+      .select("gestao")
+      .eq("role", "comercial")
+      .not("gestao", "is", null);
+    const unique = [...new Set((profiles || []).map((p: any) => p.gestao).filter(Boolean))].sort() as string[];
+    setGestoesComerciais(unique);
+
+    // Comissões já configuradas
+    const { data: configs } = await supabase
+      .from("configuracoes_gestao")
+      .select("gestao, comissao_pct");
+    const map: Record<string, string> = {};
+    unique.forEach(g => { map[g] = "0"; });
+    (configs || []).forEach((c: any) => { map[c.gestao] = String(c.comissao_pct ?? 0); });
+    setComissoes(map);
+  }, []);
+
+  useEffect(() => { buscarComissoes(); }, [buscarComissoes]);
+
+  const salvarComissoes = async () => {
+    setSalvandoComissoes(true);
+    try {
+      for (const [gestao, pctStr] of Object.entries(comissoes)) {
+        const pct = parseFloat(pctStr) || 0;
+        await supabase
+          .from("configuracoes_gestao")
+          .upsert({ gestao, comissao_pct: pct, updated_at: new Date().toISOString() }, { onConflict: "gestao" });
+      }
+      toast.success("Comissões salvas com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar comissões");
+    } finally {
+      setSalvandoComissoes(false);
+    }
+  };
 
   const salvarPerfil = async (perfil: PerfilEditavel) => {
     setSalvando(perfil.id);
@@ -272,6 +318,66 @@ export default function AdminUsuarios() {
           </Card>
         ))}
       </div>
+
+      {/* ── Seção de Comissões ── */}
+      {gestoesComerciais.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Percent className="w-4 h-4 text-amber-600" />
+                  Configuração de Comissões
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Defina o percentual de comissão sobre o faturamento bruto aprovado de cada gestão.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={salvarComissoes}
+                disabled={salvandoComissoes}
+                className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {salvandoComissoes
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Save className="w-3 h-3" />}
+                Salvar Comissões
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {gestoesComerciais.map(g => {
+                const labelG = gestaoLabel[g] || g.replace(/^G(\d+)$/, "Gestão $1");
+                return (
+                  <div key={g} className="bg-white rounded-xl border border-border/60 p-4 space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-foreground">{labelG}</p>
+                      <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">{g}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        value={comissoes[g] ?? "0"}
+                        onChange={e => setComissoes(prev => ({ ...prev, [g]: e.target.value }))}
+                        className="h-9 text-sm w-20 text-right font-mono"
+                      />
+                      <span className="text-sm text-muted-foreground font-medium">% do faturamento</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Ex: orçamentos aprovados = R$ 100k → comissão = R$ {((parseFloat(comissoes[g] || "0") / 100) * 100000).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Modal de edição */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>

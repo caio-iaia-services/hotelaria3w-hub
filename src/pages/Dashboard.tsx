@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  FileText, Clock, Users, DollarSign, TrendingUp,
+  FileText, Clock, Users, DollarSign,
   CheckCircle2, Send, XCircle, Target, RefreshCw,
   CalendarDays, Building2,
 } from "lucide-react";
@@ -15,6 +15,14 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { gestaoLabel } from "@/lib/userProfile";
+import { AcoesRapidas } from "@/components/dashboard/AcoesRapidas";
+import { CardIA } from "@/components/dashboard/CardIA";
+import { CardAlertas } from "@/components/dashboard/CardAlertas";
+import { CardTarefas } from "@/components/dashboard/CardTarefas";
+import { CardAgenda } from "@/components/dashboard/CardAgenda";
+import { CardComissao } from "@/components/dashboard/CardComissao";
+
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
   rascunho:  "hsl(215, 16%, 65%)",
@@ -34,13 +42,19 @@ const STATUS_LABELS: Record<string, string> = {
 
 function formatCurrency(value: number) {
   if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(1)}k`;
+  if (value >= 1_000)     return `R$ ${(value / 1_000).toFixed(1)}k`;
   return `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 }
 
 function formatCurrencyFull(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+const labelGestao = (g: string) => {
+  if (gestaoLabel[g]) return gestaoLabel[g];
+  const m = g.match(/^G(\d+)$/);
+  return m ? `Gestão ${m[1]}` : g;
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
@@ -60,44 +74,83 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const mesesAbrev = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+const GESTAO_COLORS: Record<string, string> = {
+  G1: "hsl(224, 64%, 33%)",
+  G2: "hsl(152, 60%, 40%)",
+  G3: "hsl(25, 90%, 55%)",
+  G4: "hsl(270, 55%, 55%)",
+};
+const gestaoColor = (g: string) => {
+  if (GESTAO_COLORS[g]) return GESTAO_COLORS[g];
+  // gera cor determinística para G5, G6...
+  const num = parseInt(g.replace("G", "")) || 0;
+  const hue = (num * 67) % 360;
+  return `hsl(${hue}, 55%, 45%)`;
+};
+
+// ─── component ──────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { gestaoFiltro, isAdmin, perfil } = useAuth();
+
+  // Tab selecionada pelo admin (null = Total)
+  const [selectedGestaoAdmin, setSelectedGestaoAdmin] = useState<string | null>(null);
+  // Gestões dinâmicas dos usuários comerciais
+  const [gestoesDinamicas, setGestoesDinamicas] = useState<string[]>([]);
+
+  // Filtro efetivo usado nas queries
+  const effectiveFiltro = isAdmin ? selectedGestaoAdmin : gestaoFiltro;
+
   const [loading, setLoading] = useState(true);
   const [atualizado, setAtualizado] = useState(new Date());
 
   // KPIs
-  const [totalOrcamentos, setTotalOrcamentos] = useState(0);
+  const [totalOrcamentos, setTotalOrcamentos]       = useState(0);
   const [orcamentosPendentes, setOrcamentosPendentes] = useState(0);
   const [orcamentosAprovados, setOrcamentosAprovados] = useState(0);
-  const [valorTotalAprovado, setValorTotalAprovado] = useState(0);
-  const [ticketMedio, setTicketMedio] = useState(0);
-  const [totalClientes, setTotalClientes] = useState(0);
-  const [totalOportunidades, setTotalOportunidades] = useState(0);
+  const [valorTotalAprovado, setValorTotalAprovado]   = useState(0);
+  const [ticketMedio, setTicketMedio]                 = useState(0);
+  const [totalClientes, setTotalClientes]             = useState(0);
+  const [totalOportunidades, setTotalOportunidades]   = useState(0);
 
   // Charts
-  const [statusData, setStatusData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [statusData, setStatusData]     = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendenciaData, setTendenciaData] = useState<{ mes: string; quantidade: number; valor: number }[]>([]);
 
-  // Atividades recentes
-  const [recentes, setRecentes] = useState<any[]>([]);
-
-  // Orçamentos por gestão
+  // Recentes / gestão
+  const [recentes, setRecentes]   = useState<any[]>([]);
   const [porGestao, setPorGestao] = useState<{ gestao: string; total: number; valor: number }[]>([]);
 
+  // Ação rápida → focar campo nova tarefa
+  const [focarNovaTarefa, setFocarNovaTarefa] = useState(false);
+
+  // ── Buscar gestões dinâmicas (admin) ──────────────────────────────────────
+  useEffect(() => {
+    if (!isAdmin) return;
+    supabase
+      .from("user_profiles")
+      .select("gestao")
+      .eq("role", "comercial")
+      .not("gestao", "is", null)
+      .then(({ data }) => {
+        const unique = [...new Set((data || []).map((p: any) => p.gestao).filter(Boolean))].sort() as string[];
+        setGestoesDinamicas(unique);
+      });
+  }, [isAdmin]);
+
+  // ── Carregar métricas ─────────────────────────────────────────────────────
   const carregar = async () => {
     setLoading(true);
 
     const baseQuery = () => {
       let q = supabase.from("orcamentos").select("*");
-      if (gestaoFiltro) q = (q as any).eq("gestao", gestaoFiltro);
+      if (effectiveFiltro) q = (q as any).eq("gestao", effectiveFiltro);
       return q;
     };
 
-    // Busca todos os orçamentos
     const { data: todos } = await baseQuery();
     const orcamentos = (todos || []) as any[];
 
-    // KPIs
     setTotalOrcamentos(orcamentos.length);
     const pendentes = orcamentos.filter(o => o.status === "rascunho" || o.status === "enviado");
     setOrcamentosPendentes(pendentes.length);
@@ -107,7 +160,7 @@ export default function Dashboard() {
     setValorTotalAprovado(valorAprov);
     setTicketMedio(aprovados.length > 0 ? valorAprov / aprovados.length : 0);
 
-    // Clientes
+    // Clientes (sem filtro de gestão)
     const { count: countClientes } = await supabase
       .from("clientes")
       .select("*", { count: "exact", head: true });
@@ -115,15 +168,13 @@ export default function Dashboard() {
 
     // Oportunidades em andamento
     let qOp = supabase.from("oportunidades").select("*", { count: "exact", head: true }).eq("status", "em_andamento");
-    if (gestaoFiltro) qOp = (qOp as any).ilike("gestao", `%${gestaoFiltro}%`);
+    if (effectiveFiltro) qOp = (qOp as any).ilike("gestao", `%${effectiveFiltro}%`);
     const { count: countOp } = await qOp;
     setTotalOportunidades(countOp || 0);
 
     // Status pie
     const statusCount: Record<string, number> = {};
-    orcamentos.forEach(o => {
-      statusCount[o.status] = (statusCount[o.status] || 0) + 1;
-    });
+    orcamentos.forEach(o => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
     setStatusData(
       Object.entries(statusCount)
         .filter(([, v]) => v > 0)
@@ -138,45 +189,47 @@ export default function Dashboard() {
     });
     orcamentos.forEach(o => {
       const d = new Date(o.created_at);
-      const mes = mesesAbrev[d.getMonth()];
-      const ano = d.getFullYear();
-      const entry = tendencia.find(t => t.mes === mes && t.ano === ano);
-      if (entry) {
-        entry.quantidade++;
-        entry.valor += parseFloat(o.total) || 0;
-      }
+      const entry = tendencia.find(t => t.mes === mesesAbrev[d.getMonth()] && t.ano === d.getFullYear());
+      if (entry) { entry.quantidade++; entry.valor += parseFloat(o.total) || 0; }
     });
     setTendenciaData(tendencia.map(({ mes, quantidade, valor }) => ({ mes, quantidade, valor })));
 
     // Recentes (últimos 5)
-    const recentes5 = [...orcamentos]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5);
-    setRecentes(recentes5);
+    setRecentes(
+      [...orcamentos]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5)
+    );
 
-    // Por gestão (apenas admin)
-    if (isAdmin) {
-      const gestoes = ["G1", "G2", "G3", "G4"];
-      const porG = gestoes.map(g => {
-        const orcs = orcamentos.filter(o => o.gestao === g);
-        return {
-          gestao: g,
-          total: orcs.length,
-          valor: orcs.reduce((s, o) => s + (parseFloat(o.total) || 0), 0),
-        };
-      }).filter(g => g.total > 0);
-      setPorGestao(porG);
+    // Por gestão (somente quando admin e aba Total)
+    if (isAdmin && effectiveFiltro === null) {
+      // Agrupar os próprios orcamentos por gestao
+      const gestaoMap: Record<string, { total: number; valor: number }> = {};
+      orcamentos.forEach(o => {
+        if (!o.gestao) return;
+        if (!gestaoMap[o.gestao]) gestaoMap[o.gestao] = { total: 0, valor: 0 };
+        gestaoMap[o.gestao].total++;
+        gestaoMap[o.gestao].valor += parseFloat(o.total) || 0;
+      });
+      setPorGestao(
+        Object.entries(gestaoMap)
+          .map(([gestao, d]) => ({ gestao, ...d }))
+          .sort((a, b) => a.gestao.localeCompare(b.gestao))
+      );
+    } else {
+      setPorGestao([]);
     }
 
     setAtualizado(new Date());
     setLoading(false);
   };
 
-  useEffect(() => { carregar(); }, [gestaoFiltro]);
+  useEffect(() => { carregar(); }, [selectedGestaoAdmin, gestaoFiltro]);
 
+  // ── Helpers visuais ───────────────────────────────────────────────────────
   const statusIcon = (status: string) => {
-    if (status === "aprovado") return <CheckCircle2 size={13} className="text-emerald-600" />;
-    if (status === "enviado")  return <Send size={13} className="text-blue-600" />;
+    if (status === "aprovado")  return <CheckCircle2 size={13} className="text-emerald-600" />;
+    if (status === "enviado")   return <Send size={13} className="text-blue-600" />;
     if (status === "rejeitado") return <XCircle size={13} className="text-red-500" />;
     return <FileText size={13} className="text-gray-400" />;
   };
@@ -191,15 +244,18 @@ export default function Dashboard() {
 
   const maxGestaoValor = Math.max(...porGestao.map(g => g.valor), 1);
 
+  // Título da aba/filtro atual
+  const tituloFiltro = effectiveFiltro ? labelGestao(effectiveFiltro) : "Visão geral do negócio";
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
+    <div className="space-y-5 bg-[#dbdbdb] min-h-screen p-6 -m-6">
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[#1a4168]">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {gestaoFiltro ? `Visão da ${gestaoLabel[gestaoFiltro] || gestaoFiltro}` : "Visão geral do negócio"}
-          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">{tituloFiltro}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="gap-1.5 font-normal">
@@ -213,7 +269,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* ── Abas de gestão (admin) ── */}
+      {isAdmin && gestoesDinamicas.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 p-1.5 bg-white/70 backdrop-blur rounded-xl border border-border/50 w-fit shadow-sm">
+          <button
+            onClick={() => setSelectedGestaoAdmin(null)}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              selectedGestaoAdmin === null
+                ? "bg-[#1a4168] text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            }`}
+          >
+            Total
+          </button>
+          {gestoesDinamicas.map(g => (
+            <button
+              key={g}
+              onClick={() => setSelectedGestaoAdmin(g)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                selectedGestaoAdmin === g
+                  ? "bg-[#1a4168] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              {labelGestao(g)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Ações rápidas ── */}
+      <AcoesRapidas onNovaTarefa={() => setFocarNovaTarefa(true)} />
+
+      {/* ── KPIs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
           {
@@ -222,7 +310,6 @@ export default function Dashboard() {
             sub: `${orcamentosAprovados} aprovados`,
             icon: CheckCircle2,
             iconBg: "bg-emerald-100", iconColor: "text-emerald-600",
-            badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
           },
           {
             title: "Orçamentos Pendentes",
@@ -230,7 +317,6 @@ export default function Dashboard() {
             sub: `de ${totalOrcamentos} no total`,
             icon: Clock,
             iconBg: "bg-amber-100", iconColor: "text-amber-600",
-            badgeColor: "bg-amber-100 text-amber-700 border-amber-200",
           },
           {
             title: "Oportunidades Abertas",
@@ -238,7 +324,6 @@ export default function Dashboard() {
             sub: "em andamento",
             icon: Target,
             iconBg: "bg-blue-100", iconColor: "text-blue-600",
-            badgeColor: "bg-blue-100 text-blue-700 border-blue-200",
           },
           {
             title: "Ticket Médio",
@@ -246,7 +331,6 @@ export default function Dashboard() {
             sub: "por orçamento aprovado",
             icon: DollarSign,
             iconBg: "bg-amber-50", iconColor: "text-amber-600",
-            badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
           },
         ].map(kpi => (
           <Card key={kpi.title} className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
@@ -266,9 +350,9 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Orçamentos por status */}
+      {/* ── Gráficos ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Pizza por status */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="font-heading text-base">Orçamentos por Status</CardTitle>
@@ -304,7 +388,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Tendência últimos 6 meses */}
+        {/* Área 6 meses */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="font-heading text-base">Orçamentos — Últimos 6 Meses</CardTitle>
@@ -334,8 +418,27 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recentes + Por Gestão */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── IA + Alertas ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2">
+          <CardIA />
+        </div>
+        <CardAlertas />
+      </div>
+
+      {/* ── Tarefas + Agenda (FIXOS — nunca filtrados) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2">
+          <CardTarefas
+            focarNovaTarefa={focarNovaTarefa}
+            onFocoConcluido={() => setFocarNovaTarefa(false)}
+          />
+        </div>
+        <CardAgenda />
+      </div>
+
+      {/* ── Recentes + Por Gestão / Comissão ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Orçamentos recentes */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3">
@@ -346,7 +449,7 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground text-center py-6">Carregando...</p>
             ) : recentes.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum orçamento encontrado</p>
-            ) : recentes.map((o, i) => (
+            ) : recentes.map(o => (
               <div key={o.id} className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0">
                 <div className="p-1.5 rounded-lg bg-muted mt-0.5 shrink-0">
                   {statusIcon(o.status)}
@@ -370,8 +473,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Por gestão (admin) ou Resumo (comercial) */}
-        {isAdmin ? (
+        {/* Lado direito: Por Gestão (admin + Total) | Comissão (comercial) | vazio (admin + gestão) */}
+        {isAdmin && effectiveFiltro === null ? (
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="font-heading text-base flex items-center gap-2">
@@ -385,18 +488,12 @@ export default function Dashboard() {
               ) : porGestao.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">Sem dados por gestão</p>
               ) : porGestao.map(g => {
-                const GESTAO_COLORS: Record<string, string> = {
-                  G1: "hsl(224, 64%, 33%)",
-                  G2: "hsl(152, 60%, 40%)",
-                  G3: "hsl(25, 90%, 55%)",
-                  G4: "hsl(270, 55%, 55%)",
-                };
-                const cor = GESTAO_COLORS[g.gestao] || "hsl(215, 16%, 65%)";
+                const cor = gestaoColor(g.gestao);
                 const pct = Math.round((g.valor / maxGestaoValor) * 100);
                 return (
                   <div key={g.gestao} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{gestaoLabel[g.gestao] || g.gestao}</span>
+                      <span className="font-medium">{labelGestao(g.gestao)}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{g.total} orç.</span>
                         <span className="text-xs font-semibold w-28 text-right">{formatCurrencyFull(g.valor)}</span>
@@ -411,17 +508,23 @@ export default function Dashboard() {
               })}
             </CardContent>
           </Card>
+        ) : !isAdmin ? (
+          <CardComissao />
         ) : (
+          /* Admin com gestão específica: resumo rápido */
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="font-heading text-base">Meu Resumo</CardTitle>
+              <CardTitle className="font-heading text-base flex items-center gap-2">
+                <Building2 size={16} />
+                Resumo — {labelGestao(effectiveFiltro!)}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {[
-                { label: "Total de Orçamentos", value: totalOrcamentos, icon: FileText, color: "text-blue-600", bg: "bg-blue-100" },
-                { label: "Pendentes de Retorno", value: orcamentosPendentes, icon: Clock, color: "text-amber-600", bg: "bg-amber-100" },
-                { label: "Aprovados", value: orcamentosAprovados, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
-                { label: "Clientes Cadastrados", value: totalClientes, icon: Users, color: "text-purple-600", bg: "bg-purple-100" },
+                { label: "Total de Orçamentos",   value: totalOrcamentos,      icon: FileText,     color: "text-blue-600",    bg: "bg-blue-100" },
+                { label: "Pendentes de Retorno",  value: orcamentosPendentes,  icon: Clock,        color: "text-amber-600",   bg: "bg-amber-100" },
+                { label: "Aprovados",             value: orcamentosAprovados,  icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
+                { label: "Oportunidades Abertas", value: totalOportunidades,   icon: Users,        color: "text-purple-600",  bg: "bg-purple-100" },
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                   <div className="flex items-center gap-3">
@@ -433,6 +536,12 @@ export default function Dashboard() {
                   <span className="text-sm font-bold">{loading ? "—" : item.value}</span>
                 </div>
               ))}
+              <div className="pt-1 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Faturamento aprovado</span>
+                  <span className="text-sm font-bold text-emerald-700">{loading ? "—" : formatCurrencyFull(valorTotalAprovado)}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
