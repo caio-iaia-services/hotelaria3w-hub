@@ -15,7 +15,6 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { gestaoLabel } from "@/lib/userProfile";
-import { AcoesRapidas } from "@/components/dashboard/AcoesRapidas";
 import { CardIA } from "@/components/dashboard/CardIA";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardTarefas } from "@/components/dashboard/CardTarefas";
@@ -121,7 +120,6 @@ export default function Dashboard() {
   const [recentes, setRecentes]   = useState<any[]>([]);
   const [porGestao, setPorGestao] = useState<{ gestao: string; total: number; valor: number }[]>([]);
 
-  // Ação rápida → focar campo nova tarefa
   const [focarNovaTarefa, setFocarNovaTarefa] = useState(false);
 
   // ── Buscar gestões dinâmicas (admin) ──────────────────────────────────────
@@ -298,9 +296,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Ações rápidas ── */}
-      <AcoesRapidas onNovaTarefa={() => setFocarNovaTarefa(true)} />
-
       {/* ── KPIs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
@@ -429,10 +424,7 @@ export default function Dashboard() {
       {/* ── Tarefas + Agenda (FIXOS — nunca filtrados) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
-          <CardTarefas
-            focarNovaTarefa={focarNovaTarefa}
-            onFocoConcluido={() => setFocarNovaTarefa(false)}
-          />
+          <CardTarefas />
         </div>
         <CardAgenda />
       </div>
