@@ -280,7 +280,8 @@ export default function Clientes() {
         cidade: dados.cidade,
         estado: dados.estado?.toUpperCase() || null,
         cep: dados.cep || null,
-        // endereco e bairro: aguardando ALTER TABLE (colunas ainda não existem no banco)
+        endereco: dados.endereco || null,
+        bairro: dados.bairro || null,
         tipo: dados.tipo || "regular",
         status: dados.status || "ativo",
         pais: "Brasil",
