@@ -296,7 +296,12 @@ export default function Clientes() {
       fetchMetrics();
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Erro ao cadastrar cliente", description: err.message, variant: "destructive" });
+      const isDuplicateCnpj = err.message?.includes("clientes_cnpj_key") || err.code === "23505";
+      toast({
+        title: isDuplicateCnpj ? "CNPJ já cadastrado" : "Erro ao cadastrar cliente",
+        description: isDuplicateCnpj ? "Já existe um cliente com esse CNPJ na base." : err.message,
+        variant: "destructive",
+      });
     } finally {
       setSalvando(false);
     }
