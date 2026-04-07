@@ -87,12 +87,18 @@ export default function CrmGestao() {
     fetchCards();
   }, [fetchCards]);
 
-  // Reset selected ops when gestao or operations change
+  // Ao trocar de gestão: limpa imediatamente para evitar fetch com dados misturados
+  useEffect(() => {
+    setCards([]);
+    setSelectedOps([]);
+  }, [gestaoId]);
+
+  // Quando as operações da nova gestão carregarem: seleciona todas
   useEffect(() => {
     if (operations.length > 0) {
       setSelectedOps(operations);
     }
-  }, [gestaoId, operations]);
+  }, [operations]);
 
   const columns = useMemo((): KanbanColumnData[] => {
     return stageIds.map((stageId) => ({
