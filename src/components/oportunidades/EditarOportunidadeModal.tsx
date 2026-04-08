@@ -5,6 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   SelectGroup, SelectLabel,
@@ -17,6 +18,7 @@ import { Trash2, AlertTriangle, Plus, ArrowRight, ArrowLeftRight } from "lucide-
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { OportunidadeComCliente } from "@/lib/types";
+import { useFornecedoresOperacoes } from "@/hooks/useFornecedoresOperacoes";
 
 interface CrmCardItem {
   id: string;
@@ -36,19 +38,6 @@ interface CrmCardItem {
   created_at: string;
 }
 
-const operacaoGestaoMap: Record<string, string> = {
-  CASTOR: "G1", RUBBERMAID: "G1", SOLEMAR: "G1", UNIBLU: "G1",
-  TEKA: "G3", KENBY: "G3", "REDES DE DORMIR": "G3", SKARA: "G3",
-  MIDEA: "G4", "D-LOCK": "G4", "CIÇA ENXOVAIS": "G4", "IM IN": "G4",
-};
-
-const operacoesPorGestao: Record<string, string[]> = {
-  "Gestão 1": ["CASTOR", "RUBBERMAID", "SOLEMAR", "UNIBLU"],
-  "Gestão 2": [],
-  "Gestão 3": ["TEKA", "KENBY", "REDES DE DORMIR", "SKARA"],
-  "Gestão 4": ["MIDEA", "D-LOCK", "CIÇA ENXOVAIS", "IM IN"],
-};
-
 interface EditarOportunidadeModalProps {
   oportunidade: OportunidadeComCliente | null;
   open: boolean;
@@ -62,10 +51,18 @@ export function EditarOportunidadeModal({
   const [operacoes, setOperacoes] = useState<CrmCardItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Dynamic operations from DB
+  const { gestaoOperacoes, operacaoGestaoLabel } = useFornecedoresOperacoes(open);
+
   // Swap modal
   const [swapOpen, setSwapOpen] = useState(false);
   const [cardParaTrocar, setCardParaTrocar] = useState<CrmCardItem | null>(null);
   const [novaOperacao, setNovaOperacao] = useState("");
+
+  // Add fornecedor modal
+  const [adicionarOpen, setAdicionarOpen] = useState(false);
+  const [opsSelecionadas, setOpsSelecionadas] = useState<string[]>([]);
+  const [adicionando, setAdicionando] = useState(false);
 
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<CrmCardItem | null>(null);
@@ -96,8 +93,43 @@ export function EditarOportunidadeModal({
       setCardParaTrocar(null);
       setNovaOperacao("");
       setDeleteTarget(null);
+      setAdicionarOpen(false);
+      setOpsSelecionadas([]);
     }
     onOpenChange(val);
+  };
+
+  // ── Add new fornecedor(es) ──
+  const confirmarAdicionar = async () => {
+    if (!oportunidade || opsSelecionadas.length === 0) return;
+    setAdicionando(true);
+    try {
+      const primeiroCard = operacoes[0];
+      const novosCards = opsSelecionadas.map((op) => ({
+        oportunidade_id: oportunidade.id,
+        cliente_id: primeiroCard?.cliente_id || oportunidade.cliente_id,
+        operacao: op,
+        gestao: operacaoGestaoLabel[op] || "G1",
+        estagio: "lead" as const,
+        cliente_nome: primeiroCard?.cliente_nome || oportunidade.cliente?.nome_fantasia || "",
+        cliente_cnpj: primeiroCard?.cliente_cnpj || oportunidade.cliente?.cnpj || "",
+        cliente_cidade: primeiroCard?.cliente_cidade || oportunidade.cliente?.cidade || "",
+        cliente_estado: primeiroCard?.cliente_estado || oportunidade.cliente?.estado || "",
+      }));
+
+      const { error } = await supabase.from("crm_cards").insert(novosCards);
+      if (error) throw error;
+
+      await atualizarOportunidadeOperacoes(oportunidade.id);
+      toast.success(`${opsSelecionadas.length} fornecedor(es) adicionado(s)!`);
+      setAdicionarOpen(false);
+      setOpsSelecionadas([]);
+      buscarOperacoes(oportunidade.id);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao adicionar fornecedor");
+    } finally {
+      setAdicionando(false);
+    }
   };
 
   // ── Swap ──
@@ -111,7 +143,7 @@ export function EditarOportunidadeModal({
     if (!novaOperacao || !cardParaTrocar || !oportunidade) return;
 
     try {
-      const novaGestao = operacaoGestaoMap[novaOperacao];
+      const novaGestao = operacaoGestaoLabel[novaOperacao] || "G1";
 
       // 1. Mark old card as substituted
       const { error: erroUpdate } = await supabase
@@ -329,7 +361,7 @@ export function EditarOportunidadeModal({
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => toast.info("Adicionar operação em desenvolvimento")}
+              onClick={() => { setOpsSelecionadas([]); setAdicionarOpen(true); }}
             >
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Novo Fornecedor
@@ -383,9 +415,9 @@ export function EditarOportunidadeModal({
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-card z-50">
-                  {Object.entries(operacoesPorGestao).map(([grupo, ops]) => (
-                    <SelectGroup key={grupo}>
-                      <SelectLabel>{grupo}</SelectLabel>
+                  {Object.entries(gestaoOperacoes).map(([gestao, ops]) => (
+                    <SelectGroup key={gestao}>
+                      <SelectLabel>Gestão {gestao}</SelectLabel>
                       {ops.map((op) => (
                         <SelectItem key={op} value={op} disabled={op === cardParaTrocar?.operacao}>
                           {op}
@@ -402,6 +434,66 @@ export function EditarOportunidadeModal({
             <Button variant="outline" onClick={() => setSwapOpen(false)}>Cancelar</Button>
             <Button onClick={confirmarTroca} disabled={!novaOperacao}>
               Confirmar Troca
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add new fornecedor dialog */}
+      <Dialog open={adicionarOpen} onOpenChange={(v) => { setAdicionarOpen(v); if (!v) setOpsSelecionadas([]); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar Fornecedor</DialogTitle>
+            <DialogDescription>Selecione os fornecedores a adicionar nesta oportunidade</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+            {Object.entries(gestaoOperacoes).map(([gestao, ops]) => {
+              const opsJaAdicionadas = new Set(operacoes.filter(o => !o.substituida).map(o => o.operacao));
+              const opsDisponiveis = ops.filter(op => !opsJaAdicionadas.has(op));
+              if (opsDisponiveis.length === 0) return null;
+              return (
+                <div key={gestao}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gestão {gestao}</p>
+                  <div className="space-y-2">
+                    {opsDisponiveis.map((op) => (
+                      <label key={op} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={opsSelecionadas.includes(op)}
+                          onCheckedChange={(checked) => {
+                            setOpsSelecionadas(prev =>
+                              checked ? [...prev, op] : prev.filter(o => o !== op)
+                            );
+                          }}
+                        />
+                        <span className="text-sm font-medium">{op}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {Object.values(gestaoOperacoes).flat().filter(op =>
+              !operacoes.filter(o => !o.substituida).map(o => o.operacao).includes(op)
+            ).length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Todos os fornecedores já estão nesta oportunidade.
+              </p>
+            )}
+          </div>
+
+          {opsSelecionadas.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {opsSelecionadas.map(op => (
+                <Badge key={op} variant="secondary" className="text-xs">{op}</Badge>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdicionarOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmarAdicionar} disabled={opsSelecionadas.length === 0 || adicionando}>
+              {adicionando ? "Adicionando..." : `Adicionar (${opsSelecionadas.length})`}
             </Button>
           </DialogFooter>
         </DialogContent>

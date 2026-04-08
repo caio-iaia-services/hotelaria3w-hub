@@ -245,6 +245,7 @@ export default function Clientes() {
   const handleSave = async (dados: Partial<Cliente>) => {
     if (!dados.id) return;
     const { id, created_at, ...rest } = dados as any;
+    if (rest.cnpj) rest.cnpj = rest.cnpj.replace(/\D/g, "");
     const { error } = await supabase.from("clientes").update(rest).eq("id", id);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -273,7 +274,7 @@ export default function Clientes() {
       const { error } = await supabase.from("clientes").insert({
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
-        cnpj: dados.cnpj,
+        cnpj: dados.cnpj ? dados.cnpj.replace(/\D/g, "") : null,
         segmento: dados.segmento || null,
         email: dados.email || null,
         telefone: dados.telefone || null,
