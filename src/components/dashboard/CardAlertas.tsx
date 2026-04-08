@@ -12,8 +12,13 @@ interface Alerta {
   count: number;
 }
 
-export function CardAlertas() {
-  const { gestaoFiltro } = useAuth();
+interface CardAlertasProps {
+  gestaoFiltro?: string | null;
+}
+
+export function CardAlertas({ gestaoFiltro: gestaoFiltroProps }: CardAlertasProps = {}) {
+  const { gestaoFiltro: gestaoFiltroAuth } = useAuth();
+  const gestaoFiltro = gestaoFiltroProps !== undefined ? gestaoFiltroProps : gestaoFiltroAuth;
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -108,7 +113,7 @@ export function CardAlertas() {
     setLoading(false);
   };
 
-  useEffect(() => { carregar(); }, [gestaoFiltro]);
+  useEffect(() => { carregar(); }, [gestaoFiltro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const estiloAlerta: Record<string, string> = {
     critico: "border-red-200 bg-red-50",

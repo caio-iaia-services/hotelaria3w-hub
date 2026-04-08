@@ -141,7 +141,7 @@ export default function Dashboard() {
     setLoading(true);
 
     const baseQuery = () => {
-      let q = supabase.from("orcamentos").select("*");
+      let q = supabase.from("orcamentos").select("id, numero, status, total, created_at, gestao, cliente_nome, cliente_razao_social, fornecedor_nome, operacao").limit(10000);
       if (effectiveFiltro) q = (q as any).eq("gestao", effectiveFiltro);
       return q;
     };
@@ -418,7 +418,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <CardIA />
         </div>
-        <CardAlertas />
+        <CardAlertas gestaoFiltro={effectiveFiltro} />
       </div>
 
       {/* ── Tarefas + Agenda (FIXOS — nunca filtrados) ── */}
