@@ -109,9 +109,7 @@ interface ClienteAtual {
   razao_social: string | null;
   email: string | null;
   telefone: string | null;
-  logradouro: string | null;
-  numero: string | null;
-  complemento: string | null;
+  endereco: string | null;
   bairro: string | null;
   cidade: string | null;
   estado: string | null;
@@ -120,11 +118,9 @@ interface ClienteAtual {
 
 function montarEnderecoCliente(cliente?: ClienteAtual | null) {
   if (!cliente) return null;
-  const logradouroNumero = [cliente.logradouro, cliente.numero].filter(Boolean).join(", ");
   const cidadeEstado = [cliente.cidade, cliente.estado].filter(Boolean).join("/");
   const partes = [
-    logradouroNumero,
-    cliente.complemento,
+    cliente.endereco,
     cliente.bairro,
     cidadeEstado,
     cliente.cep ? `CEP: ${cliente.cep}` : null,
@@ -252,7 +248,7 @@ export default function Orcamentos() {
         const { data: clientes } = await supabase
           .from("clientes")
           .select(
-            "id, nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep",
+            "id, nome_fantasia, cnpj, razao_social, email, telefone, endereco, bairro, cidade, estado, cep",
           )
           .in("id", clienteIds);
         if (clientes) clienteMap = Object.fromEntries(clientes.map((c: any) => [c.id, c as ClienteAtual]));
@@ -430,7 +426,7 @@ export default function Orcamentos() {
         ? supabase
             .from("clientes")
             .select(
-              "id, nome_fantasia, cnpj, razao_social, email, telefone, logradouro, numero, complemento, bairro, cidade, estado, cep",
+              "id, nome_fantasia, cnpj, razao_social, email, telefone, endereco, bairro, cidade, estado, cep",
             )
             .eq("id", orcamentoBase.cliente_id)
             .maybeSingle()
