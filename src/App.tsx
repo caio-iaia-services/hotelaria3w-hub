@@ -19,6 +19,7 @@ import Fornecedores from "./pages/Fornecedores";
 import Orcamentos from "./pages/Orcamentos";
 import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import Atendimento from "./pages/Atendimento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,8 +52,9 @@ const App = () => (
               <Route path="/orcamentos" element={<Protected><Orcamentos /></Protected>} />
               <Route path="/admin/email" element={<Protected><ConfiguracoesEmail /></Protected>} />
               <Route path="/admin/usuarios" element={<Protected><AdminUsuarios /></Protected>} />
+              <Route path="/atendimento" element={<Protected><Atendimento /></Protected>} />
               {[
-                "/atendimento", "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
+                "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
                 "/clientes/hospitalar", "/buscar", "/marketing", "/financeiro", "/admin",
               ].map((path) => (
                 <Route key={path} path={path} element={<Protected><PlaceholderPage /></Protected>} />

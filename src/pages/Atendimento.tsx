@@ -1,0 +1,534 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
+import {
+  MessageCircle, Send, RefreshCw, Pause, Play,
+  Bot, User, Users, Phone, Search, ChevronRight,
+  Wifi, WifiOff,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Contato {
+  id: string;
+  telefone: string;
+  nome: string | null;
+  tipo: string;
+  canal_atribuido: string | null;
+}
+
+interface Chat {
+  id: string;
+  contato_id: string;
+  canal: string;
+  status: string;
+  ia_ativa: boolean;
+  ultima_mensagem_em: string | null;
+  contato?: Contato;
+  ultima_mensagem?: string;
+  nao_lidas?: number;
+}
+
+interface Mensagem {
+  id: string;
+  chat_id: string;
+  origem: "cliente" | "ia" | "humano";
+  conteudo: string;
+  tipo: string;
+  lida: boolean;
+  criado_em: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const CANAIS = [
+  { key: "IA",  label: "Central IA",  cor: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" },
+  { key: "G1",  label: "Gestão 1",    cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
+  { key: "G4",  label: "Gestão 4",    cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
+  { key: "ADM", label: "ADM",         cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+];
+
+function formatHora(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDataHora(iso: string) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (d.toDateString() === hoje.toDateString()) return formatHora(iso);
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function BolhaMsg({ msg }: { msg: Mensagem }) {
+  const isCliente = msg.origem === "cliente";
+  const isIA = msg.origem === "ia";
+  return (
+    <div className={cn("flex gap-2 mb-3", isCliente ? "flex-row" : "flex-row-reverse")}>
+      <div
+        className={cn(
+          "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+          isCliente ? "bg-slate-200" : isIA ? "bg-purple-100" : "bg-blue-100"
+        )}
+      >
+        {isCliente
+          ? <User size={13} className="text-slate-600" />
+          : isIA
+            ? <Bot size={13} className="text-purple-600" />
+            : <User size={13} className="text-blue-600" />}
+      </div>
+      <div className={cn("max-w-[72%]", isCliente ? "" : "items-end flex flex-col")}>
+        <div
+          className={cn(
+            "px-3 py-2 rounded-2xl text-sm leading-relaxed",
+            isCliente
+              ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
+              : isIA
+                ? "bg-purple-600 text-white rounded-tr-sm"
+                : "bg-blue-600 text-white rounded-tr-sm"
+          )}
+        >
+          {msg.conteudo}
+        </div>
+        <span className="text-[10px] text-muted-foreground mt-1 px-1">
+          {formatHora(msg.criado_em)}
+          {!isCliente && (
+            <span className="ml-1 opacity-70">{isIA ? "• IA" : "• Humano"}</span>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── ChatView ─────────────────────────────────────────────────────────────────
+function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) => void }) {
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const carregar = useCallback(async () => {
+    const { data } = await supabase
+      .from("mensagens")
+      .select("*")
+      .eq("chat_id", chat.id)
+      .order("criado_em", { ascending: true })
+      .limit(200);
+    setMensagens((data as Mensagem[]) ?? []);
+    setLoading(false);
+  }, [chat.id]);
+
+  useEffect(() => {
+    setLoading(true);
+    carregar();
+
+    const sub = supabase
+      .channel(`mensagens-${chat.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensagens", filter: `chat_id=eq.${chat.id}` }, (payload) => {
+        setMensagens(prev => [...prev, payload.new as Mensagem]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(sub); };
+  }, [chat.id, carregar]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [mensagens]);
+
+  const enviar = async () => {
+    if (!texto.trim()) return;
+    setEnviando(true);
+    const msg = texto.trim();
+    setTexto("");
+    const { error } = await supabase.from("mensagens").insert({
+      chat_id: chat.id,
+      origem: "humano",
+      conteudo: msg,
+      tipo: "texto",
+    });
+    if (error) {
+      toast.error("Erro ao enviar mensagem");
+      setTexto(msg);
+    } else {
+      // atualizar ultima_mensagem_em no chat
+      await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
+    }
+    setEnviando(false);
+  };
+
+  const canalInfo = CANAIS.find(c => c.key === chat.canal) ?? CANAIS[0];
+  const nomeContato = chat.contato?.nome || chat.contato?.telefone || "Desconhecido";
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
+            <Phone size={15} className="text-slate-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-tight">{nomeContato}</p>
+            <p className="text-[11px] text-muted-foreground">{chat.contato?.telefone}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={cn("text-[10px] px-2 h-5", canalInfo.cor, canalInfo.bg, canalInfo.border)}>
+            {canalInfo.label}
+          </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => onToggleIA(chat)}
+          >
+            {chat.ia_ativa
+              ? <><Pause size={11} /> Pausar IA</>
+              : <><Play size={11} /> Retomar IA</>}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mensagens */}
+      <ScrollArea className="flex-1 px-4 py-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => <div key={i} className="h-10 rounded-lg bg-muted animate-pulse" />)}
+          </div>
+        ) : mensagens.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <MessageCircle size={32} className="mb-2 opacity-30" />
+            <p className="text-sm">Nenhuma mensagem ainda</p>
+          </div>
+        ) : (
+          mensagens.map(msg => <BolhaMsg key={msg.id} msg={msg} />)
+        )}
+        <div ref={bottomRef} />
+      </ScrollArea>
+
+      {/* Input */}
+      <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0">
+        {!chat.ia_ativa ? (
+          <div className="flex gap-2">
+            <Input
+              value={texto}
+              onChange={e => setTexto(e.target.value)}
+              placeholder="Digite uma mensagem..."
+              className="text-sm h-9"
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && enviar()}
+            />
+            <Button size="sm" className="h-9 px-3" onClick={enviar} disabled={enviando || !texto.trim()}>
+              <Send size={14} />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+            <Bot size={13} className="text-purple-500" />
+            IA está respondendo automaticamente. Pause para assumir o atendimento.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ListaChats ───────────────────────────────────────────────────────────────
+function ListaChats({
+  canal, chats, chatSelecionado, onSelecionar
+}: {
+  canal: string;
+  chats: Chat[];
+  chatSelecionado: Chat | null;
+  onSelecionar: (c: Chat) => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const filtrados = chats.filter(c =>
+    c.canal === canal &&
+    (busca === "" ||
+      (c.contato?.nome ?? "").toLowerCase().includes(busca.toLowerCase()) ||
+      (c.contato?.telefone ?? "").includes(busca))
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b border-border/50 shrink-0">
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar conversa..."
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        {filtrados.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground px-4 text-center">
+            <MessageCircle size={28} className="mb-2 opacity-30" />
+            <p className="text-xs">Nenhuma conversa {canal === "IA" ? "no canal IA" : `em ${canal}`}</p>
+          </div>
+        ) : (
+          filtrados.map(chat => {
+            const ativo = chatSelecionado?.id === chat.id;
+            const nome = chat.contato?.nome || chat.contato?.telefone || "Desconhecido";
+            return (
+              <button
+                key={chat.id}
+                onClick={() => onSelecionar(chat)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 border-b border-border/30 hover:bg-muted/50 transition-colors text-left",
+                  ativo && "bg-muted"
+                )}
+              >
+                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                  <User size={14} className="text-slate-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold truncate">{nome}</p>
+                    {chat.ultima_mensagem_em && (
+                      <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
+                        {formatDataHora(chat.ultima_mensagem_em)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {chat.ia_ativa
+                      ? <Bot size={10} className="text-purple-500 shrink-0" />
+                      : <User size={10} className="text-blue-500 shrink-0" />}
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {chat.ultima_mensagem || chat.contato?.telefone}
+                    </p>
+                  </div>
+                </div>
+                {(chat.nao_lidas ?? 0) > 0 && (
+                  <Badge className="h-4 min-w-[16px] text-[10px] px-1 bg-green-500 shrink-0">
+                    {chat.nao_lidas}
+                  </Badge>
+                )}
+                <ChevronRight size={12} className="text-muted-foreground shrink-0" />
+              </button>
+            );
+          })
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+// ─── Atendimento (página principal) ──────────────────────────────────────────
+export default function Atendimento() {
+  const { isAdmin, gestaoFiltro } = useAuth();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chatSelecionado, setChatSelecionado] = useState<Chat | null>(null);
+  const [tabAtiva, setTabAtiva] = useState("IA");
+  const [online, setOnline] = useState(true);
+
+  // Determina quais canais este usuário pode ver
+  const canaisVisiveis = (() => {
+    if (isAdmin) return CANAIS;
+    if (gestaoFiltro === "G1") return CANAIS.filter(c => c.key === "IA" || c.key === "G1");
+    if (gestaoFiltro === "G4") return CANAIS.filter(c => c.key === "IA" || c.key === "G4");
+    if (gestaoFiltro === "ADM") return CANAIS.filter(c => c.key === "IA" || c.key === "ADM");
+    return CANAIS.filter(c => c.key === "IA");
+  })();
+
+  const carregarChats = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("chats")
+      .select(`
+        id, contato_id, canal, status, ia_ativa, ultima_mensagem_em,
+        contato:contatos_whatsapp(id, telefone, nome, tipo, canal_atribuido)
+      `)
+      .in("canal", canaisVisiveis.map(c => c.key))
+      .in("status", ["ativo", "pausado"])
+      .order("ultima_mensagem_em", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      toast.error("Erro ao carregar chats");
+      setLoading(false);
+      return;
+    }
+
+    // Para cada chat, buscar última mensagem e contagem de não lidas
+    const chatsComInfo: Chat[] = await Promise.all(
+      ((data as unknown as Chat[]) ?? []).map(async chat => {
+        const { data: msgs } = await supabase
+          .from("mensagens")
+          .select("conteudo, lida, origem")
+          .eq("chat_id", chat.id)
+          .order("criado_em", { ascending: false })
+          .limit(1);
+        const { count: naoLidas } = await supabase
+          .from("mensagens")
+          .select("id", { count: "exact", head: true })
+          .eq("chat_id", chat.id)
+          .eq("lida", false)
+          .eq("origem", "cliente");
+        return {
+          ...chat,
+          ultima_mensagem: msgs?.[0]?.conteudo ?? undefined,
+          nao_lidas: naoLidas ?? 0,
+        };
+      })
+    );
+
+    setChats(chatsComInfo);
+    setLoading(false);
+  }, [canaisVisiveis.map(c => c.key).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    carregarChats();
+
+    // Real-time: novo chat
+    const subChats = supabase
+      .channel("chats-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => {
+        carregarChats();
+      })
+      .subscribe((status) => {
+        setOnline(status === "SUBSCRIBED");
+      });
+
+    return () => { supabase.removeChannel(subChats); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleIA = async (chat: Chat) => {
+    const novoEstado = !chat.ia_ativa;
+    const { error } = await supabase
+      .from("chats")
+      .update({ ia_ativa: novoEstado })
+      .eq("id", chat.id);
+    if (error) { toast.error("Erro ao alterar modo IA"); return; }
+    setChats(prev => prev.map(c => c.id === chat.id ? { ...c, ia_ativa: novoEstado } : c));
+    if (chatSelecionado?.id === chat.id) {
+      setChatSelecionado(prev => prev ? { ...prev, ia_ativa: novoEstado } : prev);
+    }
+    toast.success(novoEstado ? "IA retomada" : "IA pausada — você assumiu o atendimento");
+  };
+
+  const totalNaoLidasCanal = (canal: string) =>
+    chats.filter(c => c.canal === canal).reduce((acc, c) => acc + (c.nao_lidas ?? 0), 0);
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      {/* Topo */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+            <MessageCircle size={15} className="text-purple-600" />
+          </div>
+          <div>
+            <h1 className="font-heading text-base font-semibold">Atendimento</h1>
+            <p className="text-[11px] text-muted-foreground">WhatsApp · Central de conversas</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className={cn("flex items-center gap-1.5 text-[11px]", online ? "text-emerald-600" : "text-red-500")}>
+            {online ? <Wifi size={12} /> : <WifiOff size={12} />}
+            {online ? "Online" : "Sem conexão"}
+          </div>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={carregarChats} disabled={loading}>
+            <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
+            Atualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* Corpo */}
+      <div className="flex flex-1 min-h-0">
+        <Tabs
+          value={tabAtiva}
+          onValueChange={v => { setTabAtiva(v); setChatSelecionado(null); }}
+          className="flex flex-col w-full"
+        >
+          {/* Tabs header */}
+          <div className="px-4 pt-3 pb-0 border-b border-border/50 bg-card shrink-0">
+            <TabsList className="h-8 gap-1 bg-transparent p-0">
+              {canaisVisiveis.map(canal => {
+                const naoLidas = totalNaoLidasCanal(canal.key);
+                return (
+                  <TabsTrigger
+                    key={canal.key}
+                    value={canal.key}
+                    className={cn(
+                      "h-8 px-3 text-xs gap-1.5 data-[state=active]:border-b-2 rounded-none",
+                      tabAtiva === canal.key ? `${canal.cor} border-current` : ""
+                    )}
+                  >
+                    {canal.key === "IA" ? <Bot size={12} /> : <Users size={12} />}
+                    {canal.label}
+                    {naoLidas > 0 && (
+                      <Badge className="h-4 min-w-[16px] text-[10px] px-1 bg-red-500">{naoLidas}</Badge>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
+
+          {/* Conteúdo das tabs */}
+          {canaisVisiveis.map(canal => (
+            <TabsContent
+              key={canal.key}
+              value={canal.key}
+              className="flex-1 min-h-0 m-0 flex"
+            >
+              {/* Lista de chats */}
+              <div className="w-72 border-r border-border/50 flex flex-col shrink-0">
+                {loading ? (
+                  <div className="p-3 space-y-2">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />)}
+                  </div>
+                ) : (
+                  <ListaChats
+                    canal={canal.key}
+                    chats={chats}
+                    chatSelecionado={chatSelecionado}
+                    onSelecionar={c => { setChatSelecionado(c); setTabAtiva(canal.key); }}
+                  />
+                )}
+              </div>
+
+              {/* Área de chat */}
+              <div className="flex-1 min-w-0">
+                {chatSelecionado && chatSelecionado.canal === canal.key ? (
+                  <ChatView chat={chatSelecionado} onToggleIA={toggleIA} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
+                      {canal.key === "IA"
+                        ? <Bot size={28} className={canal.cor} />
+                        : <MessageCircle size={28} className={canal.cor} />}
+                    </div>
+                    <p className="text-sm font-medium">{canal.label}</p>
+                    <p className="text-xs mt-1">
+                      {chats.filter(c => c.canal === canal.key).length === 0
+                        ? "Nenhuma conversa ativa"
+                        : "Selecione uma conversa"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+    </div>
+  );
+}
