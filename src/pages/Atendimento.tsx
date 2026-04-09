@@ -53,7 +53,7 @@ interface Mensagem {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CANAIS = [
-  { key: "IA",  label: "Central IA",  cor: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" },
+  { key: "IA",  label: "Central IA",  cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
   { key: "G1",  label: "Gestão 1",    cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
   { key: "G4",  label: "Gestão 4",    cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
   { key: "ADM", label: "ADM",         cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
@@ -82,13 +82,13 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
       <div
         className={cn(
           "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-          isCliente ? "bg-slate-200" : isIA ? "bg-purple-100" : "bg-blue-100"
+          isCliente ? "bg-slate-200" : isIA ? "bg-[#164B6E]" : "bg-blue-100"
         )}
       >
         {isCliente
           ? <User size={13} className="text-slate-600" />
           : isIA
-            ? <Bot size={13} className="text-purple-600" />
+            ? <WhatsAppIcon size={13} className="text-white" />
             : <User size={13} className="text-blue-600" />}
       </div>
       <div className={cn("max-w-[72%]", isCliente ? "" : "items-end flex flex-col")}>
@@ -98,7 +98,7 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
             isCliente
               ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
               : isIA
-                ? "bg-purple-600 text-white rounded-tr-sm"
+                ? "bg-[#164B6E] text-white rounded-tr-sm"
                 : "bg-blue-600 text-white rounded-tr-sm"
           )}
         >
@@ -240,7 +240,7 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
           </div>
         ) : (
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-            <Bot size={13} className="text-purple-500" />
+            <WhatsAppIcon size={13} className="text-[#164B6E]" />
             IA está respondendo automaticamente. Pause para assumir o atendimento.
           </div>
         )}
@@ -312,7 +312,7 @@ function ListaChats({
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     {chat.ia_ativa
-                      ? <Bot size={10} className="text-purple-500 shrink-0" />
+                      ? <WhatsAppIcon size={10} className="text-[#164B6E] shrink-0" />
                       : <User size={10} className="text-blue-500 shrink-0" />}
                     <p className="text-[11px] text-muted-foreground truncate">
                       {chat.ultima_mensagem || chat.contato?.telefone}
@@ -436,8 +436,8 @@ export default function Atendimento() {
       {/* Topo */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-            <WhatsAppIcon size={15} className="text-purple-600" />
+          <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+            <WhatsAppIcon size={15} className="text-white" />
           </div>
           <div>
             <h1 className="font-heading text-base font-semibold">Atendimento</h1>
@@ -518,7 +518,7 @@ export default function Atendimento() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
-                      <WhatsAppIcon size={28} className={canal.cor} />
+                      <WhatsAppIcon size={28} className={canal.key === "IA" ? "text-white" : canal.cor} />
                     </div>
                     <p className="text-sm font-medium">{canal.label}</p>
                     <p className="text-xs mt-1">
