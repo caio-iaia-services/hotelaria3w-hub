@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import {
   MessageCircle, Send, RefreshCw, Pause, Play,
-  Bot, User, Users, Phone, Search, ChevronRight,
+  User, Users, Phone, Search, ChevronRight,
   Wifi, WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -477,7 +477,7 @@ export default function Atendimento() {
                       tabAtiva === canal.key ? `${canal.cor} border-current` : ""
                     )}
                   >
-                    {canal.key === "IA" ? <Bot size={12} /> : <Users size={12} />}
+                    {canal.key === "IA" ? <WhatsAppIcon size={12} /> : <Users size={12} />}
                     {canal.label}
                     {naoLidas > 0 && (
                       <Badge className="h-4 min-w-[16px] text-[10px] px-1 bg-red-500">{naoLidas}</Badge>
