@@ -20,6 +20,7 @@ import Orcamentos from "./pages/Orcamentos";
 import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import Atendimento from "./pages/Atendimento";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/" element={<Login />} />
               <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
               <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
