@@ -143,8 +143,11 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
 
     const sub = supabase
       .channel(`mensagens-${chat.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensagens", filter: `chat_id=eq.${chat.id}` }, (payload) => {
-        setMensagens(prev => [...prev, payload.new as Mensagem]);
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensagens" }, (payload) => {
+        const nova = payload.new as Mensagem;
+        if (nova.chat_id === chat.id) {
+          setMensagens(prev => [...prev, nova]);
+        }
       })
       .subscribe();
 
