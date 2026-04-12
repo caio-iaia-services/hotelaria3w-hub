@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -171,7 +170,6 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
       toast.error("Erro ao enviar mensagem");
       setTexto(msg);
     } else {
-      // atualizar ultima_mensagem_em no chat
       await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
     }
     setEnviando(false);
@@ -181,7 +179,7 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
   const nomeContato = chat.contato?.nome || chat.contato?.telefone || "Desconhecido";
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col" style={{ height: "100%" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">
@@ -210,8 +208,8 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
         </div>
       </div>
 
-      {/* Mensagens */}
-      <ScrollArea className="flex-1 px-4 py-4">
+      {/* Mensagens — div simples com overflow-y-auto, sem ScrollArea */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => <div key={i} className="h-10 rounded-lg bg-muted animate-pulse" />)}
@@ -225,7 +223,7 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
           mensagens.map(msg => <BolhaMsg key={msg.id} msg={msg} />)
         )}
         <div ref={bottomRef} />
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0">
@@ -271,7 +269,7 @@ function ListaChats({
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col" style={{ height: "100%" }}>
       <div className="p-3 border-b border-border/50 shrink-0">
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -283,7 +281,8 @@ function ListaChats({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      {/* Lista com overflow-y-auto, sem ScrollArea */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filtrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-muted-foreground px-4 text-center">
             <MessageCircle size={28} className="mb-2 opacity-30" />
@@ -306,10 +305,10 @@ function ListaChats({
                   <User size={14} className="text-slate-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <p className="text-xs font-semibold truncate">{nome}</p>
                     {chat.ultima_mensagem_em && (
-                      <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
+                      <span className="text-[10px] text-muted-foreground shrink-0">
                         {formatDataHora(chat.ultima_mensagem_em)}
                       </span>
                     )}
@@ -333,7 +332,7 @@ function ListaChats({
             );
           })
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -347,7 +346,6 @@ export default function Atendimento() {
   const [tabAtiva, setTabAtiva] = useState("IA");
   const [online, setOnline] = useState(true);
 
-  // Determina quais canais este usuário pode ver
   const canaisVisiveis = (() => {
     if (isAdmin) return CANAIS;
     if (gestaoFiltro === "G1") return CANAIS.filter(c => c.key === "IA" || c.key === "G1");
@@ -375,7 +373,6 @@ export default function Atendimento() {
       return;
     }
 
-    // Para cada chat, buscar última mensagem e contagem de não lidas
     const chatsComInfo: Chat[] = await Promise.all(
       ((data as unknown as Chat[]) ?? []).map(async chat => {
         const { data: msgs } = await supabase
@@ -405,7 +402,6 @@ export default function Atendimento() {
   useEffect(() => {
     carregarChats();
 
-    // Real-time: novo chat
     const subChats = supabase
       .channel("chats-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => {
@@ -436,7 +432,7 @@ export default function Atendimento() {
     chats.filter(c => c.canal === canal).reduce((acc, c) => acc + (c.nao_lidas ?? 0), 0);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
       {/* Topo */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">
@@ -460,12 +456,12 @@ export default function Atendimento() {
         </div>
       </div>
 
-      {/* Corpo */}
-      <div className="flex flex-1 min-h-0">
+      {/* Corpo: Tabs ocupa todo o espaço restante */}
+      <div className="flex-1 min-h-0 flex flex-col">
         <Tabs
           value={tabAtiva}
           onValueChange={v => { setTabAtiva(v); setChatSelecionado(null); }}
-          className="flex flex-col w-full"
+          className="flex flex-col flex-1 min-h-0"
         >
           {/* Tabs header */}
           <div className="px-4 pt-3 pb-0 border-b border-border/50 bg-card shrink-0">
@@ -497,7 +493,7 @@ export default function Atendimento() {
             <TabsContent
               key={canal.key}
               value={canal.key}
-              className="flex-1 min-h-0 m-0 flex"
+              className="flex-1 min-h-0 m-0 data-[state=active]:flex"
             >
               {/* Lista de chats */}
               <div className="w-72 border-r border-border/50 flex flex-col shrink-0">
@@ -516,11 +512,11 @@ export default function Atendimento() {
               </div>
 
               {/* Área de chat */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex flex-col">
                 {chatSelecionado && chatSelecionado.canal === canal.key ? (
                   <ChatView key={chatSelecionado.id} chat={chatSelecionado} onToggleIA={toggleIA} />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
                     <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
                       <WhatsAppIcon size={28} className={canal.key === "IA" ? "text-white" : canal.cor} />
                     </div>
