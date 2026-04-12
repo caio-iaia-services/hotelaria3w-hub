@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import {
   MessageCircle, Send, RefreshCw, Pause, Play,
@@ -124,12 +124,16 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const carregar = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("mensagens")
       .select("*")
       .eq("chat_id", chat.id)
       .order("criado_em", { ascending: true })
       .limit(200);
+    if (error) {
+      console.error("[ChatView] Erro ao carregar mensagens:", error);
+      toast.error("Erro ao carregar mensagens");
+    }
     setMensagens((data as Mensagem[]) ?? []);
     setLoading(false);
   }, [chat.id]);
@@ -514,7 +518,7 @@ export default function Atendimento() {
               {/* Área de chat */}
               <div className="flex-1 min-w-0">
                 {chatSelecionado && chatSelecionado.canal === canal.key ? (
-                  <ChatView chat={chatSelecionado} onToggleIA={toggleIA} />
+                  <ChatView key={chatSelecionado.id} chat={chatSelecionado} onToggleIA={toggleIA} />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
