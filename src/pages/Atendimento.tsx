@@ -4,7 +4,7 @@ import { useAuth } from "@/components/AuthProvider";
 import {
   MessageCircle, Send, RefreshCw, Pause, Play,
   User, Users, Phone, Search, ChevronRight,
-  Wifi, WifiOff,
+  Wifi, WifiOff, Plus, X, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,14 @@ interface Mensagem {
   tipo: string;
   lida: boolean;
   criado_em: string;
+}
+
+interface ClienteBusca {
+  id: string;
+  nome_fantasia: string;
+  razao_social: string;
+  cnpj: string;
+  telefone: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -268,6 +276,304 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
   );
 }
 
+// ─── ModalNovaConversa ────────────────────────────────────────────────────────
+function ModalNovaConversa({
+  isOpen, onClose, canal, onConversaCriada,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  canal: string;
+  onConversaCriada: (chatId: string, canal: string) => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState<ClienteBusca[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const [mostrarDropdown, setMostrarDropdown] = useState(false);
+  const [telefone, setTelefone] = useState("");
+  const [nome, setNome] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setMostrarDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Busca com debounce
+  useEffect(() => {
+    if (busca.length < 2) { setResultados([]); setMostrarDropdown(false); return; }
+    const timer = setTimeout(async () => {
+      setBuscando(true);
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia, razao_social, cnpj, telefone")
+        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${busca}%`)
+        .eq("status", "ativo")
+        .limit(8);
+      setResultados((data as ClienteBusca[]) ?? []);
+      setMostrarDropdown(true);
+      setBuscando(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [busca]);
+
+  const selecionarCliente = (c: ClienteBusca) => {
+    setBusca(c.nome_fantasia);
+    setNome(c.nome_fantasia);
+    if (c.telefone) setTelefone(c.telefone.replace(/\D/g, ""));
+    setMostrarDropdown(false);
+  };
+
+  const limpar = () => {
+    setBusca(""); setResultados([]); setMostrarDropdown(false);
+    setTelefone(""); setNome(""); setMensagem("");
+  };
+
+  const handleClose = () => { limpar(); onClose(); };
+
+  const enviarNovaConversa = async () => {
+    const telLimpo = telefone.replace(/\D/g, "");
+    if (!telLimpo || !mensagem.trim()) {
+      toast.error("Preencha o telefone e a mensagem");
+      return;
+    }
+    setEnviando(true);
+
+    // 1. Find or create contato
+    let contatoId: string;
+    const { data: contatoExistente } = await supabase
+      .from("contatos_whatsapp")
+      .select("id")
+      .eq("telefone", telLimpo)
+      .maybeSingle();
+    if (contatoExistente) {
+      contatoId = contatoExistente.id;
+    } else {
+      const { data: novoContato, error: errContato } = await supabase
+        .from("contatos_whatsapp")
+        .insert({ telefone: telLimpo, nome: nome.trim() || null, tipo: "cliente" })
+        .select("id")
+        .single();
+      if (errContato || !novoContato) {
+        toast.error("Erro ao criar contato");
+        setEnviando(false);
+        return;
+      }
+      contatoId = novoContato.id;
+    }
+
+    // 2. Find or create chat no canal
+    const canalChat = canal !== "IA" ? canal : "G1";
+    const { data: chatExistente } = await supabase
+      .from("chats")
+      .select("id")
+      .eq("contato_id", contatoId)
+      .eq("canal", canalChat)
+      .eq("status", "ativo")
+      .maybeSingle();
+    let chatId: string;
+    if (chatExistente) {
+      chatId = chatExistente.id;
+    } else {
+      const { data: novoChat, error: errChat } = await supabase
+        .from("chats")
+        .insert({
+          contato_id: contatoId,
+          canal: canalChat,
+          status: "ativo",
+          ia_ativa: false,
+          ultima_mensagem_em: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (errChat || !novoChat) {
+        toast.error("Erro ao criar conversa");
+        setEnviando(false);
+        return;
+      }
+      chatId = novoChat.id;
+    }
+
+    // 3. Salvar mensagem
+    const { error: errMsg } = await supabase.from("mensagens").insert({
+      chat_id: chatId,
+      origem: "humano",
+      conteudo: mensagem.trim(),
+      tipo: "texto",
+    });
+    if (errMsg) {
+      toast.error("Erro ao salvar mensagem");
+      setEnviando(false);
+      return;
+    }
+    await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chatId);
+
+    // 4. Enviar via WhatsApp
+    const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
+    try {
+      await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone_cliente: telWA, mensagem: mensagem.trim() }),
+      });
+    } catch {
+      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
+    }
+
+    toast.success("Conversa iniciada!");
+    onConversaCriada(chatId, canalChat);
+    handleClose();
+    setEnviando(false);
+  };
+
+  if (!isOpen) return null;
+
+  const canalLabel = CANAIS.find(c => c.key === (canal !== "IA" ? canal : "G1"))?.label ?? canal;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-md mx-4 z-10 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+              <Plus size={15} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-sm">Nova Conversa</h2>
+              <p className="text-[11px] text-muted-foreground">Canal: <span className="font-medium text-foreground">{canalLabel}</span></p>
+            </div>
+          </div>
+          <button onClick={handleClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-4">
+
+          {/* Busca de cliente */}
+          <div ref={dropdownRef} className="relative">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1">
+              <Building2 size={11} /> Buscar cliente (opcional)
+            </label>
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                placeholder="Nome fantasia, razão social ou CNPJ..."
+                className="pl-8 text-sm h-9 pr-8"
+              />
+              {buscando && (
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-muted-foreground/30 border-t-[#164B6E] rounded-full animate-spin" />
+              )}
+              {busca && !buscando && (
+                <button onClick={() => { setBusca(""); setResultados([]); setMostrarDropdown(false); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            {mostrarDropdown && resultados.length > 0 && (
+              <div className="absolute top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-20 max-h-44 overflow-y-auto">
+                {resultados.map(c => (
+                  <button
+                    key={c.id}
+                    onMouseDown={() => selecionarCliente(c)}
+                    className="w-full flex items-start gap-2.5 px-3 py-2.5 hover:bg-muted text-left border-b border-border/30 last:border-0 transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <Building2 size={12} className="text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{c.nome_fantasia}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{c.razao_social}</p>
+                      <p className="text-[10px] text-muted-foreground/70">{c.cnpj}{c.telefone ? ` · ${c.telefone}` : ""}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {mostrarDropdown && resultados.length === 0 && !buscando && busca.length >= 2 && (
+              <div className="absolute top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-20 px-3 py-3 text-xs text-muted-foreground text-center">
+                Nenhum cliente encontrado — preencha os campos manualmente
+              </div>
+            )}
+          </div>
+
+          {/* Telefone */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Telefone WhatsApp <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={telefone}
+              onChange={e => setTelefone(e.target.value.replace(/\D/g, ""))}
+              placeholder="41999887766"
+              className="text-sm h-9 font-mono tracking-wide"
+              maxLength={13}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">Somente números · sem código do país</p>
+          </div>
+
+          {/* Nome */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nome do contato</label>
+            <Input
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder="Nome para identificar na conversa"
+              className="text-sm h-9"
+            />
+          </div>
+
+          {/* Mensagem */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Mensagem inicial <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={mensagem}
+              onChange={e => setMensagem(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && e.ctrlKey && enviarNovaConversa()}
+              placeholder="Digite a mensagem para iniciar a conversa..."
+              rows={3}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">Ctrl+Enter para enviar</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-5 py-4 border-t border-border/50 bg-muted/30">
+          <Button variant="outline" size="sm" className="flex-1 h-9 text-sm" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1 h-9 text-sm gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
+            onClick={enviarNovaConversa}
+            disabled={enviando || !telefone.trim() || !mensagem.trim()}
+          >
+            {enviando
+              ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <Send size={13} />}
+            {enviando ? "Enviando..." : "Iniciar conversa"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ListaChats ───────────────────────────────────────────────────────────────
 function ListaChats({
   canal, chats, chatSelecionado, onSelecionar
@@ -362,6 +668,8 @@ export default function Atendimento() {
   const [chatSelecionado, setChatSelecionado] = useState<Chat | null>(null);
   const [tabAtiva, setTabAtiva] = useState("IA");
   const [online, setOnline] = useState(true);
+  const [modalNovaConversa, setModalNovaConversa] = useState(false);
+  const [pendingChatId, setPendingChatId] = useState<string | null>(null);
 
   const canaisVisiveis = (() => {
     if (isAdmin) return CANAIS;
@@ -431,6 +739,25 @@ export default function Atendimento() {
     return () => { supabase.removeChannel(subChats); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Seleciona automaticamente o chat recém-criado após carregarChats()
+  useEffect(() => {
+    if (pendingChatId && chats.length > 0) {
+      const chat = chats.find(c => c.id === pendingChatId);
+      if (chat) {
+        setChatSelecionado(chat);
+        setPendingChatId(null);
+      }
+    }
+  }, [chats, pendingChatId]);
+
+  const onConversaCriada = async (chatId: string, canal: string) => {
+    setTabAtiva(canal);
+    setPendingChatId(chatId);
+    await carregarChats();
+  };
+
+  const canalNovaConversa = gestaoFiltro ?? (tabAtiva !== "IA" ? tabAtiva : "G1");
+
   const toggleIA = async (chat: Chat) => {
     const novoEstado = !chat.ia_ativa;
     // Ao reativar IA, devolve o chat ao canal IA
@@ -472,6 +799,10 @@ export default function Atendimento() {
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={carregarChats} disabled={loading}>
             <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             Atualizar
+          </Button>
+          <Button size="sm" className="h-7 text-xs gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={() => setModalNovaConversa(true)}>
+            <Plus size={11} />
+            Nova conversa
           </Button>
         </div>
       </div>
@@ -553,6 +884,13 @@ export default function Atendimento() {
           ))}
         </Tabs>
       </div>
+
+      <ModalNovaConversa
+        isOpen={modalNovaConversa}
+        onClose={() => setModalNovaConversa(false)}
+        canal={canalNovaConversa}
+        onConversaCriada={onConversaCriada}
+      />
     </div>
   );
 }
