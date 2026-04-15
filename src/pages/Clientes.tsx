@@ -97,6 +97,7 @@ type NovoClienteForm = {
   estado: string;
   cep: string;
   endereco: string;
+  complemento: string;
   bairro: string;
   tipo: string;
   status: string;
@@ -282,6 +283,7 @@ export default function Clientes() {
         estado: dados.estado?.toUpperCase() || null,
         cep: dados.cep || null,
         endereco: dados.endereco || null,
+        complemento: dados.complemento || null,
         bairro: dados.bairro || null,
         tipo: dados.tipo || "regular",
         status: dados.status || "ativo",
@@ -656,6 +658,11 @@ export default function Clientes() {
                 <Label>Bairro</Label>
                 <Input {...register("bairro")} placeholder="Centro" />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Complemento de endereço</Label>
+              <Input {...register("complemento")} placeholder="Sala 201, Bloco B, Andar 3..." />
             </div>
 
             {/* Configurações */}
