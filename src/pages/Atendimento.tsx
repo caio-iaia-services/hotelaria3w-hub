@@ -172,8 +172,22 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
     if (error) {
       toast.error("Erro ao enviar mensagem");
       setTexto(msg);
-    } else {
-      await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
+      setEnviando(false);
+      return;
+    }
+    await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
+    // Enviar via WhatsApp ao cliente
+    const tel = chat.contato?.telefone ?? "";
+    const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
+    try {
+      await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone_cliente: telefoneCliente, mensagem: msg }),
+      });
+    } catch (err) {
+      console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
+      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
     }
     setEnviando(false);
   };
@@ -419,14 +433,17 @@ export default function Atendimento() {
 
   const toggleIA = async (chat: Chat) => {
     const novoEstado = !chat.ia_ativa;
+    // Ao reativar IA, devolve o chat ao canal IA
+    const updates: { ia_ativa: boolean; canal?: string } = { ia_ativa: novoEstado };
+    if (novoEstado) updates.canal = "IA";
     const { error } = await supabase
       .from("chats")
-      .update({ ia_ativa: novoEstado })
+      .update(updates)
       .eq("id", chat.id);
     if (error) { toast.error("Erro ao alterar modo IA"); return; }
-    setChats(prev => prev.map(c => c.id === chat.id ? { ...c, ia_ativa: novoEstado } : c));
+    setChats(prev => prev.map(c => c.id === chat.id ? { ...c, ...updates } : c));
     if (chatSelecionado?.id === chat.id) {
-      setChatSelecionado(prev => prev ? { ...prev, ia_ativa: novoEstado } : prev);
+      setChatSelecionado(prev => prev ? { ...prev, ...updates } : prev);
     }
     toast.success(novoEstado ? "IA retomada" : "IA pausada — você assumiu o atendimento");
   };
