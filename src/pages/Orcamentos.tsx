@@ -649,7 +649,7 @@ export default function Orcamentos() {
         />
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 3500));
       await Promise.all(
         Array.from(tempDiv.querySelectorAll("img")).map(
           (img) => new Promise<void>((resolve) => {
@@ -770,6 +770,7 @@ export default function Orcamentos() {
         enderecoEntregaEditado.trim() || undefined
       );
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
+      if (!pdfBase64) throw new Error("Falha ao gerar o PDF — tente fechar e reabrir o orçamento antes de enviar.");
 
       toast.info("Enviando e-mail...");
       const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento", {
@@ -810,7 +811,11 @@ export default function Orcamentos() {
       buscarContadores();
     } catch (error: any) {
       console.error("❌ Erro ao enviar:", error);
-      toast.error("Erro ao enviar e-mail", { description: error?.message || "Tente novamente." });
+      const msg = error?.message || "Tente novamente.";
+      const descricao = msg === "Failed to fetch"
+        ? "Não foi possível conectar ao servidor de e-mail. Verifique sua conexão e tente novamente."
+        : msg;
+      toast.error("Erro ao enviar e-mail", { description: descricao });
     } finally {
       setEnviandoEmail(false);
     }
