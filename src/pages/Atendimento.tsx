@@ -5,6 +5,7 @@ import {
   MessageCircle, Send, RefreshCw, Pause, Play,
   User, Users, Phone, Search, ChevronRight,
   Wifi, WifiOff, Plus, X, Building2,
+  ArrowRightLeft, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,13 +123,39 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
   );
 }
 
+const LABEL_CANAL: Record<string, string> = {
+  IA:  "Recepção",
+  G1:  "Fabiano — G1",
+  G4:  "Alex — G4",
+  ADM: "ADM — Celso",
+};
+
 // ─── ChatView ─────────────────────────────────────────────────────────────────
-function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) => void }) {
+function ChatView({
+  chat, onToggleIA, onTransferir,
+}: {
+  chat: Chat;
+  onToggleIA: (chat: Chat) => void;
+  onTransferir: (chat: Chat, novoCanal: string) => void;
+}) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [loading, setLoading] = useState(true);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [transferDropdownAberto, setTransferDropdownAberto] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const dropdownTransfRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o dropdown de transferência ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownTransfRef.current && !dropdownTransfRef.current.contains(e.target as Node)) {
+        setTransferDropdownAberto(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -220,16 +247,56 @@ function ChatView({ chat, onToggleIA }: { chat: Chat; onToggleIA: (chat: Chat) =
           <Badge variant="outline" className={cn("text-[10px] px-2 h-5", canalInfo.cor, canalInfo.bg, canalInfo.border)}>
             {canalInfo.label}
           </Badge>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1"
-            onClick={() => onToggleIA(chat)}
-          >
-            {chat.ia_ativa
-              ? <><Pause size={11} /> Pausar IA</>
-              : <><Play size={11} /> Retomar IA</>}
-          </Button>
+          {chat.canal === "IA" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1"
+              onClick={() => onToggleIA(chat)}
+            >
+              {chat.ia_ativa
+                ? <><Pause size={11} /> Pausar IA</>
+                : <><Play size={11} /> Retomar IA</>}
+            </Button>
+          )}
+
+          {/* Botão de transferência — visível apenas nos canais G1, G4 e ADM */}
+          {chat.canal !== "IA" && (
+            <div ref={dropdownTransfRef} className="relative">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1"
+                onClick={() => setTransferDropdownAberto(v => !v)}
+              >
+                <ArrowRightLeft size={11} />
+                Transferir
+                <ChevronDown size={10} />
+              </Button>
+              {transferDropdownAberto && (
+                <div className="absolute right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg z-30 w-48 overflow-hidden">
+                  <p className="text-[10px] text-muted-foreground px-3 py-2 border-b border-border/50">Transferir para:</p>
+                  {CANAIS.filter(c => c.key !== chat.canal).map(c => (
+                    <button
+                      key={c.key}
+                      onClick={() => {
+                        setTransferDropdownAberto(false);
+                        onTransferir(chat, c.key);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-muted transition-colors text-left border-b border-border/20 last:border-0"
+                    >
+                      <div className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0", c.bg)}>
+                        {c.key === "IA"
+                          ? <WhatsAppIcon size={10} className="text-white" />
+                          : <Users size={10} className={c.cor} />}
+                      </div>
+                      <span className="font-medium">{LABEL_CANAL[c.key] ?? c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -775,6 +842,17 @@ export default function Atendimento() {
     toast.success(novoEstado ? "IA retomada" : "IA pausada — você assumiu o atendimento");
   };
 
+  const transferirConversa = async (chat: Chat, novoCanal: string) => {
+    const updates: { canal: string; ia_ativa?: boolean } = { canal: novoCanal };
+    if (novoCanal === "IA") updates.ia_ativa = true;
+    const { error } = await supabase.from("chats").update(updates).eq("id", chat.id);
+    if (error) { toast.error("Erro ao transferir conversa"); return; }
+    const destino = LABEL_CANAL[novoCanal] ?? novoCanal;
+    toast.success(`Conversa transferida para ${destino}`);
+    setChatSelecionado(null);
+    await carregarChats();
+  };
+
   const totalNaoLidasCanal = (canal: string) =>
     chats.filter(c => c.canal === canal).reduce((acc, c) => acc + (c.nao_lidas ?? 0), 0);
 
@@ -865,7 +943,7 @@ export default function Atendimento() {
               {/* Área de chat */}
               <div className="flex-1 min-w-0 flex flex-col">
                 {chatSelecionado && chatSelecionado.canal === canal.key ? (
-                  <ChatView key={chatSelecionado.id} chat={chatSelecionado} onToggleIA={toggleIA} />
+                  <ChatView key={chatSelecionado.id} chat={chatSelecionado} onToggleIA={toggleIA} onTransferir={transferirConversa} />
                 ) : (
                   <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
                     <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
