@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -168,9 +168,76 @@ export default function Clientes() {
   // Novo Cliente
   const [modalNovoCliente, setModalNovoCliente] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false);
+  const ultimoCNPJBuscado = useRef<string>("");
   const { register, handleSubmit, reset, setValue, watch } = useForm<NovoClienteForm>({
     defaultValues: { tipo: "regular", status: "ativo" },
   });
+
+  // Busca automática quando CNPJ fica completo (14 dígitos)
+  const cnpjWatch = watch("cnpj");
+  useEffect(() => {
+    const digits = (cnpjWatch || "").replace(/\D/g, "");
+    if (digits.length === 14 && digits !== ultimoCNPJBuscado.current) {
+      ultimoCNPJBuscado.current = digits;
+      buscarReceita(cnpjWatch);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cnpjWatch]);
+
+  const buscarReceita = async (cnpjRaw?: string) => {
+    const cnpj = (cnpjRaw || watch("cnpj") || "").replace(/\D/g, "");
+    if (cnpj.length !== 14) {
+      toast({ title: "CNPJ incompleto", description: "Digite os 14 dígitos do CNPJ antes de buscar.", variant: "destructive" });
+      return;
+    }
+    setBuscandoCNPJ(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
+      const d = await res.json();
+
+      if (d.razao_social)  setValue("razao_social",  d.razao_social);
+      if (d.nome_fantasia) setValue("nome_fantasia",  d.nome_fantasia || d.razao_social);
+      if (d.email)         setValue("email",          d.email.toLowerCase());
+      if (d.telefone)      setValue("telefone",       d.telefone);
+      if (d.cep)           setValue("cep",            d.cep.replace(/(\d{5})(\d{3})/, "$1-$2"));
+      if (d.bairro)        setValue("bairro",         d.bairro);
+      if (d.complemento)   setValue("complemento",    d.complemento);
+      if (d.logradouro) {
+        setValue("endereco", d.numero ? `${d.logradouro}, ${d.numero}` : d.logradouro);
+      }
+
+      // Estado + Cidade (busca match case-insensitive sem acentos)
+      if (d.uf) {
+        const uf = d.uf.toUpperCase();
+        setValue("estado", uf);
+        setValue("cidade", "");
+        if (d.municipio) {
+          const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const cidades = CIDADES_POR_ESTADO[uf] || [];
+          const match = cidades.find(c => norm(c) === norm(d.municipio));
+          setValue("cidade", match || d.municipio);
+        }
+      }
+
+      // Auto-detecção de segmento pelo CNAE principal
+      const cnae = ((d.atividade_principal?.[0]?.code) || "").replace(/\D/g, "").substring(0, 4);
+      const segMap: Record<string, string> = {
+        "5510": "Hotelaria", "5590": "Hotelaria",
+        "5610": "Gastronomia", "5620": "Gastronomia", "5630": "Gastronomia",
+        "8610": "Hospitalar", "8620": "Hospitalar", "8630": "Hospitalar",
+        "8110": "Condominial", "8120": "Condominial",
+      };
+      if (segMap[cnae]) setValue("segmento", segMap[cnae]);
+
+      toast({ title: "Dados encontrados!", description: `${d.razao_social} · dados preenchidos automaticamente.` });
+    } catch (err: any) {
+      toast({ title: "CNPJ não encontrado", description: err.message || "Verifique o número e tente novamente.", variant: "destructive" });
+    } finally {
+      setBuscandoCNPJ(false);
+    }
+  };
 
   // Debounce busca
   useEffect(() => {
@@ -566,7 +633,7 @@ export default function Clientes() {
       />
 
       {/* Modal Novo Cliente */}
-      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) reset(); }}>
+      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) { reset(); ultimoCNPJBuscado.current = ""; } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
@@ -589,7 +656,29 @@ export default function Clientes() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ *</Label>
-                <Input {...register("cnpj")} placeholder="00.000.000/0000-00" maxLength={18} required onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))} />
+                <div className="flex gap-2">
+                  <Input
+                    {...register("cnpj")}
+                    placeholder="00.000.000/0000-00"
+                    maxLength={18}
+                    required
+                    onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1.5 h-10 px-3 text-xs whitespace-nowrap"
+                    onClick={() => buscarReceita()}
+                    disabled={buscandoCNPJ}
+                    title="Buscar dados na Receita Federal"
+                  >
+                    {buscandoCNPJ
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <Search size={13} />}
+                    {buscandoCNPJ ? "Buscando..." : "Receita Federal"}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Segmento</Label>
