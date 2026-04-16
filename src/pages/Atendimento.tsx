@@ -61,10 +61,10 @@ interface ClienteBusca {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CANAIS = [
-  { key: "IA",  label: "Recepção",     cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
-  { key: "G1",  label: "Gestão 1",    cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
-  { key: "G4",  label: "Gestão 4",    cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
-  { key: "ADM", label: "ADM",         cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+  { key: "IA",  label: "Recepção",      cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
+  { key: "G1",  label: "Fabiano (G1)",  cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
+  { key: "G4",  label: "Alex (G4)",     cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
+  { key: "ADM", label: "Celso (Adm)",   cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 ];
 
 function formatHora(iso: string) {
@@ -125,9 +125,9 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
 
 const LABEL_CANAL: Record<string, string> = {
   IA:  "Recepção",
-  G1:  "Fabiano — G1",
-  G4:  "Alex — G4",
-  ADM: "ADM — Celso",
+  G1:  "Fabiano (G1)",
+  G4:  "Alex (G4)",
+  ADM: "Celso (Adm)",
 };
 
 // ─── ChatView ─────────────────────────────────────────────────────────────────
