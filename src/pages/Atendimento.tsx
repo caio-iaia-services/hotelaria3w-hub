@@ -60,7 +60,7 @@ interface ClienteBusca {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CANAIS = [
-  { key: "IA",  label: "Central IA",  cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
+  { key: "IA",  label: "Recepção",     cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
   { key: "G1",  label: "Gestão 1",    cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
   { key: "G4",  label: "Gestão 4",    cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
   { key: "ADM", label: "ADM",         cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
@@ -609,7 +609,7 @@ function ListaChats({
         {filtrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-muted-foreground px-4 text-center">
             <MessageCircle size={28} className="mb-2 opacity-30" />
-            <p className="text-xs">Nenhuma conversa {canal === "IA" ? "no canal IA" : `em ${canal}`}</p>
+            <p className="text-xs">Nenhuma conversa {canal === "IA" ? "na Recepção" : `em ${canal}`}</p>
           </div>
         ) : (
           filtrados.map(chat => {
