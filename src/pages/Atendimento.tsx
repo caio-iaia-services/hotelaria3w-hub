@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PainelAtendimento } from "@/components/atendimento/PainelAtendimento";
+import { NovaOportunidadeModal } from "@/components/oportunidades/NovaOportunidadeModal";
+import { type Cliente } from "@/lib/types";
 
 const WhatsAppIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -36,6 +39,12 @@ interface Chat {
   status: string;
   ia_ativa: boolean;
   ultima_mensagem_em: string | null;
+  // Painel de atendimento
+  cliente_id?: string | null;
+  interesse_cliente?: string | null;
+  notas_gestor?: string | null;
+  prioridade?: string | null;
+  proxima_acao?: string | null;
   contato?: Contato;
   ultima_mensagem?: string;
   nao_lidas?: number;
@@ -737,6 +746,8 @@ export default function Atendimento() {
   const [online, setOnline] = useState(true);
   const [modalNovaConversa, setModalNovaConversa] = useState(false);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const [modalOportunidade, setModalOportunidade] = useState(false);
+  const [clienteParaOportunidade, setClienteParaOportunidade] = useState<Cliente | null>(null);
 
   const canaisVisiveis = (() => {
     if (isAdmin) return CANAIS;
@@ -752,6 +763,7 @@ export default function Atendimento() {
       .from("chats")
       .select(`
         id, contato_id, canal, status, ia_ativa, ultima_mensagem_em,
+        cliente_id, interesse_cliente, notas_gestor, prioridade, proxima_acao,
         contato:contatos_whatsapp(id, telefone, nome, tipo, canal_atribuido)
       `)
       .in("canal", canaisVisiveis.map(c => c.key))
@@ -824,6 +836,11 @@ export default function Atendimento() {
   };
 
   const canalNovaConversa = gestaoFiltro ?? (tabAtiva !== "IA" ? tabAtiva : "G1");
+
+  const handleCriarOportunidade = (cliente: Cliente | null) => {
+    setClienteParaOportunidade(cliente);
+    setModalOportunidade(true);
+  };
 
   const toggleIA = async (chat: Chat) => {
     const novoEstado = !chat.ia_ativa;
@@ -918,48 +935,59 @@ export default function Atendimento() {
           </div>
 
           {/* Conteúdo das tabs */}
-          {canaisVisiveis.map(canal => (
-            <TabsContent
-              key={canal.key}
-              value={canal.key}
-              className="flex-1 min-h-0 m-0 data-[state=active]:flex"
-            >
-              {/* Lista de chats */}
-              <div className="w-72 border-r border-border/50 flex flex-col shrink-0">
-                {loading ? (
-                  <div className="p-3 space-y-2">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />)}
-                  </div>
-                ) : (
-                  <ListaChats
-                    canal={canal.key}
-                    chats={chats}
-                    chatSelecionado={chatSelecionado}
-                    onSelecionar={c => { setChatSelecionado(c); setTabAtiva(canal.key); }}
+          {canaisVisiveis.map(canal => {
+            const chatDoCanal = chatSelecionado?.canal === canal.key ? chatSelecionado : null;
+            return (
+              <TabsContent
+                key={canal.key}
+                value={canal.key}
+                className="flex-1 min-h-0 m-0 data-[state=active]:flex"
+              >
+                {/* Lista de chats */}
+                <div className="w-72 border-r border-border/50 flex flex-col shrink-0">
+                  {loading ? (
+                    <div className="p-3 space-y-2">
+                      {[1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />)}
+                    </div>
+                  ) : (
+                    <ListaChats
+                      canal={canal.key}
+                      chats={chats}
+                      chatSelecionado={chatSelecionado}
+                      onSelecionar={c => { setChatSelecionado(c); setTabAtiva(canal.key); }}
+                    />
+                  )}
+                </div>
+
+                {/* Área de chat */}
+                <div className="flex-1 min-w-0 flex flex-col">
+                  {chatDoCanal ? (
+                    <ChatView key={chatDoCanal.id} chat={chatDoCanal} onToggleIA={toggleIA} onTransferir={transferirConversa} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
+                      <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
+                        <WhatsAppIcon size={28} className={canal.key === "IA" ? "text-white" : canal.cor} />
+                      </div>
+                      <p className="text-sm font-medium">{canal.label}</p>
+                      <p className="text-xs mt-1">
+                        {chats.filter(c => c.canal === canal.key).length === 0
+                          ? "Nenhuma conversa ativa"
+                          : "Selecione uma conversa"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Painel de atendimento — apenas canais G1/G4/ADM */}
+                {canal.key !== "IA" && (
+                  <PainelAtendimento
+                    chat={chatDoCanal}
+                    onCriarOportunidade={handleCriarOportunidade}
                   />
                 )}
-              </div>
-
-              {/* Área de chat */}
-              <div className="flex-1 min-w-0 flex flex-col">
-                {chatSelecionado && chatSelecionado.canal === canal.key ? (
-                  <ChatView key={chatSelecionado.id} chat={chatSelecionado} onToggleIA={toggleIA} onTransferir={transferirConversa} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
-                    <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
-                      <WhatsAppIcon size={28} className={canal.key === "IA" ? "text-white" : canal.cor} />
-                    </div>
-                    <p className="text-sm font-medium">{canal.label}</p>
-                    <p className="text-xs mt-1">
-                      {chats.filter(c => c.canal === canal.key).length === 0
-                        ? "Nenhuma conversa ativa"
-                        : "Selecione uma conversa"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          ))}
+              </TabsContent>
+            );
+          })}
         </Tabs>
       </div>
 
@@ -968,6 +996,13 @@ export default function Atendimento() {
         onClose={() => setModalNovaConversa(false)}
         canal={canalNovaConversa}
         onConversaCriada={onConversaCriada}
+      />
+
+      <NovaOportunidadeModal
+        open={modalOportunidade}
+        onOpenChange={setModalOportunidade}
+        clientePreSelecionado={clienteParaOportunidade}
+        onSave={() => setModalOportunidade(false)}
       />
     </div>
   );

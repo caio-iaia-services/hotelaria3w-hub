@@ -21,6 +21,8 @@ interface NovaOportunidadeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave?: () => void;
+  /** Quando fornecido, pula a busca e pré-seleciona o cliente no step 1 */
+  clientePreSelecionado?: Cliente | null;
 }
 
 const estados = [
@@ -49,7 +51,7 @@ function maskTelefone(value: string): string {
   return digits.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportunidadeModalProps) {
+export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSelecionado }: NovaOportunidadeModalProps) {
   const [step, setStep] = useState(1);
 
   // Operações sincronizadas com fornecedores do banco
@@ -73,6 +75,14 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave }: NovaOportu
   const [operacoesSelecionadas, setOperacoesSelecionadas] = useState<string[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  // Pré-seleciona cliente vindo do Painel de Atendimento
+  useEffect(() => {
+    if (open && clientePreSelecionado) {
+      setClienteSelecionado(clientePreSelecionado);
+      setCadastrandoNovo(false);
+    }
+  }, [open, clientePreSelecionado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Search clients from Supabase
   useEffect(() => {
