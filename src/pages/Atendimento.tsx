@@ -253,7 +253,15 @@ function ChatView({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn("text-[10px] px-2 h-5", canalInfo.cor, canalInfo.bg, canalInfo.border)}>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] px-2 h-5",
+              canalInfo.key === "IA"
+                ? "text-white bg-[#164B6E] border-[#164B6E]/50"
+                : cn(canalInfo.cor, canalInfo.bg, canalInfo.border)
+            )}
+          >
             {canalInfo.label}
           </Badge>
           {chat.canal === "IA" && (
