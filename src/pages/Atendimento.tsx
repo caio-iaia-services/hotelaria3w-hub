@@ -5,7 +5,7 @@ import {
   MessageCircle, Send, RefreshCw, Pause, Play,
   User, Users, Phone, Search, ChevronRight,
   Wifi, WifiOff, Plus, X, Building2,
-  ArrowRightLeft, ChevronDown,
+  ArrowRightLeft, ChevronDown, Trash2, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -660,14 +660,17 @@ function ModalNovaConversa({
 
 // ─── ListaChats ───────────────────────────────────────────────────────────────
 function ListaChats({
-  canal, chats, chatSelecionado, onSelecionar
+  canal, chats, chatSelecionado, onSelecionar, onDeletar,
 }: {
   canal: string;
   chats: Chat[];
   chatSelecionado: Chat | null;
   onSelecionar: (c: Chat) => void;
+  onDeletar: (c: Chat) => void;
 }) {
   const [busca, setBusca] = useState("");
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+
   const filtrados = chats.filter(c =>
     c.canal === canal &&
     (busca === "" ||
@@ -698,44 +701,86 @@ function ListaChats({
         ) : (
           filtrados.map(chat => {
             const ativo = chatSelecionado?.id === chat.id;
+            const confirmando = confirmandoId === chat.id;
             const nome = chat.contato?.nome || chat.contato?.telefone || "Desconhecido";
             return (
-              <button
+              <div
                 key={chat.id}
-                onClick={() => onSelecionar(chat)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 border-b border-border/30 hover:bg-muted/50 transition-colors text-left",
+                  "group w-full flex items-center gap-3 px-3 py-3 border-b border-border/30 hover:bg-muted/50 transition-colors",
                   ativo && "bg-muted"
                 )}
               >
-                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                  <User size={14} className="text-slate-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs font-semibold truncate">{nome}</p>
-                    {chat.ultima_mensagem_em && (
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDataHora(chat.ultima_mensagem_em)}
-                      </span>
-                    )}
+                {/* Área clicável para selecionar */}
+                <button
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  onClick={() => { setConfirmandoId(null); onSelecionar(chat); }}
+                >
+                  <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                    <User size={14} className="text-slate-600" />
                   </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {chat.ia_ativa
-                      ? <WhatsAppIcon size={10} className="text-[#164B6E] shrink-0" />
-                      : <User size={10} className="text-blue-500 shrink-0" />}
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {chat.ultima_mensagem || chat.contato?.telefone}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-semibold truncate">{nome}</p>
+                      {chat.ultima_mensagem_em && !confirmando && (
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {formatDataHora(chat.ultima_mensagem_em)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {chat.ia_ativa
+                        ? <WhatsAppIcon size={10} className="text-[#164B6E] shrink-0" />
+                        : <User size={10} className="text-blue-500 shrink-0" />}
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {chat.ultima_mensagem || chat.contato?.telefone}
+                      </p>
+                    </div>
                   </div>
+                </button>
+
+                {/* Lado direito: badge + lixeira/confirmar */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {(chat.nao_lidas ?? 0) > 0 && !confirmando && (
+                    <Badge className="h-4 min-w-[16px] text-[10px] px-1 bg-green-500">
+                      {chat.nao_lidas}
+                    </Badge>
+                  )}
+
+                  {confirmando ? (
+                    // Estado de confirmação inline
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">Excluir?</span>
+                      <button
+                        onClick={() => { setConfirmandoId(null); onDeletar(chat); }}
+                        className="w-5 h-5 rounded flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors"
+                        title="Confirmar exclusão"
+                      >
+                        <Check size={10} className="text-white" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmandoId(null)}
+                        className="w-5 h-5 rounded flex items-center justify-center bg-muted hover:bg-muted/80 transition-colors"
+                        title="Cancelar"
+                      >
+                        <X size={10} className="text-muted-foreground" />
+                      </button>
+                    </div>
+                  ) : (
+                    // Lixeira + chevron (lixeira aparece no hover)
+                    <>
+                      <button
+                        onClick={e => { e.stopPropagation(); setConfirmandoId(chat.id); }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                        title="Excluir conversa"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                      <ChevronRight size={12} className="text-muted-foreground group-hover:opacity-0 transition-opacity" />
+                    </>
+                  )}
                 </div>
-                {(chat.nao_lidas ?? 0) > 0 && (
-                  <Badge className="h-4 min-w-[16px] text-[10px] px-1 bg-green-500 shrink-0">
-                    {chat.nao_lidas}
-                  </Badge>
-                )}
-                <ChevronRight size={12} className="text-muted-foreground shrink-0" />
-              </button>
+              </div>
             );
           })
         )}
@@ -878,6 +923,17 @@ export default function Atendimento() {
     await carregarChats();
   };
 
+  const deletarConversa = async (chat: Chat) => {
+    // Deleta mensagens primeiro (FK), depois o chat
+    const { error: errMsg } = await supabase.from("mensagens").delete().eq("chat_id", chat.id);
+    if (errMsg) { toast.error("Erro ao excluir mensagens"); return; }
+    const { error: errChat } = await supabase.from("chats").delete().eq("id", chat.id);
+    if (errChat) { toast.error("Erro ao excluir conversa"); return; }
+    setChats(prev => prev.filter(c => c.id !== chat.id));
+    if (chatSelecionado?.id === chat.id) setChatSelecionado(null);
+    toast.success("Conversa excluída");
+  };
+
   const totalNaoLidasCanal = (canal: string) =>
     chats.filter(c => c.canal === canal).reduce((acc, c) => acc + (c.nao_lidas ?? 0), 0);
 
@@ -963,6 +1019,7 @@ export default function Atendimento() {
                       chats={chats}
                       chatSelecionado={chatSelecionado}
                       onSelecionar={c => { setChatSelecionado(c); setTabAtiva(canal.key); }}
+                      onDeletar={deletarConversa}
                     />
                   )}
                 </div>
