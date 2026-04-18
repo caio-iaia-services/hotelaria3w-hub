@@ -187,12 +187,11 @@ function ChatView({
 
     const sub = supabase
       .channel(`mensagens-${chat.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensagens" }, (payload) => {
-        const nova = payload.new as Mensagem;
-        if (nova.chat_id === chat.id) {
-          setMensagens(prev => [...prev, nova]);
-        }
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "mensagens", filter: `chat_id=eq.${chat.id}` },
+        (payload) => { setMensagens(prev => [...prev, payload.new as Mensagem]); }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(sub); };
@@ -810,8 +809,11 @@ export default function Atendimento() {
     return CANAIS.filter(c => c.key === "IA");
   })();
 
-  const carregarChats = useCallback(async () => {
-    setLoading(true);
+  // Sempre aponta para a versão mais recente de carregarChats (evita closure stale)
+  const carregarChatsRef = useRef<(silent?: boolean) => Promise<void>>(async () => {});
+
+  const carregarChats = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("chats")
       .select(`
@@ -856,19 +858,57 @@ export default function Atendimento() {
     setLoading(false);
   }, [canaisVisiveis.map(c => c.key).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    carregarChats();
+  // Mantém ref atualizada para uso dentro de closures de subscriptions
+  useEffect(() => { carregarChatsRef.current = carregarChats; }, [carregarChats]);
 
-    const subChats = supabase
-      .channel("chats-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => {
-        carregarChats();
+  useEffect(() => {
+    carregarChatsRef.current();
+
+    const sub = supabase
+      .channel("atendimento-realtime")
+      // Novo chat criado ou canal alterado → recarrega lista
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chats" }, () => {
+        carregarChatsRef.current(true);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chats" }, () => {
+        carregarChatsRef.current(true);
+      })
+      // Nova mensagem → atualiza preview e badge sem reload completo
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensagens" }, (payload) => {
+        const nova = payload.new as {
+          chat_id: string; conteudo: string; origem: string; lida: boolean; criado_em: string;
+        };
+        setChats(prev => {
+          const existe = prev.some(c => c.id === nova.chat_id);
+          if (!existe) {
+            // Chat novo que ainda não está na lista: recarrega tudo
+            carregarChatsRef.current(true);
+            return prev;
+          }
+          return prev.map(c => {
+            if (c.id !== nova.chat_id) return c;
+            return {
+              ...c,
+              ultima_mensagem: nova.conteudo,
+              ultima_mensagem_em: nova.criado_em || new Date().toISOString(),
+              nao_lidas: nova.origem === "cliente" && !nova.lida
+                ? (c.nao_lidas ?? 0) + 1
+                : c.nao_lidas,
+            };
+          });
+        });
       })
       .subscribe((status) => {
         setOnline(status === "SUBSCRIBED");
       });
 
-    return () => { supabase.removeChannel(subChats); };
+    // Polling de segurança a cada 30s caso o realtime falhe
+    const intervalo = setInterval(() => carregarChatsRef.current(true), 30_000);
+
+    return () => {
+      supabase.removeChannel(sub);
+      clearInterval(intervalo);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seleciona automaticamente o chat recém-criado após carregarChats()
