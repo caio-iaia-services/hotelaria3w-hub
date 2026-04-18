@@ -77,10 +77,33 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
 
     if (chat.cliente_id) {
       carregarCliente(chat.cliente_id);
+    } else if (chat.contato?.telefone) {
+      // Tenta vincular automaticamente pelo telefone do contato
+      autoVincularPorTelefone(chat.id, chat.contato.telefone);
     } else {
       setCliente(null);
     }
   }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const autoVincularPorTelefone = async (chatId: string, telefone: string) => {
+    const tel = telefone.replace(/\D/g, "");
+    const sufixo = tel.slice(-9);
+    if (!sufixo) { setCliente(null); return; }
+
+    const { data } = await supabase
+      .from("clientes")
+      .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento, status, tipo")
+      .ilike("telefone", `%${sufixo}`)
+      .maybeSingle();
+
+    if (data) {
+      // Atualiza o chat com o cliente encontrado (silenciosamente)
+      await supabase.from("chats").update({ cliente_id: data.id }).eq("id", chatId);
+      setCliente(data as unknown as Cliente);
+    } else {
+      setCliente(null);
+    }
+  };
 
   const carregarCliente = async (id: string) => {
     const { data } = await supabase
