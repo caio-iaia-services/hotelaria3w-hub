@@ -45,6 +45,7 @@ function applyMaskCNPJ(value: string) {
 const statusColors: Record<string, string> = {
   ativo: "bg-[#1a4168] text-white",
   inativo: "bg-[#D4AF37] text-[#1a4168]",
+  revisao: "bg-orange-500 text-white",
 };
 
 const tipoColors: Record<string, string> = {
@@ -231,6 +232,7 @@ export default function Clientes() {
       };
       if (segMap[cnae]) setValue("segmento", segMap[cnae]);
 
+      setValue("status", "revisao");
       toast({ title: "Dados encontrados!", description: `${d.razao_social} · dados preenchidos automaticamente.` });
     } catch (err: any) {
       toast({ title: "CNPJ não encontrado", description: err.message || "Verifique o número e tente novamente.", variant: "destructive" });
@@ -773,6 +775,7 @@ export default function Clientes() {
                   <SelectContent className="bg-card z-50">
                     <SelectItem value="ativo">Ativo</SelectItem>
                     <SelectItem value="inativo">Inativo</SelectItem>
+                    <SelectItem value="revisao">Revisão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

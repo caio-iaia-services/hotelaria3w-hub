@@ -115,6 +115,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                   <SelectContent className="bg-card z-50">
                     <SelectItem value="ativo">Ativo</SelectItem>
                     <SelectItem value="inativo">Inativo</SelectItem>
+                    <SelectItem value="revisao">Revisão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -181,8 +182,12 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Info label="Cidade/UF" value={`${cliente.cidade || "-"}/${cliente.estado || "-"}`} />
             </div>
             <div className="flex gap-2">
-              <Badge variant="outline" className={cliente.status === "ativo" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"}>
-                {cliente.status}
+              <Badge variant="outline" className={
+                cliente.status === "ativo" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" :
+                cliente.status === "revisao" ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" :
+                "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+              }>
+                {cliente.status === "revisao" ? "REVISÃO" : cliente.status}
               </Badge>
               <Badge variant="outline" className={cliente.tipo === "vip" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" : "bg-muted text-muted-foreground"}>
                 {cliente.tipo?.toUpperCase()}
