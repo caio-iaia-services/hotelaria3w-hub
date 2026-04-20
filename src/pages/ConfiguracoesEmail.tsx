@@ -116,7 +116,7 @@ export default function ConfiguracoesEmail() {
     setTestando(true)
     try {
       await new Promise(resolve => setTimeout(resolve, 2000))
-      console.log('🧪 Teste SMTP:', { host: config.host, port: config.port })
+      console.log('Teste SMTP:', { host: config.host, port: config.port })
       toast.success('Conexão SMTP testada com sucesso!')
     } catch (error) {
       console.error('Erro no teste:', error)
@@ -168,8 +168,8 @@ export default function ConfiguracoesEmail() {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             {config.ativo
-              ? '✅ O envio de e-mails está habilitado.'
-              : '⚠️ O envio de e-mails está desabilitado.'}
+              ? 'O envio de e-mails está habilitado.'
+              : 'O envio de e-mails está desabilitado.'}
           </p>
         </CardContent>
       </Card>

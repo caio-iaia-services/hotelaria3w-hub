@@ -810,7 +810,7 @@ export default function Orcamentos() {
       buscarOrcamentos();
       buscarContadores();
     } catch (error: any) {
-      console.error("❌ Erro ao enviar:", error);
+      console.error("Erro ao enviar:", error);
       const msg = error?.message || "Tente novamente.";
       const descricao = msg === "Failed to fetch"
         ? "Não foi possível conectar ao servidor de e-mail. Verifique sua conexão e tente novamente."
@@ -824,11 +824,11 @@ export default function Orcamentos() {
   function enviarPorWhatsApp(o: Orcamento) {
     const telefone = (o.cliente_telefone || "").replace(/\D/g, "");
     const mensagem = encodeURIComponent(
-      `Olá ${o.cliente_nome}! 👋\n\n` +
+      `Olá ${o.cliente_nome}!\n\n` +
         `Segue a *Proposta Comercial nº ${o.numero}* da *3W HOTELARIA*.\n\n` +
-        `💰 *Valor Total:* R$ ${parseNum(o.total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
-        `📅 *Validade:* ${o.validade_dias} dias\n\n` +
-        `Ficamos à disposição para esclarecimentos!\n\nEquipe Comercial\n3W HOTELARIA\n📧 comercial1@3whotelaria.com.br\n📞 +55 11 5197-5779`,
+        `*Valor Total:* R$ ${parseNum(o.total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
+        `*Validade:* ${o.validade_dias} dias\n\n` +
+        `Ficamos à disposição para esclarecimentos!\n\nEquipe Comercial\n3W HOTELARIA\ncomercial1@3whotelaria.com.br\n+55 11 5197-5779`,
     );
     const url = telefone ? `https://wa.me/55${telefone}?text=${mensagem}` : `https://wa.me/?text=${mensagem}`;
     window.open(url, "_blank");

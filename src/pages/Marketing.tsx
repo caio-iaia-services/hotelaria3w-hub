@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone } from "lucide-react";
+import {
+  Megaphone, Users, Phone, MapPin, Mail, Share2,
+  CalendarDays, Globe, MessageSquare, Search,
+  TrendingUp, Newspaper, Tv, Youtube,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Midia {
   id: string;
   slug: string;
@@ -10,33 +15,37 @@ interface Midia {
   ordem: number;
 }
 
-// Ícone mapeado por slug (mesmo do admin)
-const ICONE_SLUG: Record<string, string> = {
-  relacionamentos:  "🤝",
-  ativo_telefonico: "📞",
-  visitas:          "🚗",
-  email_marketing:  "📧",
-  redes_sociais:    "📱",
-  feiras_eventos:   "🎪",
-  site_seo:         "🌐",
-  sms_ativo:        "💬",
-  whatsapp:         "💚",
-  google_ads:       "🔍",
-  bing_ads:         "🔵",
-  midia_impressa:   "📰",
-  midia_tv_radio:   "📺",
-  youtube:          "▶️",
+// ─── Ícone Lucide por canal ───────────────────────────────────────────────────
+const CANAL_ICON: Record<string, React.ElementType> = {
+  relacionamentos:  Users,
+  ativo_telefonico: Phone,
+  visitas:          MapPin,
+  email_marketing:  Mail,
+  redes_sociais:    Share2,
+  feiras_eventos:   CalendarDays,
+  site_seo:         Globe,
+  sms_ativo:        MessageSquare,
+  whatsapp:         MessageSquare,
+  google_ads:       Search,
+  bing_ads:         TrendingUp,
+  midia_impressa:   Newspaper,
+  midia_tv_radio:   Tv,
+  youtube:          Youtube,
 };
 
-// ─── Placeholder por canal (expandido depois) ─────────────────────────────────
+// ─── Placeholder por canal ────────────────────────────────────────────────────
 function CanalPlaceholder({ midia }: { midia: Midia }) {
+  const Icon = CANAL_ICON[midia.slug] || Megaphone;
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <span className="text-5xl mb-4">{ICONE_SLUG[midia.slug] || "📢"}</span>
-      <h3 className="text-lg font-semibold text-foreground mb-2">{midia.nome}</h3>
-      <p className="text-sm text-muted-foreground max-w-xs">
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center select-none">
+      <div className="w-16 h-16 rounded-2xl bg-[#164B6E]/8 flex items-center justify-center mb-5">
+        <Icon size={28} className="text-[#164B6E]/40" strokeWidth={1.5} />
+      </div>
+      <h3 className="text-base font-semibold text-foreground mb-2 font-heading">
+        {midia.nome}
+      </h3>
+      <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
         A área de campanhas para este canal está em construção.
-        <br />
         Em breve você poderá criar e gerenciar campanhas aqui.
       </p>
     </div>
@@ -45,13 +54,11 @@ function CanalPlaceholder({ midia }: { midia: Midia }) {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Marketing() {
-  const [midias, setMidias] = useState<Midia[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [midias, setMidias]     = useState<Midia[]>([]);
+  const [loading, setLoading]   = useState(true);
   const [tabAtiva, setTabAtiva] = useState<string>("");
 
-  useEffect(() => {
-    carregar();
-  }, []);
+  useEffect(() => { carregar(); }, []);
 
   async function carregar() {
     setLoading(true);
@@ -60,7 +67,6 @@ export default function Marketing() {
       .select("id, slug, nome, ordem")
       .eq("ativo", true)
       .order("ordem");
-
     if (!error && data) {
       const lista = data as Midia[];
       setMidias(lista);
@@ -69,7 +75,7 @@ export default function Marketing() {
     setLoading(false);
   }
 
-  // ── Estado de carregamento ──
+  // ── Carregando ──
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
@@ -78,80 +84,84 @@ export default function Marketing() {
     );
   }
 
-  // ── Nenhum canal ativo ──
+  // ── Sem canais ativos ──
   if (midias.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-center gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
-          <Megaphone size={24} className="text-muted-foreground/50" />
+      <div className="flex flex-col items-center justify-center h-64 text-center gap-4 px-6">
+        <div className="w-14 h-14 rounded-2xl bg-[#164B6E]/8 flex items-center justify-center">
+          <Megaphone size={24} className="text-[#164B6E]/40" strokeWidth={1.5} />
         </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          Nenhum canal de marketing ativo
-        </p>
-        <p className="text-xs text-muted-foreground/60">
-          O administrador deve ativar os canais em Admin → Config. Marketing
-        </p>
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Nenhum canal de marketing ativo
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Acesse Admin &rsaquo; Config. Marketing para ativar os canais desejados.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // ── Módulo com abas ──
+  const midiaAtiva = midias.find((m) => m.slug === tabAtiva);
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 pt-5 pb-3 border-b border-border/50 shrink-0">
+
+      {/* ── Header da página ──────────────────────────────────────────────────── */}
+      <div className="bg-[#164B6E] px-6 py-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#164B6E]/10 flex items-center justify-center">
-            <Megaphone size={16} className="text-[#164B6E]" />
-          </div>
+          <Megaphone size={18} className="text-[#C4942C]" />
           <div>
-            <h1 className="text-lg font-bold font-heading leading-none">Marketing</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h1 className="text-[15px] font-bold font-heading text-white leading-none">
+              Marketing
+            </h1>
+            <p className="text-[11px] text-white/50 mt-0.5">
               {midias.length} {midias.length === 1 ? "canal ativo" : "canais ativos"}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tabs de canais */}
-      <Tabs
-        value={tabAtiva}
-        onValueChange={setTabAtiva}
-        className="flex-1 flex flex-col min-h-0"
+      {/* ── Barra de abas ─────────────────────────────────────────────────────── */}
+      {/*
+          Todas as abas: fundo dourado (#C4942C) com texto azul escuro
+          Aba ativa: fundo azul (#164B6E) com texto branco
+      */}
+      <div
+        className="flex shrink-0 overflow-x-auto scrollbar-brand border-b border-[#C4942C]/30"
+        style={{ backgroundColor: "rgba(196,148,44,0.06)" }}
       >
-        {/* Lista de abas — scroll horizontal se muitos canais */}
-        <div className="border-b border-border/50 px-4 shrink-0 overflow-x-auto">
-          <TabsList className="h-auto bg-transparent p-0 gap-0 flex w-max">
-            {midias.map((m) => (
-              <TabsTrigger
-                key={m.slug}
-                value={m.slug}
-                className="
-                  flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium rounded-none
-                  border-b-2 border-transparent
-                  data-[state=active]:border-[#164B6E] data-[state=active]:text-[#164B6E]
-                  data-[state=inactive]:text-muted-foreground
-                  hover:text-foreground transition-colors
-                  bg-transparent data-[state=active]:bg-transparent
-                  shadow-none
-                "
-              >
-                <span className="text-sm">{ICONE_SLUG[m.slug] || "📢"}</span>
-                {m.nome}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        {midias.map((m) => {
+          const Icon = CANAL_ICON[m.slug] || Megaphone;
+          const isActive = tabAtiva === m.slug;
+          return (
+            <button
+              key={m.slug}
+              onClick={() => setTabAtiva(m.slug)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide",
+                "shrink-0 border-b-2 transition-all duration-200 whitespace-nowrap",
+                isActive
+                  ? "border-[#164B6E] bg-[#164B6E] text-white"
+                  : "border-[#C4942C] bg-[#C4942C]/10 text-[#C4942C] hover:bg-[#C4942C]/20",
+              )}
+            >
+              <Icon
+                size={13}
+                strokeWidth={isActive ? 2.5 : 2}
+                className="shrink-0"
+              />
+              {m.nome}
+            </button>
+          );
+        })}
+      </div>
 
-        {/* Conteúdo de cada canal */}
-        <div className="flex-1 overflow-y-auto">
-          {midias.map((m) => (
-            <TabsContent key={m.slug} value={m.slug} className="h-full m-0 p-0">
-              <CanalPlaceholder midia={m} />
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
+      {/* ── Conteúdo da aba ───────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto scrollbar-brand">
+        {midiaAtiva && <CanalPlaceholder midia={midiaAtiva} />}
+      </div>
     </div>
   );
 }

@@ -594,7 +594,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
             marginTop: "3mm", padding: "3mm", background: "#dcfce7", border: "0.3mm solid #4ade80",
             color: "#166534", borderRadius: "2mm", textAlign: "center", fontWeight: 600, fontSize: "8pt",
           }}>
-            ✅ {mensagemSucesso}
+            {mensagemSucesso}
           </div>
         )}
         {mensagemErro && (
@@ -602,7 +602,7 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
             marginTop: "3mm", padding: "3mm", background: "#fee2e2", border: "0.3mm solid #f87171",
             color: "#991b1b", borderRadius: "2mm", textAlign: "center", fontWeight: 600, fontSize: "8pt",
           }}>
-            ❌ {mensagemErro}
+            {mensagemErro}
           </div>
         )}
 

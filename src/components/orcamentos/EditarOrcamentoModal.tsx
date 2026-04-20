@@ -373,7 +373,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           : null
 
         if (colunaAusente && colunaAusente in updatePayload) {
-          console.warn(`⚠️ Removendo campo ausente no schema: ${colunaAusente}`)
+          console.warn(`Removendo campo ausente no schema: ${colunaAusente}`)
           delete updatePayload[colunaAusente]
           continue
         }

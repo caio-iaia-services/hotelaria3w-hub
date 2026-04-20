@@ -1178,8 +1178,8 @@ export default function Fornecedores() {
                           <p className="font-medium text-sm">{c.nome}</p>
                           {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
                           <div className="flex gap-4 mt-1 text-sm">
-                            {c.whatsapp && <p>📱 {c.whatsapp}</p>}
-                            {c.email && <p>✉️ {c.email}</p>}
+                            {c.whatsapp && <p>WhatsApp: {c.whatsapp}</p>}
+                            {c.email && <p>E-mail: {c.email}</p>}
                           </div>
                         </div>
                       ))}

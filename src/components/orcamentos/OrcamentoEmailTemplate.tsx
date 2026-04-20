@@ -173,16 +173,16 @@ export function gerarHtmlOrcamento({
     })
     .join("");
 
-  const iconGlobe = (c: string) => emailIcon("🌐", c);
-  const iconPhone = (c: string) => emailIcon("📞", c);
-  const iconEnvelope = (c: string) => emailIcon("✉️", c);
-  const iconPin = (c: string) => emailIcon("📍", c);
-  const iconTruck = emailIcon("🚚", "#111827");
-  const iconBox = emailIcon("📦", "#111827");
-  const iconDollar = emailIcon("💲", "#111827");
-  const iconCard = emailIcon("💳", "#111827");
-  const iconAlert = `<span style="font-size:20px;vertical-align:middle;">⚠️</span>`;
-  const iconCheck = `<span style="font-size:16px;color:#ffffff;margin-right:6px;vertical-align:middle;">✅</span>`;
+  const iconGlobe = (_c: string) => "";
+  const iconPhone = (_c: string) => "";
+  const iconEnvelope = (_c: string) => "";
+  const iconPin = (_c: string) => "";
+  const iconTruck = "";
+  const iconBox = "";
+  const iconDollar = "";
+  const iconCard = "";
+  const iconAlert = `<span style="font-size:14px;font-weight:700;vertical-align:middle;color:inherit;">!</span>`;
+  const iconCheck = `<span style="font-size:13px;font-weight:700;color:#ffffff;margin-right:6px;vertical-align:middle;">OK</span>`;
   const termosFornecedorTitulo = `TERMOS LEGAIS ${fornecedorNome.toUpperCase()}`;
 
   const getStatusLabel = (status: string) => {

@@ -392,7 +392,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
                   <Label>CNPJ *</Label>
                   <Input value={novoCliente.cnpj} onChange={(e) => setNovoCliente({ ...novoCliente, cnpj: maskCnpj(e.target.value) })} placeholder="00.000.000/0000-00" />
                   {cnpjDuplicado && (
-                    <p className="text-sm text-destructive mt-1 font-medium">⚠️ Cliente já cadastrado com este CNPJ. Utilize a busca para selecioná-lo.</p>
+                    <p className="text-sm text-destructive mt-1 font-medium">Cliente já cadastrado com este CNPJ. Utilize a busca para selecioná-lo.</p>
                   )}
                 </div>
                 <div>

@@ -509,7 +509,7 @@ export function EditarOportunidadeModal({
               seu card no funil serão removidos permanentemente.
               {activeCount <= 1 && (
                 <span className="block mt-2 font-medium text-destructive">
-                  ⚠️ Este é o último fornecedor ativo. A oportunidade também será removida.
+                  Este é o último fornecedor ativo. A oportunidade também será removida.
                 </span>
               )}
             </AlertDialogDescription>

@@ -195,13 +195,13 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
         <div className="grid md:grid-cols-2 gap-6">
           {orcamento.prazo_entrega && (
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-              <h4 className="font-bold text-blue-900 mb-2">📦 Prazo de Entrega</h4>
+              <h4 className="font-bold text-blue-900 mb-2">Prazo de Entrega</h4>
               <p className="text-blue-800">{orcamento.prazo_entrega}</p>
             </div>
           )}
 
           <div className="bg-[#c4942c]/10 border-l-4 border-[#c4942c] p-4 rounded-r-lg">
-            <h4 className="font-bold text-[#c4942c] mb-2">⏰ Validade da Proposta</h4>
+            <h4 className="font-bold text-[#c4942c] mb-2">Validade da Proposta</h4>
             <p className="text-[#1a4168]">
               {orcamento.validade_dias} dias (até {formatDate(orcamento.data_validade)})
             </p>
@@ -210,7 +210,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
 
         {condicoesPagamentoTexto && (
           <div className="mt-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-            <h4 className="font-bold text-green-900 mb-2">💳 Condições de Pagamento</h4>
+            <h4 className="font-bold text-green-900 mb-2">Condições de Pagamento</h4>
             <div className="text-green-800 whitespace-pre-wrap">
               {condicoesPagamentoTexto}
             </div>
@@ -219,7 +219,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
 
         {orcamento.observacoes && (
           <div className="mt-6 bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-            <h4 className="font-bold text-purple-900 mb-2">📝 Observações</h4>
+            <h4 className="font-bold text-purple-900 mb-2">Observações</h4>
             <p className="text-purple-800 whitespace-pre-wrap">{orcamento.observacoes}</p>
           </div>
         )}
@@ -236,7 +236,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
             />
             <div className="absolute top-4 right-4">
               <span className="inline-block px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-full shadow-lg">
-                ✨ Oportunidade Especial
+                Oportunidade Especial
               </span>
             </div>
           </div>
@@ -284,7 +284,7 @@ export function OrcamentoVisualizacao({ orcamento, itens }: Props) {
               <p className="text-sm text-gray-600 mb-4">Aceite do Cliente</p>
               {orcamento.assinatura_cliente ? (
                 <div className="border-2 border-green-500 rounded-lg p-4 bg-green-50">
-                  <p className="text-green-800 font-semibold">✓ Assinado digitalmente</p>
+                  <p className="text-green-800 font-semibold">Assinado digitalmente</p>
                   <p className="text-sm text-green-700 mt-1">
                     {formatDate(orcamento.assinado_em)}
                   </p>

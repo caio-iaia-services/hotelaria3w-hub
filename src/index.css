@@ -114,6 +114,27 @@
   .sidebar-item-hover {
     background: hsla(43, 72%, 52%, 0.1);
   }
+
+  /* ── Scrollbar de marca: track dourado, thumb azul ── */
+  .scrollbar-brand {
+    scrollbar-width: thin;
+    scrollbar-color: #164B6E rgba(196, 148, 44, 0.2);
+  }
+  .scrollbar-brand::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-brand::-webkit-scrollbar-track {
+    background: rgba(196, 148, 44, 0.18);
+    border-radius: 3px;
+  }
+  .scrollbar-brand::-webkit-scrollbar-thumb {
+    background: #164B6E;
+    border-radius: 3px;
+  }
+  .scrollbar-brand::-webkit-scrollbar-thumb:hover {
+    background: #1a5a84;
+  }
 }
 
 /* ── Page-break classes for html2pdf / print ── */

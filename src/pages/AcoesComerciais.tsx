@@ -934,7 +934,7 @@ export default function AcoesComerciais() {
       const valorFrete = parseFloat(String(dadosOrcamento.frete).replace(",", ".")) || 0;
       const total = subtotal + valorImpostos - valorDesconto + valorFrete;
 
-      console.log("💰 VALORES CALCULADOS:", {
+      console.log("VALORES CALCULADOS:", {
         subtotal,
         impPerc,
         valorImpostos,
@@ -996,7 +996,7 @@ export default function AcoesComerciais() {
         }
       }
 
-      console.log("📋 PAYLOAD ANTES DO INSERT:");
+      console.log("PAYLOAD ANTES DO INSERT:");
       console.log("subtotal:", subtotal, typeof subtotal);
       console.log("impostos:", valorImpostos, typeof valorImpostos);
       console.log("desconto:", valorDesconto, typeof valorDesconto);
@@ -1058,7 +1058,7 @@ export default function AcoesComerciais() {
         oportunidade_id: cardSelecionado.oportunidade_id || null,
       };
 
-      console.log("🔑 PAYLOAD COMPLETO:", JSON.stringify(orcamentoPayload, null, 2));
+      console.log("PAYLOAD COMPLETO:", JSON.stringify(orcamentoPayload, null, 2));
 
       async function inserirOrcamentoComFallback(payloadBase: Record<string, unknown>) {
         const payload = { ...payloadBase };
@@ -1077,7 +1077,7 @@ export default function AcoesComerciais() {
 
           if (colunaAusente && colunaAusente in payload) {
             console.warn(
-              `⚠️ Removendo campo ausente no schema: ${colunaAusente} = ${JSON.stringify(payload[colunaAusente])}`,
+              `Removendo campo ausente no schema: ${colunaAusente} = ${JSON.stringify(payload[colunaAusente])}`,
             );
             delete payload[colunaAusente as keyof typeof payload];
             continue;
@@ -1092,9 +1092,9 @@ export default function AcoesComerciais() {
       const orcamento = await inserirOrcamentoComFallback(orcamentoPayload);
 
       if (orcamento) {
-        console.log("✅ ORÇAMENTO SALVO COM SUCESSO:", JSON.stringify(orcamento, null, 2));
+        console.log("ORÇAMENTO SALVO COM SUCESSO:", JSON.stringify(orcamento, null, 2));
         console.log(
-          "💰 Valores no retorno: subtotal=",
+          "Valores no retorno: subtotal=",
           orcamento.subtotal,
           "total=",
           orcamento.total,
@@ -1104,7 +1104,7 @@ export default function AcoesComerciais() {
           orcamento.desconto,
         );
         if (orcamento.total === 0 || orcamento.subtotal === 0) {
-          console.error("⚠️ VALORES ZERADOS NO RETORNO! O banco não salvou os valores corretamente");
+          console.error("VALORES ZERADOS NO RETORNO! O banco não salvou os valores corretamente");
         }
       }
 
