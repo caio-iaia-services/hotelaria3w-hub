@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn, type KanbanColumnData } from "./KanbanColumn";
-import { OpportunityModal } from "./OpportunityModal";
+import { PipelineCardModal } from "./PipelineCardModal";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { CRMCard } from "@/lib/types";
@@ -22,7 +22,6 @@ export function KanbanBoard({ columns, onRefresh, operationColors, showOperation
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const estagioAtual = source.droppableId;
     const novoEstagio = destination.droppableId;
 
     // Update in Supabase
@@ -60,7 +59,7 @@ export function KanbanBoard({ columns, onRefresh, operationColors, showOperation
           ))}
         </div>
       </DragDropContext>
-      <OpportunityModal card={selectedCard} open={modalOpen} onOpenChange={setModalOpen} />
+      <PipelineCardModal card={selectedCard} open={modalOpen} onOpenChange={setModalOpen} />
     </>
   );
 }
