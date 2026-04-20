@@ -143,7 +143,7 @@ export default function Marketing() {
                 "flex items-center gap-2 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide",
                 "shrink-0 border-b-2 transition-all duration-200 whitespace-nowrap",
                 isActive
-                  ? "border-[#164B6E] bg-[#164B6E] text-white"
+                  ? "border-[#C4942C] bg-[#C4942C] text-white"
                   : "border-[#C4942C] bg-[#C4942C]/10 text-[#C4942C] hover:bg-[#C4942C]/20",
               )}
             >
