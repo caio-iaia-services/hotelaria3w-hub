@@ -20,6 +20,8 @@ import Orcamentos from "./pages/Orcamentos";
 import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import Atendimento from "./pages/Atendimento";
+import Marketing from "./pages/Marketing";
+import AdminMarketing from "./pages/AdminMarketing";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
@@ -55,9 +57,11 @@ const App = () => (
               <Route path="/admin/email" element={<Protected><ConfiguracoesEmail /></Protected>} />
               <Route path="/admin/usuarios" element={<Protected><AdminUsuarios /></Protected>} />
               <Route path="/atendimento" element={<Protected><Atendimento /></Protected>} />
+              <Route path="/marketing" element={<Protected><Marketing /></Protected>} />
+              <Route path="/admin/marketing" element={<Protected><AdminMarketing /></Protected>} />
               {[
                 "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
-                "/clientes/hospitalar", "/buscar", "/marketing", "/financeiro", "/admin",
+                "/clientes/hospitalar", "/buscar", "/financeiro", "/admin",
               ].map((path) => (
                 <Route key={path} path={path} element={<Protected><PlaceholderPage /></Protected>} />
               ))}

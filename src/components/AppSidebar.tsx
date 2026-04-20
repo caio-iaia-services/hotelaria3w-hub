@@ -121,6 +121,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       submenu: [
         ...(temModulo("admin_usuarios") ? [{ title: "Usuários", url: "/admin/usuarios" }] : []),
         { title: "Configurações E-mail", url: "/admin/email" },
+        { title: "Config. Marketing", url: "/admin/marketing" },
       ],
     },
   ];
