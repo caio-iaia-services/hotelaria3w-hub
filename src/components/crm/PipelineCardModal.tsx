@@ -28,16 +28,7 @@ import { toast } from "sonner";
 import type { CRMCard, Cliente } from "@/lib/types";
 import { OrcamentoModal } from "@/components/orcamentos/OrcamentoModal";
 
-// ─── Tipos locais ─────────────────────────────────────────────────────────────
-interface ChatVinculado {
-  id: string;
-  interesse_cliente: string | null;
-  notas_gestor: string | null;
-  prioridade: string | null;
-  proxima_acao: string | null;
-  contato?: { telefone: string; nome: string | null } | null;
-}
-
+// ─── Constantes ───────────────────────────────────────────────────────────────
 const PRIORIDADE_COR: Record<string, string> = {
   alta: "bg-red-500",
   media: "bg-yellow-500",
@@ -50,7 +41,7 @@ function formatCnpj(cnpj: string | null | undefined) {
   return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// ─── Componente ───────────────────────────────────────────────────────────────
 interface PipelineCardModalProps {
   card: CRMCard | null;
   open: boolean;
@@ -60,14 +51,14 @@ interface PipelineCardModalProps {
 export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModalProps) {
   const navigate = useNavigate();
 
-  // Dados do cliente completo
+  // Dados completos do cliente
   const [cliente, setCliente] = useState<Cliente | null>(null);
 
-  // Chat WhatsApp vinculado a este cliente (o mais recente)
-  const [chat, setChat] = useState<ChatVinculado | null>(null);
+  // Chat WhatsApp mais recente vinculado a este cliente (se houver)
+  const [chatId, setChatId] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
-  // Campos de anotação (espelham os do PainelAtendimento)
+  // Campos de anotação — salvos em crm_cards (sempre disponível)
   const [interesse, setInteresse] = useState("");
   const [notas, setNotas] = useState("");
   const [prioridade, setPrioridade] = useState("media");
@@ -77,14 +68,13 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
   // Modal de orçamento
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
 
-  // Carrega dados do cliente + chat ao abrir
+  // ── Carregar dados ao abrir ──
   useEffect(() => {
     if (open && card) {
-      carregarDados();
+      carregarDados(card);
     } else if (!open) {
-      // Reset ao fechar
       setCliente(null);
-      setChat(null);
+      setChatId(null);
       setInteresse("");
       setNotas("");
       setPrioridade("media");
@@ -92,58 +82,54 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
     }
   }, [open, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function carregarDados() {
-    if (!card) return;
+  async function carregarDados(c: CRMCard) {
     setCarregando(true);
 
-    // 1. Busca dados completos do cliente
+    // Preenche campos com dados já disponíveis no card
+    setInteresse(c.interesse_cliente || "");
+    setNotas(c.notas_gestor || "");
+    setPrioridade(c.prioridade || "media");
+    setProximaAcao(c.proxima_acao || "");
+
+    // 1. Dados completos do cliente
     const { data: clienteData } = await supabase
       .from("clientes")
       .select(
         "id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento, status, tipo",
       )
-      .eq("id", card.cliente_id)
+      .eq("id", c.cliente_id)
       .maybeSingle();
 
     if (clienteData) setCliente(clienteData as unknown as Cliente);
 
-    // 2. Busca o chat mais recente vinculado a este cliente
+    // 2. Procura chat WhatsApp mais recente deste cliente (apenas para link)
     const { data: chatData } = await supabase
       .from("chats")
-      .select(
-        "id, interesse_cliente, notas_gestor, prioridade, proxima_acao, contato",
-      )
-      .eq("cliente_id", card.cliente_id)
+      .select("id")
+      .eq("cliente_id", c.cliente_id)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (chatData) {
-      setChat(chatData as unknown as ChatVinculado);
-      setInteresse(chatData.interesse_cliente || "");
-      setNotas(chatData.notas_gestor || "");
-      setPrioridade(chatData.prioridade || "media");
-      setProximaAcao(chatData.proxima_acao || "");
-    }
+    setChatId(chatData?.id || null);
 
     setCarregando(false);
   }
 
+  // ── Salvar anotações em crm_cards (sempre funciona) ──
   async function salvarAnotacoes() {
-    if (!chat) {
-      toast.error("Nenhuma conversa vinculada para salvar anotações");
-      return;
-    }
+    if (!card) return;
     setSalvando(true);
     const { error } = await supabase
-      .from("chats")
+      .from("crm_cards")
       .update({
         interesse_cliente: interesse || null,
         notas_gestor: notas || null,
         prioridade,
         proxima_acao: proximaAcao || null,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", chat.id);
+      .eq("id", card.id);
     setSalvando(false);
     if (error) {
       toast.error("Erro ao salvar anotações");
@@ -152,7 +138,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
     toast.success("Anotações salvas");
   }
 
-  function irParaConversa() {
+  function irParaAtendimento() {
     onOpenChange(false);
     navigate("/atendimento");
   }
@@ -162,9 +148,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* Largura similar ao painel de atendimento */}
         <DialogContent className="max-w-[340px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
-          {/* Título oculto para acessibilidade */}
           <DialogTitle className="sr-only">{card.cliente_nome}</DialogTitle>
 
           {/* ── Cabeçalho azul — Ficha do Cliente ── */}
@@ -217,7 +201,6 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
                   )}
                 </div>
 
-                {/* Info do operação/card */}
                 <div className="mt-3 pt-3 border-t border-white/10">
                   <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">
                     Fornecedor
@@ -233,10 +216,9 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
             )}
           </div>
 
-          {/* ── Corpo: Anotações ── */}
+          {/* ── Corpo: Anotações (salvas em crm_cards) ── */}
           <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
 
-            {/* Interesse */}
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Interesse do Cliente
@@ -249,7 +231,6 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               />
             </div>
 
-            {/* Prioridade */}
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Prioridade
@@ -273,7 +254,6 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               </Select>
             </div>
 
-            {/* Anotações */}
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Anotações do Gestor
@@ -281,13 +261,12 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               <Textarea
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Contexto da conversa, observações importantes, combinados..."
+                placeholder="Contexto da negociação, observações importantes, combinados..."
                 className="text-sm resize-none"
                 rows={4}
               />
             </div>
 
-            {/* Próxima ação */}
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Próxima Ação
@@ -300,10 +279,9 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               />
             </div>
 
-            {/* Salvar */}
             <Button
               onClick={salvarAnotacoes}
-              disabled={salvando || !chat}
+              disabled={salvando}
               variant="outline"
               size="sm"
               className="w-full gap-2 h-8"
@@ -311,39 +289,29 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               <Save size={13} />
               {salvando ? "Salvando..." : "Salvar Anotações"}
             </Button>
-
-            {/* Aviso se não há chat */}
-            {!carregando && !chat && (
-              <p className="text-[10px] text-muted-foreground text-center">
-                Sem conversa WhatsApp vinculada — anotações não podem ser salvas
-              </p>
-            )}
           </div>
 
-          {/* ── Rodapé: Conversa WhatsApp + Preparar Orçamento ── */}
+          {/* ── Rodapé ── */}
           <div className="p-4 border-t border-border/50 shrink-0 space-y-2">
-            {/* Botão de conversa */}
-            {chat ? (
-              <Button
-                onClick={irParaConversa}
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 h-8 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
-              >
-                <MessageSquare size={13} />
-                Ver Conversa no Atendimento
-              </Button>
-            ) : (
-              <Button
-                onClick={irParaConversa}
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 h-8 text-muted-foreground"
-              >
-                <PlusCircle size={13} />
-                Iniciar Conversa no Atendimento
-              </Button>
-            )}
+            {/* Link de conversa WhatsApp */}
+            <Button
+              onClick={irParaAtendimento}
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 h-8 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
+            >
+              {chatId ? (
+                <>
+                  <MessageSquare size={13} />
+                  Ver Conversa no Atendimento
+                </>
+              ) : (
+                <>
+                  <PlusCircle size={13} />
+                  Iniciar Conversa no Atendimento
+                </>
+              )}
+            </Button>
 
             {/* Preparar Orçamento */}
             <Button
@@ -358,7 +326,6 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
         </DialogContent>
       </Dialog>
 
-      {/* Modal de orçamento */}
       <OrcamentoModal
         card={card}
         open={orcamentoOpen}

@@ -57,6 +57,10 @@ export interface CRMCard {
   cliente_estado: string
   cliente_segmento: string | null
   observacoes: string | null
+  interesse_cliente: string | null
+  notas_gestor: string | null
+  prioridade: string | null
+  proxima_acao: string | null
   ordem: number
   substituida?: boolean
   operacao_nova?: string | null
