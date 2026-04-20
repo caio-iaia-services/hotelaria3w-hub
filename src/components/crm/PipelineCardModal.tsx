@@ -138,9 +138,19 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
     toast.success("Anotações salvas");
   }
 
-  function irParaAtendimento() {
+  function irParaAtendimento(iniciarConversa = false) {
     onOpenChange(false);
-    navigate("/atendimento");
+    if (iniciarConversa) {
+      navigate("/atendimento", {
+        state: {
+          abrirNovaConversa: true,
+          telefone: cliente?.telefone || "",
+          nome: cliente?.nome_fantasia || card.cliente_nome,
+        },
+      });
+    } else {
+      navigate("/atendimento");
+    }
   }
 
   if (!card) return null;
@@ -294,24 +304,27 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
           {/* ── Rodapé ── */}
           <div className="p-4 border-t border-border/50 shrink-0 space-y-2">
             {/* Link de conversa WhatsApp */}
-            <Button
-              onClick={irParaAtendimento}
-              variant="outline"
-              size="sm"
-              className="w-full gap-2 h-8 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
-            >
-              {chatId ? (
-                <>
-                  <MessageSquare size={13} />
-                  Ver Conversa no Atendimento
-                </>
-              ) : (
-                <>
-                  <PlusCircle size={13} />
-                  Iniciar Conversa no Atendimento
-                </>
-              )}
-            </Button>
+            {chatId ? (
+              <Button
+                onClick={() => irParaAtendimento(false)}
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 h-8 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
+              >
+                <MessageSquare size={13} />
+                Ver Conversa no Atendimento
+              </Button>
+            ) : (
+              <Button
+                onClick={() => irParaAtendimento(true)}
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 h-8 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
+              >
+                <PlusCircle size={13} />
+                Iniciar Conversa no Atendimento
+              </Button>
+            )}
 
             {/* Preparar Orçamento */}
             <Button

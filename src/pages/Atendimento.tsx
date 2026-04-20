@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -361,12 +362,14 @@ function ChatView({
 
 // ─── ModalNovaConversa ────────────────────────────────────────────────────────
 function ModalNovaConversa({
-  isOpen, onClose, canal, onConversaCriada,
+  isOpen, onClose, canal, onConversaCriada, telefoneInicial, nomeInicial,
 }: {
   isOpen: boolean;
   onClose: () => void;
   canal: string;
   onConversaCriada: (chatId: string, canal: string) => void;
+  telefoneInicial?: string;
+  nomeInicial?: string;
 }) {
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<ClienteBusca[]>([]);
@@ -374,6 +377,15 @@ function ModalNovaConversa({
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [telefone, setTelefone] = useState("");
   const [nome, setNome] = useState("");
+
+  // Pré-preenche quando abre com dados externos
+  useEffect(() => {
+    if (isOpen && telefoneInicial) {
+      setTelefone(telefoneInicial.replace(/\D/g, ""));
+      setBusca(nomeInicial || "");
+      setNome(nomeInicial || "");
+    }
+  }, [isOpen, telefoneInicial, nomeInicial]); // eslint-disable-line react-hooks/exhaustive-deps
   const [mensagem, setMensagem] = useState("");
   const [enviando, setEnviando] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -791,15 +803,31 @@ function ListaChats({
 // ─── Atendimento (página principal) ──────────────────────────────────────────
 export default function Atendimento() {
   const { isAdmin, gestaoFiltro } = useAuth();
+  const location = useLocation();
+
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatSelecionado, setChatSelecionado] = useState<Chat | null>(null);
   const [tabAtiva, setTabAtiva] = useState("IA");
   const [online, setOnline] = useState(true);
   const [modalNovaConversa, setModalNovaConversa] = useState(false);
+  const [novaConversaTelefone, setNovaConversaTelefone] = useState<string | undefined>();
+  const [novaConversaNome, setNovaConversaNome] = useState<string | undefined>();
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [modalOportunidade, setModalOportunidade] = useState(false);
   const [clienteParaOportunidade, setClienteParaOportunidade] = useState<Cliente | null>(null);
+
+  // Abre modal de nova conversa se navegou a partir de outro módulo
+  useEffect(() => {
+    const state = location.state as { abrirNovaConversa?: boolean; telefone?: string; nome?: string } | null;
+    if (state?.abrirNovaConversa) {
+      setNovaConversaTelefone(state.telefone);
+      setNovaConversaNome(state.nome);
+      setModalNovaConversa(true);
+      // Limpa o state para não reabrir ao voltar
+      window.history.replaceState({}, "");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canaisVisiveis = (() => {
     if (isAdmin) return CANAIS;
@@ -1098,9 +1126,11 @@ export default function Atendimento() {
 
       <ModalNovaConversa
         isOpen={modalNovaConversa}
-        onClose={() => setModalNovaConversa(false)}
+        onClose={() => { setModalNovaConversa(false); setNovaConversaTelefone(undefined); setNovaConversaNome(undefined); }}
         canal={canalNovaConversa}
         onConversaCriada={onConversaCriada}
+        telefoneInicial={novaConversaTelefone}
+        nomeInicial={novaConversaNome}
       />
 
       <NovaOportunidadeModal
