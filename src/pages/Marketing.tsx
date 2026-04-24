@@ -6,6 +6,7 @@ import {
   TrendingUp, Newspaper, Tv, Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import EmailMarketing from "./marketing/EmailMarketing";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Midia {
@@ -160,7 +161,11 @@ export default function Marketing() {
 
       {/* ── Conteúdo da aba ───────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto scrollbar-brand">
-        {midiaAtiva && <CanalPlaceholder midia={midiaAtiva} />}
+        {midiaAtiva && (
+          midiaAtiva.slug === "email_marketing"
+            ? <EmailMarketing />
+            : <CanalPlaceholder midia={midiaAtiva} />
+        )}
       </div>
     </div>
   );
