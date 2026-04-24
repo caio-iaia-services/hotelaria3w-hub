@@ -130,7 +130,7 @@ export default function Marketing() {
           Aba ativa: fundo azul (#164B6E) com texto branco
       */}
       <div
-        className="flex shrink-0 overflow-x-auto scrollbar-brand border-b border-[#C4942C]/30"
+        className="flex shrink-0 flex-wrap border-b border-[#C4942C]/30"
         style={{ backgroundColor: "rgba(196,148,44,0.06)" }}
       >
         {midias.map((m) => {
@@ -141,15 +141,15 @@ export default function Marketing() {
               key={m.slug}
               onClick={() => setTabAtiva(m.slug)}
               className={cn(
-                "flex items-center gap-2 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide",
-                "shrink-0 border-b-2 transition-all duration-200 whitespace-nowrap",
+                "flex items-center gap-1 px-2.5 py-2 text-[9px] font-semibold uppercase tracking-tight",
+                "border-b-2 transition-all duration-200 whitespace-nowrap",
                 isActive
                   ? "border-[#C4942C] bg-[#C4942C] text-white"
-                  : "border-[#C4942C] bg-[#C4942C]/10 text-[#C4942C] hover:bg-[#C4942C]/20",
+                  : "border-transparent text-[#C4942C] hover:bg-[#C4942C]/20 hover:border-[#C4942C]/50",
               )}
             >
               <Icon
-                size={13}
+                size={11}
                 strokeWidth={isActive ? 2.5 : 2}
                 className="shrink-0"
               />
