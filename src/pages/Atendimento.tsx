@@ -7,6 +7,7 @@ import {
   User, Users, Phone, Search, ChevronRight,
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
+  Paperclip, FileText, Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +113,8 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
       <div className={cn("max-w-[72%]", isCliente ? "" : "items-end flex flex-col")}>
         <div
           className={cn(
-            "px-3 py-2 rounded-2xl text-sm leading-relaxed",
+            "rounded-2xl text-sm leading-relaxed overflow-hidden",
+            msg.tipo === "imagem" ? "p-0" : "px-3 py-2",
             isCliente
               ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
               : isIA
@@ -120,7 +122,34 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
                 : "bg-blue-600 text-white rounded-tr-sm"
           )}
         >
-          {msg.conteudo}
+          {msg.tipo === "imagem" ? (
+            <a href={msg.conteudo} target="_blank" rel="noopener noreferrer">
+              <img
+                src={msg.conteudo}
+                alt="imagem"
+                className="max-w-[240px] max-h-[320px] object-cover rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+              />
+            </a>
+          ) : msg.tipo === "documento" ? (
+            <a
+              href={msg.conteudo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                isCliente ? "bg-slate-100" : "bg-white/20"
+              )}>
+                <FileText size={15} className={isCliente ? "text-slate-600" : "text-white"} />
+              </div>
+              <span className="text-xs font-medium underline underline-offset-2 truncate max-w-[160px]">
+                {decodeURIComponent(msg.conteudo.split("/").pop() ?? "documento")}
+              </span>
+            </a>
+          ) : (
+            msg.conteudo
+          )}
         </div>
         <span className="text-[10px] text-muted-foreground mt-1 px-1">
           {formatHora(msg.criado_em)}
@@ -153,8 +182,11 @@ function ChatView({
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [transferDropdownAberto, setTransferDropdownAberto] = useState(false);
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const dropdownTransfRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fecha o dropdown de transferência ao clicar fora
   useEffect(() => {
@@ -234,6 +266,78 @@ function ChatView({
       toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
     }
     setEnviando(false);
+  };
+
+  const selecionarArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setArquivo(f);
+    if (f.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(f));
+    } else {
+      setPreviewUrl(null);
+    }
+    // Limpa o input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = "";
+  };
+
+  const cancelarArquivo = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setArquivo(null);
+    setPreviewUrl(null);
+  };
+
+  const enviarArquivo = async () => {
+    if (!arquivo) return;
+    setEnviando(true);
+    try {
+      const ext = arquivo.name.split(".").pop() ?? "bin";
+      const tipo = arquivo.type.startsWith("image/") ? "imagem" : "documento";
+      const path = `${chat.id}/${Date.now()}-${arquivo.name}`;
+      const { error: errUp } = await supabase.storage
+        .from("chat-midia")
+        .upload(path, arquivo, { upsert: false });
+      if (errUp) throw errUp;
+
+      const { data: urlData } = supabase.storage.from("chat-midia").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+
+      const legenda = texto.trim() || arquivo.name;
+      const { error: errMsg } = await supabase.from("mensagens").insert({
+        chat_id: chat.id,
+        origem: "humano",
+        conteudo: publicUrl,
+        tipo,
+      });
+      if (errMsg) throw errMsg;
+
+      await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
+
+      // Envia via n8n ao WhatsApp
+      const tel = chat.contato?.telefone ?? "";
+      const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
+      try {
+        await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telefone_cliente: telefoneCliente,
+            mensagem: legenda,
+            arquivo_url: publicUrl,
+            tipo_midia: tipo,
+          }),
+        });
+      } catch {
+        toast.error("Arquivo salvo, mas falha ao enviar no WhatsApp");
+      }
+
+      cancelarArquivo();
+      setTexto("");
+    } catch (err: any) {
+      toast.error("Erro ao enviar arquivo", { description: err?.message });
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const canalInfo = CANAIS.find(c => c.key === chat.canal) ?? CANAIS[0];
@@ -337,17 +441,73 @@ function ChatView({
       {/* Input */}
       <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0">
         {!chat.ia_ativa ? (
-          <div className="flex gap-2">
-            <Input
-              value={texto}
-              onChange={e => setTexto(e.target.value)}
-              placeholder="Digite uma mensagem..."
-              className="text-sm h-9"
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && enviar()}
-            />
-            <Button size="sm" className="h-9 px-3" onClick={enviar} disabled={enviando || !texto.trim()}>
-              <Send size={14} />
-            </Button>
+          <div className="space-y-2">
+            {/* Preview do arquivo selecionado */}
+            {arquivo && (
+              <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-3 py-2 border border-border/50">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="preview" className="w-10 h-10 object-cover rounded shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 bg-muted rounded flex items-center justify-center shrink-0">
+                    <FileText size={18} className="text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{arquivo.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {(arquivo.size / 1024).toFixed(0)} KB · {arquivo.type.startsWith("image/") ? "Imagem" : "Documento"}
+                  </p>
+                </div>
+                <button onClick={cancelarArquivo} className="text-muted-foreground hover:text-foreground shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Linha de input + botões */}
+            <div className="flex gap-2 items-center">
+              {/* Botão de anexo */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-muted-foreground hover:text-[#164B6E] transition-colors shrink-0"
+                title="Anexar imagem ou documento"
+                disabled={enviando}
+              >
+                <Paperclip size={18} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                onChange={selecionarArquivo}
+              />
+
+              <Input
+                value={texto}
+                onChange={e => setTexto(e.target.value)}
+                placeholder={arquivo ? "Legenda (opcional)..." : "Digite uma mensagem..."}
+                className="text-sm h-9 flex-1"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    arquivo ? enviarArquivo() : enviar();
+                  }
+                }}
+              />
+
+              <Button
+                size="sm"
+                className="h-9 px-3 bg-[#164B6E] hover:bg-[#1a5a84] text-white shrink-0"
+                onClick={arquivo ? enviarArquivo : enviar}
+                disabled={enviando || (!texto.trim() && !arquivo)}
+              >
+                {enviando
+                  ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <Send size={14} />
+                }
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
