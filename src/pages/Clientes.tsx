@@ -23,7 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
-import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
+import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 import ClienteModal from "@/components/clientes/ClienteModal";
 
 function formatCNPJ(cnpj: string | null) {
@@ -213,13 +213,8 @@ export default function Clientes() {
       if (d.uf) {
         const uf = d.uf.toUpperCase();
         setValue("estado", uf);
-        setValue("cidade", "");
-        if (d.municipio) {
-          const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          const cidades = CIDADES_POR_ESTADO[uf] || [];
-          const match = cidades.find(c => norm(c) === norm(d.municipio));
-          setValue("cidade", match || d.municipio);
-        }
+        // Cidade vinda do ViaCEP j\u00e1 \u00e9 o nome oficial do IBGE \u2014 usa diretamente
+        setValue("cidade", d.municipio || "");
       }
 
       // Auto-detecção de segmento pelo CNAE principal
@@ -424,6 +419,7 @@ export default function Clientes() {
   const segmentoValue = watch("segmento");
   const watchEstado = watch("estado") || "";
   const watchCidade = watch("cidade") || "";
+  const { cidades: cidadesIBGE, loading: loadingCidades } = useCidadesIBGE(watchEstado || null);
   return (
     <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
@@ -717,7 +713,7 @@ export default function Clientes() {
                 <Select value={watchEstado} onValueChange={(v) => { setValue("estado", v); setValue("cidade", ""); }}>
                   <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
                   <SelectContent className="bg-card z-50 max-h-60">
-                    {Object.keys(CIDADES_POR_ESTADO).sort().map(uf => (
+                    {["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"].map(uf => (
                       <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                     ))}
                   </SelectContent>
@@ -725,10 +721,16 @@ export default function Clientes() {
               </div>
               <div className="space-y-1.5">
                 <Label>Cidade *</Label>
-                <Select value={watchCidade} onValueChange={(v) => setValue("cidade", v)} disabled={!watchEstado}>
-                  <SelectTrigger><SelectValue placeholder={watchEstado ? "Selecione" : "Selecione o estado"} /></SelectTrigger>
+                <Select value={watchCidade} onValueChange={(v) => setValue("cidade", v)} disabled={!watchEstado || loadingCidades}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !watchEstado ? "Selecione o estado" :
+                      loadingCidades ? "Carregando cidades..." :
+                      "Selecione a cidade"
+                    } />
+                  </SelectTrigger>
                   <SelectContent className="bg-card z-50 max-h-60">
-                    {(CIDADES_POR_ESTADO[watchEstado] || []).map(c => (
+                    {cidadesIBGE.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>

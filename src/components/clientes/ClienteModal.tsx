@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, X } from "lucide-react";
 import type { Cliente } from "@/lib/types";
-import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
+import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 
 interface Props {
   cliente: Cliente | null;
@@ -38,6 +38,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Cliente>>({});
+  const { cidades, loading: loadingCidades } = useCidadesIBGE(form.estado);
 
   useEffect(() => {
     if (cliente) {
@@ -128,7 +129,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                 }}>
                   <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
                   <SelectContent className="bg-card z-50 max-h-60">
-                    {Object.keys(CIDADES_POR_ESTADO).sort().map(uf => (
+                    {["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"].map(uf => (
                       <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                     ))}
                   </SelectContent>
@@ -136,10 +137,16 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               </div>
               <div className="space-y-1.5">
                 <Label>Cidade</Label>
-                <Select value={form.cidade || ""} onValueChange={(v) => set("cidade", v)} disabled={!form.estado}>
-                  <SelectTrigger><SelectValue placeholder={form.estado ? "Selecione a cidade" : "Selecione o estado primeiro"} /></SelectTrigger>
+                <Select value={form.cidade || ""} onValueChange={(v) => set("cidade", v)} disabled={!form.estado || loadingCidades}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !form.estado ? "Selecione o estado primeiro" :
+                      loadingCidades ? "Carregando cidades..." :
+                      "Selecione a cidade"
+                    } />
+                  </SelectTrigger>
                   <SelectContent className="bg-card z-50 max-h-60">
-                    {(CIDADES_POR_ESTADO[form.estado || ""] || []).map(cidade => (
+                    {cidades.map(cidade => (
                       <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
                     ))}
                   </SelectContent>
