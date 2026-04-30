@@ -1078,10 +1078,26 @@ export default function Atendimento() {
           .eq("chat_id", chat.id)
           .eq("lida", false)
           .eq("origem", "cliente");
+
+        // Se a última mensagem não é do cliente, a conversa já foi respondida → badge zero
+        const lastOrigin = msgs?.[0]?.origem;
+        const naoLidasEfetivo = lastOrigin === "cliente" ? (naoLidas ?? 0) : 0;
+
+        // Corrige silenciosamente no DB caso ainda haja mensagens antigas com lida=false
+        if (naoLidasEfetivo === 0 && (naoLidas ?? 0) > 0) {
+          supabase
+            .from("mensagens")
+            .update({ lida: true })
+            .eq("chat_id", chat.id)
+            .eq("origem", "cliente")
+            .eq("lida", false)
+            .then(() => {});
+        }
+
         return {
           ...chat,
           ultima_mensagem: msgs?.[0]?.conteudo ?? undefined,
-          nao_lidas: naoLidas ?? 0,
+          nao_lidas: naoLidasEfetivo,
         };
       })
     );
@@ -1202,14 +1218,16 @@ export default function Atendimento() {
   };
 
   const deletarConversa = async (chat: Chat) => {
-    // Deleta mensagens primeiro (FK), depois o chat
-    const { error: errMsg } = await supabase.from("mensagens").delete().eq("chat_id", chat.id);
-    if (errMsg) { toast.error("Erro ao excluir mensagens"); return; }
-    const { error: errChat } = await supabase.from("chats").delete().eq("id", chat.id);
-    if (errChat) { toast.error("Erro ao excluir conversa"); return; }
+    // Encerra o chat via update de status (RLS pode bloquear hard delete silenciosamente)
+    // carregarChats filtra status IN ('ativo','pausado'), então 'encerrado' some da lista
+    const { error } = await supabase
+      .from("chats")
+      .update({ status: "encerrado" })
+      .eq("id", chat.id);
+    if (error) { toast.error("Erro ao encerrar conversa"); return; }
     setChats(prev => prev.filter(c => c.id !== chat.id));
     if (chatSelecionado?.id === chat.id) setChatSelecionado(null);
-    toast.success("Conversa excluída");
+    toast.success("Conversa encerrada");
   };
 
   const totalNaoLidasCanal = (canal: string) =>
