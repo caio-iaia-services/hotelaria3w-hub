@@ -171,11 +171,12 @@ const LABEL_CANAL: Record<string, string> = {
 
 // ─── ChatView ─────────────────────────────────────────────────────────────────
 function ChatView({
-  chat, onToggleIA, onTransferir,
+  chat, onToggleIA, onTransferir, onMarcarLidas,
 }: {
   chat: Chat;
   onToggleIA: (chat: Chat) => void;
   onTransferir: (chat: Chat, novoCanal: string) => void;
+  onMarcarLidas: (chatId: string) => void;
 }) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,21 +215,44 @@ function ChatView({
     setLoading(false);
   }, [chat.id]);
 
+  // Marca todas as mensagens do cliente como lidas ao abrir o chat
+  const marcarComoLidas = useCallback(async () => {
+    await supabase
+      .from("mensagens")
+      .update({ lida: true })
+      .eq("chat_id", chat.id)
+      .eq("origem", "cliente")
+      .eq("lida", false);
+    onMarcarLidas(chat.id);
+  }, [chat.id, onMarcarLidas]);
+
   useEffect(() => {
     setLoading(true);
     carregar();
+    marcarComoLidas();
 
     const sub = supabase
       .channel(`mensagens-${chat.id}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "mensagens", filter: `chat_id=eq.${chat.id}` },
-        (payload) => { setMensagens(prev => [...prev, payload.new as Mensagem]); }
+        (payload) => {
+          const nova = payload.new as Mensagem;
+          setMensagens(prev => [...prev, nova]);
+          // Mensagem do cliente chegou enquanto o chat está aberto → marcar como lida imediatamente
+          if (nova.origem === "cliente" && !nova.lida) {
+            supabase
+              .from("mensagens")
+              .update({ lida: true })
+              .eq("id", nova.id)
+              .then(() => onMarcarLidas(chat.id));
+          }
+        }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(sub); };
-  }, [chat.id, carregar]);
+  }, [chat.id, carregar, marcarComoLidas, onMarcarLidas]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -259,7 +283,7 @@ function ChatView({
       await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telefone_cliente: telefoneCliente, mensagem: msg }),
+        body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, mensagem: msg }),
       });
     } catch (err) {
       console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
@@ -321,6 +345,7 @@ function ChatView({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            chat_id: chat.id,
             telefone_cliente: telefoneCliente,
             mensagem: legenda,
             arquivo_url: publicUrl,
@@ -967,7 +992,21 @@ export default function Atendimento() {
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chatSelecionado, setChatSelecionado] = useState<Chat | null>(null);
+  const [chatSelecionado, setChatSelecionadoState] = useState<Chat | null>(null);
+  const chatSelecionadoRef = useRef<Chat | null>(null);
+  // Setter síncrono: atualiza a ref imediatamente (antes do próximo render)
+  const setChatSelecionado = useCallback((chat: Chat | null | ((prev: Chat | null) => Chat | null)) => {
+    if (typeof chat === "function") {
+      setChatSelecionadoState(prev => {
+        const next = chat(prev);
+        chatSelecionadoRef.current = next;
+        return next;
+      });
+    } else {
+      chatSelecionadoRef.current = chat;
+      setChatSelecionadoState(chat);
+    }
+  }, []);
   const [tabAtiva, setTabAtiva] = useState("IA");
   const [online, setOnline] = useState(true);
   const [modalNovaConversa, setModalNovaConversa] = useState(false);
@@ -976,6 +1015,11 @@ export default function Atendimento() {
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [modalOportunidade, setModalOportunidade] = useState(false);
   const [clienteParaOportunidade, setClienteParaOportunidade] = useState<Cliente | null>(null);
+
+  // Zera o badge de não lidas localmente quando um chat é aberto
+  const marcarLidas = useCallback((chatId: string) => {
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, nao_lidas: 0 } : c));
+  }, []);
 
   // Abre modal de nova conversa se navegou a partir de outro módulo
   useEffect(() => {
@@ -1042,7 +1086,11 @@ export default function Atendimento() {
       })
     );
 
-    setChats(chatsComInfo);
+    // Se um chat está aberto, o usuário já leu as mensagens — zeramos o badge
+    const chatsFinais = chatsComInfo.map(c =>
+      c.id === chatSelecionadoRef.current?.id ? { ...c, nao_lidas: 0 } : c
+    );
+    setChats(chatsFinais);
     setLoading(false);
   }, [canaisVisiveis.map(c => c.key).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1073,13 +1121,15 @@ export default function Atendimento() {
             carregarChatsRef.current(true);
             return prev;
           }
+          const chatAberto = chatSelecionadoRef.current?.id === nova.chat_id;
           return prev.map(c => {
             if (c.id !== nova.chat_id) return c;
             return {
               ...c,
               ultima_mensagem: nova.conteudo,
               ultima_mensagem_em: nova.criado_em || new Date().toISOString(),
-              nao_lidas: nova.origem === "cliente" && !nova.lida
+              // Só incrementa o badge se o chat NÃO estiver aberto no momento
+              nao_lidas: nova.origem === "cliente" && !nova.lida && !chatAberto
                 ? (c.nao_lidas ?? 0) + 1
                 : c.nao_lidas,
             };
@@ -1255,7 +1305,7 @@ export default function Atendimento() {
                 {/* Área de chat */}
                 <div className="flex-1 min-w-0 flex flex-col">
                   {chatDoCanal ? (
-                    <ChatView key={chatDoCanal.id} chat={chatDoCanal} onToggleIA={toggleIA} onTransferir={transferirConversa} />
+                    <ChatView key={chatDoCanal.id} chat={chatDoCanal} onToggleIA={toggleIA} onTransferir={transferirConversa} onMarcarLidas={marcarLidas} />
                   ) : (
                     <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
                       <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
