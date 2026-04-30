@@ -280,7 +280,7 @@ function ChatView({
     const tel = chat.contato?.telefone ?? "";
     const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
     try {
-      await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+      await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, mensagem: msg }),
@@ -341,7 +341,7 @@ function ChatView({
       const tel = chat.contato?.telefone ?? "";
       const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
       try {
-        await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+        await fetch("/api/enviar-mensagem", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -698,7 +698,7 @@ function ModalNovaConversa({
     // 4. Enviar via WhatsApp
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
-      await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano", {
+      await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefone_cliente: telWA, mensagem: mensagem.trim() }),
