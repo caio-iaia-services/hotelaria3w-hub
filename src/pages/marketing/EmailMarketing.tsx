@@ -386,7 +386,9 @@ export default function EmailMarketing() {
         tipo_envio: form.tipo_envio,
         agendado_para,
         recorrencia,
-        total_destinatarios: audienciaCount,
+        // total_destinatarios será atualizado após buscar os destinatários reais (envio imediato)
+        // para agendado/recorrente usa a estimativa da audiência
+        total_destinatarios: form.tipo_envio === "imediato" ? 0 : audienciaCount,
         updated_at: new Date().toISOString(),
       }).select("id").single()
       if (error) throw error
@@ -427,17 +429,18 @@ export default function EmailMarketing() {
           throw new Error(`Falha ao disparar envio: ${txt || res.status}`)
         }
 
-        // Atualiza status para "enviada" no banco (n8n não consegue por RLS)
+        // Atualiza status + contagem real no banco (n8n não consegue por RLS)
         await supabase.from("email_campanhas" as any)
           .update({
             status: "enviada",
             enviado_em: new Date().toISOString(),
+            total_destinatarios: destinatarios.length,
             total_enviados: destinatarios.length,
             updated_at: new Date().toISOString(),
           })
           .eq("id", campanhaNova.id)
 
-        toast.success(`Campanha disparada para ${destinatarios.length} contatos!`)
+        toast.success(`Campanha disparada para ${destinatarios.length} contato${destinatarios.length !== 1 ? "s" : ""}!`)
       } else {
         toast.success(status === "rascunho" ? "Rascunho salvo!" : "Campanha agendada com sucesso!")
       }
