@@ -773,7 +773,7 @@ export default function Orcamentos() {
       if (!pdfBase64) throw new Error("Falha ao gerar o PDF — tente fechar e reabrir o orçamento antes de enviar.");
 
       toast.info("Enviando e-mail...");
-      const response = await fetch("https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-email-orcamento", {
+      const response = await fetch("/api/enviar-email-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

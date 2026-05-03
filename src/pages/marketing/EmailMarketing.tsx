@@ -314,6 +314,30 @@ export default function EmailMarketing() {
     setWizardAberto(true)
   }
 
+  async function buscarDestinatarios(lista_id: string | null): Promise<{ email: string; nome: string }[]> {
+    // Se há lista salva, usa os filtros dela para buscar clientes
+    let filtros = form.filtros
+    if (lista_id) {
+      const lista = listas.find((l) => l.id === lista_id)
+      if (lista?.filtros) filtros = lista.filtros as typeof form.filtros
+    }
+
+    let query = supabase
+      .from("clientes")
+      .select("email, nome_fantasia")
+      .not("email", "is", null)
+    const f = filtros
+    if (f.segmento) query = query.eq("segmento", f.segmento)
+    if (f.status)   query = query.eq("status", f.status)
+    if (f.estado)   query = query.eq("estado", f.estado)
+    if (f.tipo)     query = query.eq("tipo", f.tipo)
+
+    const { data } = await query.limit(2000)
+    return (data ?? [])
+      .filter((c: any) => c.email)
+      .map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
+  }
+
   async function salvar(status: "rascunho" | "agendada") {
     if (!form.nome || !form.assunto) { toast.error("Preencha nome e assunto"); return }
     setSalvando(true)
@@ -343,7 +367,10 @@ export default function EmailMarketing() {
           ? { frequencia: form.recorrencia_frequencia, hora: form.agendado_hora }
           : null
 
-      const { error } = await supabase.from("email_campanhas" as any).insert({
+      // Status no banco: imediato → "enviando" (n8n atualiza para "enviada"), outros → status passado
+      const statusBanco = form.tipo_envio === "imediato" ? "enviando" : status
+
+      const { data: campanhaNova, error } = await supabase.from("email_campanhas" as any).insert({
         user_id: user.id,
         nome: form.nome,
         assunto: form.assunto,
@@ -353,16 +380,54 @@ export default function EmailMarketing() {
         lista_id,
         conteudo_html: form.conteudo_html,
         template_tipo: form.template_tipo,
-        status,
+        status: statusBanco,
         tipo_envio: form.tipo_envio,
         agendado_para,
         recorrencia,
         total_destinatarios: audienciaCount,
         updated_at: new Date().toISOString(),
-      })
+      }).select("id").single()
       if (error) throw error
 
-      toast.success(status === "rascunho" ? "Rascunho salvo!" : "Campanha agendada com sucesso!")
+      // Envio imediato: busca destinatários e dispara o webhook de envio
+      if (form.tipo_envio === "imediato" && campanhaNova) {
+        toast.info("Preparando envio...")
+        const destinatarios = await buscarDestinatarios(lista_id)
+        if (destinatarios.length === 0) throw new Error("Nenhum destinatário encontrado para os filtros selecionados.")
+
+        const res = await fetch("/api/enviar-campanha-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campanha_id: campanhaNova.id,
+            assunto: form.assunto,
+            pre_header: form.pre_header || "",
+            conteudo_html: form.conteudo_html,
+            remetente_nome: form.remetente_nome,
+            remetente_email: form.remetente_email,
+            destinatarios,
+          }),
+        })
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "")
+          throw new Error(`Falha ao disparar envio: ${txt || res.status}`)
+        }
+
+        // Atualiza status para "enviada" no banco (n8n não consegue por RLS)
+        await supabase.from("email_campanhas" as any)
+          .update({
+            status: "enviada",
+            enviado_em: new Date().toISOString(),
+            total_enviados: destinatarios.length,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", campanhaNova.id)
+
+        toast.success(`Campanha disparada para ${destinatarios.length} contatos!`)
+      } else {
+        toast.success(status === "rascunho" ? "Rascunho salvo!" : "Campanha agendada com sucesso!")
+      }
+
       setWizardAberto(false)
       setForm(FORM_INICIAL)
       carregar()
