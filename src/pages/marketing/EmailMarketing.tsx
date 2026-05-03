@@ -6,7 +6,7 @@ import {
   Mail, Plus, Send, Eye, Users, RefreshCw,
   ChevronRight, ChevronLeft, Check, Calendar,
   Filter, MoreHorizontal, Copy, Loader2,
-  Tag, MapPin, Star, AlertCircle, FileText, Trash2,
+  Tag, MapPin, Star, AlertCircle, FileText, Trash2, Pencil, X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -234,6 +234,9 @@ export default function EmailMarketing() {
   const [salvando, setSalvando] = useState(false)
   const [segmentos, setSegmentos] = useState<string[]>([])
   const [estados, setEstados] = useState<string[]>([])
+  const [editandoLista, setEditandoLista] = useState<Lista | null>(null)
+  const [editEmailsLista, setEditEmailsLista] = useState("")
+  const [salvandoLista, setSalvandoLista] = useState(false)
 
   useEffect(() => { carregar() }, [])
 
@@ -283,7 +286,27 @@ export default function EmailMarketing() {
     try {
       if (form.usar_lista_existente && form.lista_id) {
         const lista = listas.find((l) => l.id === form.lista_id)
-        setAudienciaCount(lista?.total_contatos || 0)
+        const f = (lista?.filtros || {}) as Record<string, string>
+        // Lista com e-mails diretos: conta os endereços
+        if (f.emails_diretos) {
+          const count = f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
+          setAudienciaCount(count)
+          return
+        }
+        // Lista com filtros de clientes: faz a query real (evita confiar no total_contatos desatualizado)
+        const temFiltros = !!(f.segmento || f.status || f.estado || f.tipo)
+        if (!temFiltros) {
+          // Lista sem config → exibe 0 para forçar revisão antes de enviar
+          setAudienciaCount(0)
+          return
+        }
+        let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
+        if (f.segmento) query = query.eq("segmento", f.segmento)
+        if (f.status)   query = query.eq("status", f.status)
+        if (f.estado)   query = query.eq("estado", f.estado)
+        if (f.tipo)     query = query.eq("tipo", f.tipo)
+        const { count } = await query
+        setAudienciaCount(count || 0)
         return
       }
       let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
@@ -296,6 +319,38 @@ export default function EmailMarketing() {
       setAudienciaCount(count || 0)
     } finally {
       setAudienciaLoading(false)
+    }
+  }
+
+  async function salvarEmailsLista() {
+    if (!editandoLista) return
+    setSalvandoLista(true)
+    try {
+      const emails = editEmailsLista
+        .split(",")
+        .map((e) => e.trim())
+        .filter((e) => e.includes("@"))
+        .join(",")
+      const novosFiltros = { ...((editandoLista.filtros || {}) as Record<string, string>), emails_diretos: emails }
+      const { error } = await supabase
+        .from("email_listas" as any)
+        .update({ filtros: novosFiltros, total_contatos: emails.split(",").filter((e) => e.includes("@")).length })
+        .eq("id", editandoLista.id)
+      if (error) throw error
+      // Atualiza local
+      setListas((prev) => prev.map((l) =>
+        l.id === editandoLista.id
+          ? { ...l, filtros: novosFiltros as any, total_contatos: emails.split(",").filter((e) => e.includes("@")).length }
+          : l
+      ))
+      toast.success("Lista atualizada!")
+      setEditandoLista(null)
+      // Recontar audiência com os novos dados
+      setTimeout(() => contarAudiencia(), 100)
+    } catch (err: any) {
+      toast.error("Erro ao salvar lista", { description: err?.message })
+    } finally {
+      setSalvandoLista(false)
     }
   }
 
@@ -317,27 +372,46 @@ export default function EmailMarketing() {
   }
 
   async function buscarDestinatarios(lista_id: string | null): Promise<{ email: string; nome: string }[]> {
-    // Se há lista salva, usa os filtros dela para buscar clientes
-    let filtros = form.filtros
     if (lista_id) {
       const lista = listas.find((l) => l.id === lista_id)
-      if (lista?.filtros) filtros = lista.filtros as typeof form.filtros
+      const f = (lista?.filtros || {}) as Record<string, string>
+
+      // Lista com e-mails diretos
+      if (f.emails_diretos) {
+        return f.emails_diretos
+          .split(",")
+          .map((e) => e.trim())
+          .filter((e) => e.includes("@"))
+          .map((e) => ({ email: e, nome: "" }))
+      }
+
+      // Lista baseada em filtros de clientes — exige ao menos 1 filtro para não varrer toda a base
+      const temFiltros = !!(f.segmento || f.status || f.estado || f.tipo)
+      if (!temFiltros) {
+        throw new Error(
+          `A lista "${lista?.nome}" não tem e-mails nem filtros configurados. ` +
+          `Clique no lápis ao lado da lista para adicionar os e-mails diretos.`
+        )
+      }
+
+      let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
+      if (f.segmento) query = query.eq("segmento", f.segmento)
+      if (f.status)   query = query.eq("status", f.status)
+      if (f.estado)   query = query.eq("estado", f.estado)
+      if (f.tipo)     query = query.eq("tipo", f.tipo)
+      const { data } = await query.limit(2000)
+      return (data ?? []).filter((c: any) => c.email).map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
     }
 
-    let query = supabase
-      .from("clientes")
-      .select("email, nome_fantasia")
-      .not("email", "is", null)
-    const f = filtros
+    // Sem lista — usa filtros do formulário
+    let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
+    const f = form.filtros
     if (f.segmento) query = query.eq("segmento", f.segmento)
     if (f.status)   query = query.eq("status", f.status)
     if (f.estado)   query = query.eq("estado", f.estado)
     if (f.tipo)     query = query.eq("tipo", f.tipo)
-
     const { data } = await query.limit(2000)
-    return (data ?? [])
-      .filter((c: any) => c.email)
-      .map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
+    return (data ?? []).filter((c: any) => c.email).map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
   }
 
   async function salvar(status: "rascunho" | "agendada") {
@@ -629,6 +703,46 @@ export default function EmailMarketing() {
         </div>
       )}
 
+      {/* ── Modal editar lista ───────────────────────────────────────────── */}
+      <Dialog open={!!editandoLista} onOpenChange={(open) => { if (!open) setEditandoLista(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#164B6E] font-heading text-base flex items-center gap-2">
+              <Pencil size={15} /> Editar lista: {editandoLista?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">E-mails diretos</Label>
+              <Textarea
+                value={editEmailsLista}
+                onChange={(e) => setEditEmailsLista(e.target.value)}
+                placeholder="sac@3whotelaria.com.br, celso@3whotelaria.com.br, comercial1@3whotelaria.com.br"
+                rows={4}
+                className="text-xs resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Separe os e-mails por vírgula. Ao salvar, a campanha enviará exatamente para esses endereços (ignora filtros de segmento).
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditandoLista(null)} className="h-8">
+                <X size={13} className="mr-1" /> Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="bg-[#164B6E] hover:bg-[#1a5a84] text-white h-8"
+                onClick={salvarEmailsLista}
+                disabled={salvandoLista}
+              >
+                {salvandoLista ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
+                Salvar lista
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Wizard ───────────────────────────────────────────────────────── */}
       <Dialog open={wizardAberto} onOpenChange={setWizardAberto}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
@@ -677,6 +791,11 @@ export default function EmailMarketing() {
                 form={form} listas={listas} segmentos={segmentos} estados={estados}
                 audienciaCount={audienciaCount} audienciaLoading={audienciaLoading}
                 onChange={set} onFiltro={setFiltro}
+                onEditarLista={(lista) => {
+                  const f = (lista.filtros || {}) as Record<string, string>
+                  setEditEmailsLista(f.emails_diretos || "")
+                  setEditandoLista(lista)
+                }}
               />
             )}
             {step === 3 && <Step3 form={form} onChange={set} onTemplate={selecionarTemplate} />}
@@ -795,7 +914,7 @@ function Step1({
 function Step2({
   form, listas, segmentos, estados,
   audienciaCount, audienciaLoading,
-  onChange, onFiltro,
+  onChange, onFiltro, onEditarLista,
 }: {
   form: CampanhaForm
   listas: Lista[]
@@ -805,6 +924,7 @@ function Step2({
   audienciaLoading: boolean
   onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
   onFiltro: (k: keyof FiltrosAudiencia, v: string) => void
+  onEditarLista: (lista: Lista) => void
 }) {
   return (
     <>
@@ -841,16 +961,56 @@ function Step2({
       {form.usar_lista_existente ? (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold">Selecionar Lista</Label>
-          <Select value={form.lista_id} onValueChange={(v) => onChange("lista_id", v)}>
-            <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
-            <SelectContent>
-              {listas.map((l) => (
-                <SelectItem key={l.id} value={l.id}>
-                  {l.nome} — {l.total_contatos} contatos
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select value={form.lista_id} onValueChange={(v) => onChange("lista_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
+                <SelectContent>
+                  {listas.map((l) => {
+                    const f = (l.filtros || {}) as Record<string, string>
+                    const count = f.emails_diretos
+                      ? f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
+                      : l.total_contatos
+                    return (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.nome} — {count} contato{count !== 1 ? "s" : ""}
+                        {f.emails_diretos ? " (e-mails diretos)" : ""}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {form.lista_id && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                title="Editar e-mails da lista"
+                onClick={() => {
+                  const lista = listas.find((l) => l.id === form.lista_id)
+                  if (lista) onEditarLista(lista)
+                }}
+              >
+                <Pencil size={14} />
+              </Button>
+            )}
+          </div>
+          {form.lista_id && (() => {
+            const lista = listas.find((l) => l.id === form.lista_id)
+            const f = (lista?.filtros || {}) as Record<string, string>
+            const semConfig = !f.emails_diretos && !f.segmento && !f.status && !f.estado && !f.tipo
+            if (!semConfig) return null
+            return (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-1">
+                <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700">
+                  Esta lista não tem e-mails nem filtros configurados. Clique no lápis para adicionar os e-mails diretos antes de enviar.
+                </p>
+              </div>
+            )
+          })()}
         </div>
       ) : (
         <>
