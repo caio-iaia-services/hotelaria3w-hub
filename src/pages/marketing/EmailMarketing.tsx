@@ -6,7 +6,7 @@ import {
   Mail, Plus, Send, Eye, Users, RefreshCw,
   ChevronRight, ChevronLeft, Check, Calendar,
   Filter, MoreHorizontal, Copy, Loader2,
-  Tag, MapPin, Star, AlertCircle, FileText,
+  Tag, MapPin, Star, AlertCircle, FileText, Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -455,6 +455,16 @@ export default function EmailMarketing() {
     }
   }
 
+  async function apagar(c: Campanha) {
+    const { error } = await supabase
+      .from("email_campanhas" as any)
+      .delete()
+      .eq("id", c.id)
+    if (error) { toast.error("Erro ao apagar campanha"); return }
+    setCampanhas(prev => prev.filter(x => x.id !== c.id))
+    toast.success("Campanha apagada")
+  }
+
   async function duplicar(c: Campanha) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -603,6 +613,12 @@ export default function EmailMarketing() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => duplicar(c)} className="gap-2 text-sm">
                         <Copy size={13} /> Duplicar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => apagar(c)}
+                        className="gap-2 text-sm text-destructive focus:text-destructive"
+                      >
+                        <Trash2 size={13} /> Apagar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
