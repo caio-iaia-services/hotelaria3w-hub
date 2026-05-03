@@ -929,7 +929,7 @@ function ListaSalvaSelector({
       <Label className="text-xs font-semibold">Selecionar Lista</Label>
       <div className="flex gap-2">
         <div className="flex-1">
-          <Select value={form.lista_id} onValueChange={(v) => onChange("lista_id", v)}>
+          <Select value={form.lista_id || undefined} onValueChange={(v) => onChange("lista_id", v)}>
             <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
             <SelectContent>
               {listas.map((l) => {
