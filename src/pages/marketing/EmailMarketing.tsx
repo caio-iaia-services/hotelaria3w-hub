@@ -79,6 +79,7 @@ interface CampanhaForm {
   agendado_data: string
   agendado_hora: string
   recorrencia_frequencia: "semanal" | "mensal"
+  emails_teste: string   // emails diretos separados por vírgula (override para teste)
 }
 
 // ─── Configuração de status ───────────────────────────────────────────────────
@@ -217,6 +218,7 @@ const FORM_INICIAL: CampanhaForm = {
   agendado_data: "",
   agendado_hora: "09:00",
   recorrencia_frequencia: "semanal",
+  emails_teste: "",
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -392,8 +394,20 @@ export default function EmailMarketing() {
       // Envio imediato: busca destinatários e dispara o webhook de envio
       if (form.tipo_envio === "imediato" && campanhaNova) {
         toast.info("Preparando envio...")
-        const destinatarios = await buscarDestinatarios(lista_id)
-        if (destinatarios.length === 0) throw new Error("Nenhum destinatário encontrado para os filtros selecionados.")
+
+        // Se o usuário informou emails de teste diretos, usa eles; senão busca clientes
+        let destinatarios: { email: string; nome: string }[] = []
+        if (form.emails_teste.trim()) {
+          destinatarios = form.emails_teste
+            .split(",")
+            .map((e) => e.trim())
+            .filter((e) => e.includes("@"))
+            .map((e) => ({ email: e, nome: "" }))
+        } else {
+          destinatarios = await buscarDestinatarios(lista_id)
+        }
+
+        if (destinatarios.length === 0) throw new Error("Nenhum destinatário encontrado. Verifique os filtros ou informe e-mails diretamente.")
 
         const res = await fetch("/api/enviar-campanha-email", {
           method: "POST",
@@ -682,7 +696,7 @@ export default function EmailMarketing() {
             ) : (
               <Button
                 onClick={() => salvar(form.tipo_envio === "imediato" ? "agendada" : "agendada")}
-                disabled={salvando || audienciaCount === 0}
+                disabled={salvando || (audienciaCount === 0 && !form.emails_teste.trim())}
                 className="bg-[#C4942C] hover:bg-[#b8841f] text-white gap-1.5 h-9"
               >
                 {salvando
@@ -1128,6 +1142,21 @@ function Step4({
           </p>
         </div>
       )}
+
+      {/* Emails de teste — override direto */}
+      <div className="space-y-1.5 pt-1">
+        <Label className="text-xs font-semibold">E-mails de teste <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+        <textarea
+          value={form.emails_teste}
+          onChange={(e) => onChange("emails_teste", e.target.value)}
+          placeholder="email1@exemplo.com, email2@exemplo.com"
+          rows={2}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+        />
+        <p className="text-[10px] text-muted-foreground">
+          Se preenchido, envia apenas para estes e-mails (ignora os filtros de audiência). Útil para validar o template antes do envio real.
+        </p>
+      </div>
     </>
   )
 }
