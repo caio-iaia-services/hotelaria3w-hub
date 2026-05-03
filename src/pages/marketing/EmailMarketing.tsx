@@ -910,6 +910,66 @@ function Step1({
   )
 }
 
+// ─── Subcomponente: seletor de lista salva ────────────────────────────────────
+function ListaSalvaSelector({
+  form, listas, onChange, onEditarLista,
+}: {
+  form: CampanhaForm
+  listas: Lista[]
+  onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
+  onEditarLista: (lista: Lista) => void
+}) {
+  const listaAtual = listas.find((l) => l.id === form.lista_id)
+  const filtrosAtual = (listaAtual?.filtros || {}) as Record<string, string>
+  const semConfig = !!form.lista_id && !filtrosAtual.emails_diretos &&
+    !filtrosAtual.segmento && !filtrosAtual.status && !filtrosAtual.estado && !filtrosAtual.tipo
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-semibold">Selecionar Lista</Label>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Select value={form.lista_id} onValueChange={(v) => onChange("lista_id", v)}>
+            <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
+            <SelectContent>
+              {listas.map((l) => {
+                const f = (l.filtros || {}) as Record<string, string>
+                const n = f.emails_diretos
+                  ? f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
+                  : l.total_contatos
+                const label = f.emails_diretos
+                  ? `${l.nome} — ${n} e-mail${n !== 1 ? "s" : ""} diretos`
+                  : `${l.nome} — ${n} contato${n !== 1 ? "s" : ""}`
+                return <SelectItem key={l.id} value={l.id}>{label}</SelectItem>
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+        {form.lista_id && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 shrink-0"
+            title="Editar e-mails da lista"
+            onClick={() => { if (listaAtual) onEditarLista(listaAtual) }}
+          >
+            <Pencil size={14} />
+          </Button>
+        )}
+      </div>
+      {semConfig && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-700">
+            Esta lista não tem e-mails nem filtros configurados. Clique no lápis para adicionar os e-mails diretos antes de enviar.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Step 2 — Base de Envio ───────────────────────────────────────────────────
 function Step2({
   form, listas, segmentos, estados,
@@ -959,59 +1019,12 @@ function Step2({
       </div>
 
       {form.usar_lista_existente ? (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold">Selecionar Lista</Label>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Select value={form.lista_id} onValueChange={(v) => onChange("lista_id", v)}>
-                <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
-                <SelectContent>
-                  {listas.map((l) => {
-                    const f = (l.filtros || {}) as Record<string, string>
-                    const count = f.emails_diretos
-                      ? f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
-                      : l.total_contatos
-                    return (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.nome} — {count} contato{count !== 1 ? "s" : ""}
-                        {f.emails_diretos ? " (e-mails diretos)" : ""}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            {form.lista_id && (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 shrink-0"
-                title="Editar e-mails da lista"
-                onClick={() => {
-                  const lista = listas.find((l) => l.id === form.lista_id)
-                  if (lista) onEditarLista(lista)
-                }}
-              >
-                <Pencil size={14} />
-              </Button>
-            )}
-          </div>
-          {form.lista_id && (() => {
-            const lista = listas.find((l) => l.id === form.lista_id)
-            const f = (lista?.filtros || {}) as Record<string, string>
-            const semConfig = !f.emails_diretos && !f.segmento && !f.status && !f.estado && !f.tipo
-            if (!semConfig) return null
-            return (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-1">
-                <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-700">
-                  Esta lista não tem e-mails nem filtros configurados. Clique no lápis para adicionar os e-mails diretos antes de enviar.
-                </p>
-              </div>
-            )
-          })()}
-        </div>
+        <ListaSalvaSelector
+          form={form}
+          listas={listas}
+          onChange={onChange}
+          onEditarLista={onEditarLista}
+        />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
