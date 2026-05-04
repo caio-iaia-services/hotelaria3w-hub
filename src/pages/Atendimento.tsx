@@ -185,6 +185,8 @@ function ChatView({
   const [transferDropdownAberto, setTransferDropdownAberto] = useState(false);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const dropdownTransfRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -311,6 +313,43 @@ function ChatView({
     setPreviewUrl(null);
   };
 
+  // ── Drag-and-drop ────────────────────────────────────────────────────────────
+  const processarArquivo = (f: File) => {
+    setArquivo(f);
+    if (f.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(f));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  const onDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsDragging(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) setIsDragging(false);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    if (chat.ia_ativa) return; // IA ativa — não aceita arquivos
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    processarArquivo(f);
+  };
+
   const enviarArquivo = async () => {
     if (!arquivo) return;
     setEnviando(true);
@@ -369,7 +408,28 @@ function ChatView({
   const nomeContato = chat.contato?.nome || chat.contato?.telefone || "Desconhecido";
 
   return (
-    <div className="flex flex-col" style={{ height: "100%" }}>
+    <div
+      className="flex flex-col relative"
+      style={{ height: "100%" }}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      {/* Overlay de drag-and-drop */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute inset-2 rounded-2xl border-2 border-dashed border-[#164B6E] bg-[#164B6E]/8 transition-all" />
+          <div className="relative flex flex-col items-center gap-2 text-[#164B6E]">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center">
+              <Image size={26} className="text-[#164B6E]" />
+            </div>
+            <p className="text-sm font-bold">Solte para enviar</p>
+            <p className="text-xs text-[#164B6E]/70">Imagens, PDF, documentos</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">
