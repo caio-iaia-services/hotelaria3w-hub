@@ -1,12 +1,47 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component } from "react";
+import type { ReactNode, ErrorInfo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Megaphone, Users, Phone, MapPin, Mail, Share2,
   CalendarDays, Globe, MessageSquare, Search,
-  TrendingUp, Newspaper, Tv, Youtube,
+  TrendingUp, Newspaper, Tv, Youtube, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmailMarketing from "./marketing/EmailMarketing";
+
+// ─── Guarda global para evitar tela branca em qualquer erro do módulo ─────────
+class ModuleErrorBoundary extends Component<{ children: ReactNode }, { err: string | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { err: null };
+  }
+  static getDerivedStateFromError(e: Error) {
+    return { err: e?.message ?? String(e) };
+  }
+  componentDidCatch(e: Error, info: ErrorInfo) {
+    console.error("[Marketing] render error:", e, info);
+  }
+  render() {
+    if (this.state.err) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+          <AlertCircle size={28} className="text-red-400" />
+          <p className="text-sm font-semibold text-red-600">Erro ao renderizar o módulo.</p>
+          <p className="text-xs text-muted-foreground font-mono bg-muted px-3 py-2 rounded max-w-md break-all">
+            {this.state.err}
+          </p>
+          <button
+            className="text-xs text-[#164B6E] underline"
+            onClick={() => this.setState({ err: null })}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Midia {
@@ -63,17 +98,22 @@ export default function Marketing() {
 
   async function carregar() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("marketing_midias")
-      .select("id, slug, nome, ordem")
-      .eq("ativo", true)
-      .order("ordem");
-    if (!error && data) {
-      const lista = data as Midia[];
-      setMidias(lista);
-      if (lista.length > 0) setTabAtiva(lista[0].slug);
+    try {
+      const { data, error } = await supabase
+        .from("marketing_midias")
+        .select("id, slug, nome, ordem")
+        .eq("ativo", true)
+        .order("ordem");
+      if (!error && data) {
+        const lista = data as Midia[];
+        setMidias(lista);
+        if (lista.length > 0) setTabAtiva(lista[0].slug);
+      }
+    } catch (err) {
+      console.error("[Marketing.carregar]", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   // ── Carregando ──
@@ -163,7 +203,7 @@ export default function Marketing() {
       <div className="flex-1 overflow-y-auto scrollbar-brand">
         {midiaAtiva && (
           midiaAtiva.slug === "email_marketing"
-            ? <EmailMarketing />
+            ? <ModuleErrorBoundary><EmailMarketing /></ModuleErrorBoundary>
             : <CanalPlaceholder midia={midiaAtiva} />
         )}
       </div>

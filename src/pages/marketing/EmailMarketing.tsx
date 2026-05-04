@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, Component } from "react"
+import type { ErrorInfo, ReactNode } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -21,6 +22,42 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+// ─── ErrorBoundary ────────────────────────────────────────────────────────────
+interface EBState { hasError: boolean; message: string }
+class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, message: "" }
+  }
+  static getDerivedStateFromError(error: Error): EBState {
+    return { hasError: true, message: error?.message ?? String(error) }
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[EmailMarketing] render error:", error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center">
+          <AlertCircle size={28} className="text-red-500" />
+          <p className="text-sm font-semibold text-red-600">Ocorreu um erro ao renderizar este passo.</p>
+          <p className="text-xs text-muted-foreground font-mono bg-muted px-3 py-2 rounded max-w-sm break-all">
+            {this.state.message}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => this.setState({ hasError: false, message: "" })}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type CampanhaStatus = "rascunho" | "agendada" | "enviando" | "enviada" | "pausada" | "cancelada"
@@ -51,7 +88,7 @@ interface Lista {
   id: string
   nome: string
   descricao: string | null
-  filtros: Record<string, string>
+  filtros: Record<string, unknown>
   total_contatos: number
 }
 
@@ -79,11 +116,25 @@ interface CampanhaForm {
   agendado_data: string
   agendado_hora: string
   recorrencia_frequencia: "semanal" | "mensal"
-  emails_teste: string   // emails diretos separados por vírgula (override para teste)
+  emails_teste: string
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+/** Converte o campo filtros (que pode vir como qualquer coisa do DB) num objeto seguro */
+function safeFiltros(raw: unknown): Record<string, string> {
+  if (raw === null || raw === undefined) return {}
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof v === "string") out[k] = v
+    }
+    return out
+  }
+  return {}
 }
 
 // ─── Configuração de status ───────────────────────────────────────────────────
-const STATUS_CONFIG: Record<CampanhaStatus, { label: string; color: string }> = {
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   rascunho:  { label: "Rascunho",  color: "bg-gray-100 text-gray-600 border-gray-200" },
   agendada:  { label: "Agendada",  color: "bg-blue-50 text-blue-700 border-blue-200" },
   enviando:  { label: "Enviando",  color: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -91,6 +142,7 @@ const STATUS_CONFIG: Record<CampanhaStatus, { label: string; color: string }> = 
   pausada:   { label: "Pausada",   color: "bg-orange-50 text-orange-700 border-orange-200" },
   cancelada: { label: "Cancelada", color: "bg-red-50 text-red-600 border-red-200" },
 }
+const STATUS_DEFAULT = { label: "Desconhecido", color: "bg-gray-100 text-gray-500 border-gray-200" }
 
 // ─── Templates de e-mail ──────────────────────────────────────────────────────
 const TEMPLATES: Record<string, { label: string; descricao: string; html: string }> = {
@@ -223,6 +275,9 @@ const FORM_INICIAL: CampanhaForm = {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function EmailMarketing() {
+  // diagnóstico — remover após confirmar que o novo código está ativo
+  console.log("[EmailMarketing] v3 – rewrite ativo, ErrorBoundary habilitado")
+
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [listas, setListas] = useState<Lista[]>([])
   const [loading, setLoading] = useState(true)
@@ -240,7 +295,6 @@ export default function EmailMarketing() {
 
   useEffect(() => { carregar() }, [])
 
-  // Recalcula audiência ao mudar filtros no step 2
   useEffect(() => {
     if (step === 2) contarAudiencia()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -248,37 +302,42 @@ export default function EmailMarketing() {
 
   async function carregar() {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    const [
-      { data: camps },
-      { data: lists },
-      { data: segs },
-      { data: ests },
-      { data: emailCfg },
-    ] = await Promise.all([
-      supabase.from("email_campanhas" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("email_listas" as any).select("*").eq("user_id", user.id).order("nome"),
-      supabase.from("clientes").select("segmento").not("segmento", "is", null),
-      supabase.from("clientes").select("estado").not("estado", "is", null),
-      supabase.from("usuarios_email_config" as any).select("email").eq("user_id", user.id).single(),
-    ])
+      const [
+        { data: camps },
+        { data: lists },
+        { data: segs },
+        { data: ests },
+        { data: emailCfg },
+      ] = await Promise.all([
+        supabase.from("email_campanhas" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("email_listas" as any).select("*").eq("user_id", user.id).order("nome"),
+        supabase.from("clientes").select("segmento").not("segmento", "is", null),
+        supabase.from("clientes").select("estado").not("estado", "is", null),
+        supabase.from("usuarios_email_config" as any).select("email").eq("user_id", user.id).single(),
+      ])
 
-    if (camps) setCampanhas(camps as unknown as Campanha[])
-    if (lists) setListas(lists as unknown as Lista[])
-    if (segs) {
-      const uniq = [...new Set((segs as any[]).map((s) => s.segmento).filter(Boolean))].sort() as string[]
-      setSegmentos(uniq)
+      if (camps) setCampanhas(camps as unknown as Campanha[])
+      if (lists) setListas(lists as unknown as Lista[])
+      if (segs) {
+        const uniq = [...new Set((segs as any[]).map((s) => s.segmento).filter(Boolean))].sort() as string[]
+        setSegmentos(uniq)
+      }
+      if (ests) {
+        const uniq = [...new Set((ests as any[]).map((e) => e.estado).filter(Boolean))].sort() as string[]
+        setEstados(uniq)
+      }
+      if (emailCfg) {
+        setForm((prev) => ({ ...prev, remetente_email: (emailCfg as any).email || "" }))
+      }
+    } catch (err) {
+      console.error("[carregar]", err)
+    } finally {
+      setLoading(false)
     }
-    if (ests) {
-      const uniq = [...new Set((ests as any[]).map((e) => e.estado).filter(Boolean))].sort() as string[]
-      setEstados(uniq)
-    }
-    if (emailCfg) {
-      setForm((prev) => ({ ...prev, remetente_email: (emailCfg as any).email || "" }))
-    }
-    setLoading(false)
   }
 
   async function contarAudiencia() {
@@ -286,17 +345,14 @@ export default function EmailMarketing() {
     try {
       if (form.usar_lista_existente && form.lista_id) {
         const lista = listas.find((l) => l.id === form.lista_id)
-        const f = (lista?.filtros || {}) as Record<string, string>
-        // Lista com e-mails diretos: conta os endereços
+        const f = safeFiltros(lista?.filtros)
         if (f.emails_diretos) {
           const count = f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
           setAudienciaCount(count)
           return
         }
-        // Lista com filtros de clientes: faz a query real (evita confiar no total_contatos desatualizado)
         const temFiltros = !!(f.segmento || f.status || f.estado || f.tipo)
         if (!temFiltros) {
-          // Lista sem config → exibe 0 para forçar revisão antes de enviar
           setAudienciaCount(0)
           return
         }
@@ -317,6 +373,9 @@ export default function EmailMarketing() {
       if (f.tipo)     query = query.eq("tipo", f.tipo)
       const { count } = await query
       setAudienciaCount(count || 0)
+    } catch (err) {
+      console.error("[contarAudiencia]", err)
+      setAudienciaCount(0)
     } finally {
       setAudienciaLoading(false)
     }
@@ -331,21 +390,19 @@ export default function EmailMarketing() {
         .map((e) => e.trim())
         .filter((e) => e.includes("@"))
         .join(",")
-      const novosFiltros = { ...((editandoLista.filtros || {}) as Record<string, string>), emails_diretos: emails }
+      const novosFiltros = { ...safeFiltros(editandoLista.filtros), emails_diretos: emails }
       const { error } = await supabase
         .from("email_listas" as any)
         .update({ filtros: novosFiltros, total_contatos: emails.split(",").filter((e) => e.includes("@")).length })
         .eq("id", editandoLista.id)
       if (error) throw error
-      // Atualiza local
       setListas((prev) => prev.map((l) =>
         l.id === editandoLista.id
-          ? { ...l, filtros: novosFiltros as any, total_contatos: emails.split(",").filter((e) => e.includes("@")).length }
+          ? { ...l, filtros: novosFiltros, total_contatos: emails.split(",").filter((e) => e.includes("@")).length }
           : l
       ))
       toast.success("Lista atualizada!")
       setEditandoLista(null)
-      // Recontar audiência com os novos dados
       setTimeout(() => contarAudiencia(), 100)
     } catch (err: any) {
       toast.error("Erro ao salvar lista", { description: err?.message })
@@ -374,18 +431,10 @@ export default function EmailMarketing() {
   async function buscarDestinatarios(lista_id: string | null): Promise<{ email: string; nome: string }[]> {
     if (lista_id) {
       const lista = listas.find((l) => l.id === lista_id)
-      const f = (lista?.filtros || {}) as Record<string, string>
-
-      // Lista com e-mails diretos
+      const f = safeFiltros(lista?.filtros)
       if (f.emails_diretos) {
-        return f.emails_diretos
-          .split(",")
-          .map((e) => e.trim())
-          .filter((e) => e.includes("@"))
-          .map((e) => ({ email: e, nome: "" }))
+        return f.emails_diretos.split(",").map((e) => e.trim()).filter((e) => e.includes("@")).map((e) => ({ email: e, nome: "" }))
       }
-
-      // Lista baseada em filtros de clientes — exige ao menos 1 filtro para não varrer toda a base
       const temFiltros = !!(f.segmento || f.status || f.estado || f.tipo)
       if (!temFiltros) {
         throw new Error(
@@ -393,7 +442,6 @@ export default function EmailMarketing() {
           `Clique no lápis ao lado da lista para adicionar os e-mails diretos.`
         )
       }
-
       let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
       if (f.segmento) query = query.eq("segmento", f.segmento)
       if (f.status)   query = query.eq("status", f.status)
@@ -402,8 +450,6 @@ export default function EmailMarketing() {
       const { data } = await query.limit(2000)
       return (data ?? []).filter((c: any) => c.email).map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
     }
-
-    // Sem lista — usa filtros do formulário
     let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
     const f = form.filtros
     if (f.segmento) query = query.eq("segmento", f.segmento)
@@ -421,7 +467,7 @@ export default function EmailMarketing() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Não autenticado")
 
-      let lista_id: string | null = form.usar_lista_existente ? form.lista_id : null
+      let lista_id: string | null = form.usar_lista_existente ? (form.lista_id || null) : null
 
       if (!form.usar_lista_existente && form.salvar_lista && form.nome_lista) {
         const { data: nl } = await supabase.from("email_listas" as any).insert({
@@ -443,7 +489,6 @@ export default function EmailMarketing() {
           ? { frequencia: form.recorrencia_frequencia, hora: form.agendado_hora }
           : null
 
-      // Status no banco: imediato → "enviando" (n8n atualiza para "enviada"), outros → status passado
       const statusBanco = form.tipo_envio === "imediato" ? "enviando" : status
 
       const { data: campanhaNova, error } = await supabase.from("email_campanhas" as any).insert({
@@ -460,29 +505,19 @@ export default function EmailMarketing() {
         tipo_envio: form.tipo_envio,
         agendado_para,
         recorrencia,
-        // total_destinatarios será atualizado após buscar os destinatários reais (envio imediato)
-        // para agendado/recorrente usa a estimativa da audiência
         total_destinatarios: form.tipo_envio === "imediato" ? 0 : audienciaCount,
         updated_at: new Date().toISOString(),
       }).select("id").single()
       if (error) throw error
 
-      // Envio imediato: busca destinatários e dispara o webhook de envio
       if (form.tipo_envio === "imediato" && campanhaNova) {
         toast.info("Preparando envio...")
-
-        // Se o usuário informou emails de teste diretos, usa eles; senão busca clientes
         let destinatarios: { email: string; nome: string }[] = []
         if (form.emails_teste.trim()) {
-          destinatarios = form.emails_teste
-            .split(",")
-            .map((e) => e.trim())
-            .filter((e) => e.includes("@"))
-            .map((e) => ({ email: e, nome: "" }))
+          destinatarios = form.emails_teste.split(",").map((e) => e.trim()).filter((e) => e.includes("@")).map((e) => ({ email: e, nome: "" }))
         } else {
           destinatarios = await buscarDestinatarios(lista_id)
         }
-
         if (destinatarios.length === 0) throw new Error("Nenhum destinatário encontrado. Verifique os filtros ou informe e-mails diretamente.")
 
         const res = await fetch("/api/enviar-campanha-email", {
@@ -502,8 +537,6 @@ export default function EmailMarketing() {
           const txt = await res.text().catch(() => "")
           throw new Error(`Falha ao disparar envio: ${txt || res.status}`)
         }
-
-        // Atualiza status + contagem real no banco (n8n não consegue por RLS)
         await supabase.from("email_campanhas" as any)
           .update({
             status: "enviada",
@@ -513,7 +546,6 @@ export default function EmailMarketing() {
             updated_at: new Date().toISOString(),
           })
           .eq("id", campanhaNova.id)
-
         toast.success(`Campanha disparada para ${destinatarios.length} contato${destinatarios.length !== 1 ? "s" : ""}!`)
       } else {
         toast.success(status === "rascunho" ? "Rascunho salvo!" : "Campanha agendada com sucesso!")
@@ -530,33 +562,38 @@ export default function EmailMarketing() {
   }
 
   async function apagar(c: Campanha) {
-    const { error } = await supabase
-      .from("email_campanhas" as any)
-      .delete()
-      .eq("id", c.id)
-    if (error) { toast.error("Erro ao apagar campanha"); return }
-    setCampanhas(prev => prev.filter(x => x.id !== c.id))
-    toast.success("Campanha apagada")
+    try {
+      const { error } = await supabase.from("email_campanhas" as any).delete().eq("id", c.id)
+      if (error) { toast.error("Erro ao apagar campanha"); return }
+      setCampanhas(prev => prev.filter(x => x.id !== c.id))
+      toast.success("Campanha apagada")
+    } catch (err: any) {
+      toast.error("Erro ao apagar campanha", { description: err?.message })
+    }
   }
 
   async function duplicar(c: Campanha) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { error } = await supabase.from("email_campanhas" as any).insert({
-      user_id: user.id,
-      nome: `${c.nome} (cópia)`,
-      assunto: c.assunto,
-      pre_header: c.pre_header,
-      remetente_nome: c.remetente_nome,
-      remetente_email: c.remetente_email,
-      lista_id: c.lista_id,
-      conteudo_html: c.conteudo_html,
-      template_tipo: c.template_tipo,
-      status: "rascunho",
-      tipo_envio: c.tipo_envio,
-      total_destinatarios: c.total_destinatarios,
-    })
-    if (!error) { toast.success("Campanha duplicada"); carregar() }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { error } = await supabase.from("email_campanhas" as any).insert({
+        user_id: user.id,
+        nome: `${c.nome} (cópia)`,
+        assunto: c.assunto,
+        pre_header: c.pre_header,
+        remetente_nome: c.remetente_nome,
+        remetente_email: c.remetente_email,
+        lista_id: c.lista_id,
+        conteudo_html: c.conteudo_html,
+        template_tipo: c.template_tipo,
+        status: "rascunho",
+        tipo_envio: c.tipo_envio,
+        total_destinatarios: c.total_destinatarios,
+      })
+      if (!error) { toast.success("Campanha duplicada"); carregar() }
+    } catch (err: any) {
+      toast.error("Erro ao duplicar campanha", { description: err?.message })
+    }
   }
 
   const taxa = (enviados: number, valor: number) =>
@@ -608,10 +645,10 @@ export default function EmailMarketing() {
       {/* ── Métricas ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total", value: campanhas.length,  Icon: Mail,       cor: "#164B6E" },
-          { label: "Enviadas",  value: totalEnviadas,  Icon: Send,       cor: "#22c55e" },
-          { label: "Abertura Média", value: `${mediaAbertura}%`, Icon: Eye, cor: "#C4942C" },
-          { label: "Segmentos", value: listas.length,  Icon: Users,      cor: "#8b5cf6" },
+          { label: "Total",         value: campanhas.length, Icon: Mail,  cor: "#164B6E" },
+          { label: "Enviadas",      value: totalEnviadas,    Icon: Send,  cor: "#22c55e" },
+          { label: "Abertura Média",value: `${mediaAbertura}%`, Icon: Eye, cor: "#C4942C" },
+          { label: "Segmentos",     value: listas.length,    Icon: Users, cor: "#8b5cf6" },
         ].map(({ label, value, Icon, cor }) => (
           <div key={label} className="bg-white border border-border rounded-xl p-4">
             <div className="flex items-center gap-1.5 mb-2">
@@ -633,11 +670,7 @@ export default function EmailMarketing() {
             <p className="font-semibold text-foreground text-sm">Nenhuma campanha ainda</p>
             <p className="text-xs text-muted-foreground mt-1">Crie sua primeira campanha de e-mail marketing</p>
           </div>
-          <Button
-            onClick={abrirWizard}
-            variant="outline"
-            className="gap-2 border-[#C4942C] text-[#C4942C] hover:bg-[#C4942C]/10 h-9"
-          >
+          <Button onClick={abrirWizard} variant="outline" className="gap-2 border-[#C4942C] text-[#C4942C] hover:bg-[#C4942C]/10 h-9">
             <Plus size={14} /> Criar primeira campanha
           </Button>
         </div>
@@ -645,7 +678,7 @@ export default function EmailMarketing() {
         <div className="bg-white border border-border rounded-xl overflow-hidden">
           <div className="divide-y divide-border/50">
             {campanhas.map((c) => {
-              const sc = STATUS_CONFIG[c.status]
+              const sc = STATUS_CONFIG[c.status] ?? STATUS_DEFAULT
               return (
                 <div key={c.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors">
                   <div className="flex-1 min-w-0">
@@ -688,10 +721,7 @@ export default function EmailMarketing() {
                       <DropdownMenuItem onClick={() => duplicar(c)} className="gap-2 text-sm">
                         <Copy size={13} /> Duplicar
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => apagar(c)}
-                        className="gap-2 text-sm text-destructive focus:text-destructive"
-                      >
+                      <DropdownMenuItem onClick={() => apagar(c)} className="gap-2 text-sm text-destructive focus:text-destructive">
                         <Trash2 size={13} /> Apagar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -722,19 +752,14 @@ export default function EmailMarketing() {
                 className="text-xs resize-none"
               />
               <p className="text-[10px] text-muted-foreground">
-                Separe os e-mails por vírgula. Ao salvar, a campanha enviará exatamente para esses endereços (ignora filtros de segmento).
+                Separe os e-mails por vírgula. A campanha enviará exatamente para esses endereços (ignora filtros de segmento).
               </p>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditandoLista(null)} className="h-8">
                 <X size={13} className="mr-1" /> Cancelar
               </Button>
-              <Button
-                size="sm"
-                className="bg-[#164B6E] hover:bg-[#1a5a84] text-white h-8"
-                onClick={salvarEmailsLista}
-                disabled={salvandoLista}
-              >
+              <Button size="sm" className="bg-[#164B6E] hover:bg-[#1a5a84] text-white h-8" onClick={salvarEmailsLista} disabled={salvandoLista}>
                 {salvandoLista ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
                 Salvar lista
               </Button>
@@ -750,7 +775,6 @@ export default function EmailMarketing() {
           {/* Header */}
           <DialogHeader className="px-6 pt-5 pb-4 shrink-0 border-b border-border">
             <DialogTitle className="font-heading text-[#164B6E] text-base">Nova Campanha de E-mail</DialogTitle>
-            {/* Indicador de passos */}
             <div className="flex items-center gap-1 mt-3 flex-wrap">
               {PASSOS.map((label, i) => {
                 const n = i + 1
@@ -761,45 +785,45 @@ export default function EmailMarketing() {
                     <div className="flex items-center gap-1.5">
                       <div className={cn(
                         "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all",
-                        feito  ? "bg-green-500 text-white" :
-                        ativo  ? "bg-[#164B6E] text-white" :
-                                 "bg-muted text-muted-foreground"
+                        feito ? "bg-green-500 text-white" : ativo ? "bg-[#164B6E] text-white" : "bg-muted text-muted-foreground"
                       )}>
                         {feito ? <Check size={11} strokeWidth={3} /> : n}
                       </div>
-                      <span className={cn(
-                        "text-[11px] font-medium hidden sm:block",
-                        ativo ? "text-[#164B6E]" : "text-muted-foreground"
-                      )}>
+                      <span className={cn("text-[11px] font-medium hidden sm:block", ativo ? "text-[#164B6E]" : "text-muted-foreground")}>
                         {label}
                       </span>
                     </div>
-                    {i < 3 && (
-                      <div className={cn("w-5 h-px mx-1.5 shrink-0", step > n ? "bg-green-400" : "bg-border")} />
-                    )}
+                    {i < 3 && <div className={cn("w-5 h-px mx-1.5 shrink-0", step > n ? "bg-green-400" : "bg-border")} />}
                   </div>
                 )
               })}
             </div>
           </DialogHeader>
 
-          {/* Conteúdo do step */}
+          {/* Conteúdo do step — envolto em ErrorBoundary */}
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 scrollbar-brand">
-            {step === 1 && <Step1 form={form} onChange={set} />}
-            {step === 2 && (
-              <Step2
-                form={form} listas={listas} segmentos={segmentos} estados={estados}
-                audienciaCount={audienciaCount} audienciaLoading={audienciaLoading}
-                onChange={set} onFiltro={setFiltro}
-                onEditarLista={(lista) => {
-                  const f = (lista.filtros || {}) as Record<string, string>
-                  setEditEmailsLista(f.emails_diretos || "")
-                  setEditandoLista(lista)
-                }}
-              />
-            )}
-            {step === 3 && <Step3 form={form} onChange={set} onTemplate={selecionarTemplate} />}
-            {step === 4 && <Step4 form={form} audienciaCount={audienciaCount} onChange={set} />}
+            <ErrorBoundary>
+              {step === 1 && <Step1 form={form} onChange={set} />}
+              {step === 2 && (
+                <Step2
+                  form={form}
+                  listas={listas}
+                  segmentos={segmentos}
+                  estados={estados}
+                  audienciaCount={audienciaCount}
+                  audienciaLoading={audienciaLoading}
+                  onChange={set}
+                  onFiltro={setFiltro}
+                  onEditarLista={(lista) => {
+                    const f = safeFiltros(lista.filtros)
+                    setEditEmailsLista(f.emails_diretos || "")
+                    setEditandoLista(lista)
+                  }}
+                />
+              )}
+              {step === 3 && <Step3 form={form} onChange={set} onTemplate={selecionarTemplate} />}
+              {step === 4 && <Step4 form={form} audienciaCount={audienciaCount} onChange={set} />}
+            </ErrorBoundary>
           </div>
 
           {/* Footer */}
@@ -811,36 +835,22 @@ export default function EmailMarketing() {
                 </Button>
               )}
               {form.nome && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground h-8 text-xs"
-                  onClick={() => salvar("rascunho")}
-                  disabled={salvando}
-                >
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs" onClick={() => salvar("rascunho")} disabled={salvando}>
                   <FileText size={12} className="mr-1" /> Salvar Rascunho
                 </Button>
               )}
             </div>
-
             {step < 4 ? (
-              <Button
-                onClick={() => setStep((s) => s + 1)}
-                disabled={!podeProsseguir()}
-                className="bg-[#164B6E] hover:bg-[#1a5a84] text-white gap-1 h-9"
-              >
+              <Button onClick={() => setStep((s) => s + 1)} disabled={!podeProsseguir()} className="bg-[#164B6E] hover:bg-[#1a5a84] text-white gap-1 h-9">
                 Próximo <ChevronRight size={14} />
               </Button>
             ) : (
               <Button
-                onClick={() => salvar(form.tipo_envio === "imediato" ? "agendada" : "agendada")}
+                onClick={() => salvar("agendada")}
                 disabled={salvando || (audienciaCount === 0 && !form.emails_teste.trim())}
                 className="bg-[#C4942C] hover:bg-[#b8841f] text-white gap-1.5 h-9"
               >
-                {salvando
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <Send size={14} />
-                }
+                {salvando ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 {form.tipo_envio === "imediato" ? "Confirmar Envio" : "Agendar Campanha"}
               </Button>
             )}
@@ -852,9 +862,7 @@ export default function EmailMarketing() {
 }
 
 // ─── Step 1 — Identificação ───────────────────────────────────────────────────
-function Step1({
-  form, onChange,
-}: {
+function Step1({ form, onChange }: {
   form: CampanhaForm
   onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
 }) {
@@ -862,104 +870,114 @@ function Step1({
     <>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold">Nome da Campanha *</Label>
-        <Input
-          value={form.nome}
-          onChange={(e) => onChange("nome", e.target.value)}
-          placeholder="Ex: Promoção Enxoval Verão 2025"
-        />
+        <Input value={form.nome} onChange={(e) => onChange("nome", e.target.value)} placeholder="Ex: Promoção Enxoval Verão 2025" />
         <p className="text-[11px] text-muted-foreground">Identificação interna — não aparece para o destinatário.</p>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold">Assunto do E-mail *</Label>
-        <Input
-          value={form.assunto}
-          onChange={(e) => onChange("assunto", e.target.value)}
-          placeholder="Ex: Oferta exclusiva de enxoval para hotéis"
-        />
+        <Input value={form.assunto} onChange={(e) => onChange("assunto", e.target.value)} placeholder="Ex: Oferta exclusiva de enxoval para hotéis" />
         <p className="text-[11px] text-muted-foreground">Aparece na caixa de entrada do destinatário.</p>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold">Pré-header <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-        <Input
-          value={form.pre_header}
-          onChange={(e) => onChange("pre_header", e.target.value)}
-          placeholder="Ex: Condições especiais válidas até dia 30"
-        />
+        <Input value={form.pre_header} onChange={(e) => onChange("pre_header", e.target.value)} placeholder="Ex: Condições especiais válidas até dia 30" />
         <p className="text-[11px] text-muted-foreground">Texto de preview exibido após o assunto em alguns e-mails.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold">Nome do Remetente</Label>
-          <Input
-            value={form.remetente_nome}
-            onChange={(e) => onChange("remetente_nome", e.target.value)}
-            placeholder="3W Hotelaria"
-          />
+          <Input value={form.remetente_nome} onChange={(e) => onChange("remetente_nome", e.target.value)} placeholder="3W Hotelaria" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold">E-mail Remetente *</Label>
-          <Input
-            type="email"
-            value={form.remetente_email}
-            onChange={(e) => onChange("remetente_email", e.target.value)}
-            placeholder="comercial@3whotelaria.com.br"
-          />
+          <Input type="email" value={form.remetente_email} onChange={(e) => onChange("remetente_email", e.target.value)} placeholder="comercial@3whotelaria.com.br" />
         </div>
       </div>
     </>
   )
 }
 
-// ─── Subcomponente: seletor de lista salva ────────────────────────────────────
-function ListaSalvaSelector({
-  form, listas, onChange, onEditarLista,
-}: {
+// ─── Step 2 — Base de Envio ───────────────────────────────────────────────────
+// ListaSalvaSelector: usa cards HTML nativos — ZERO dependência de Radix Select
+function ListaSalvaSelector({ form, listas, onChange, onEditarLista }: {
   form: CampanhaForm
   listas: Lista[]
   onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
   onEditarLista: (lista: Lista) => void
 }) {
-  const listaAtual = listas.find((l) => l.id === form.lista_id)
-  const filtrosAtual = (listaAtual?.filtros || {}) as Record<string, string>
-  const semConfig = !!form.lista_id && !filtrosAtual.emails_diretos &&
-    !filtrosAtual.segmento && !filtrosAtual.status && !filtrosAtual.estado && !filtrosAtual.tipo
+  // Calcula badge de cada lista com segurança total
+  const listaComInfo = listas.map((l) => {
+    const f = safeFiltros(l.filtros)
+    const count = f.emails_diretos
+      ? f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
+      : (typeof l.total_contatos === "number" ? l.total_contatos : 0)
+    const tipo = f.emails_diretos ? "diretos" : "filtro"
+    const semConfig = !f.emails_diretos && !f.segmento && !f.status && !f.estado && !f.tipo
+    return { lista: l, count, tipo, semConfig }
+  })
+
+  const selecionada = listaComInfo.find((x) => x.lista.id === form.lista_id)
 
   return (
     <div className="space-y-2">
       <Label className="text-xs font-semibold">Selecionar Lista</Label>
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <Select value={form.lista_id || undefined} onValueChange={(v) => onChange("lista_id", v)}>
-            <SelectTrigger><SelectValue placeholder="Escolha uma lista..." /></SelectTrigger>
-            <SelectContent>
-              {listas.map((l) => {
-                const f = (l.filtros || {}) as Record<string, string>
-                const n = f.emails_diretos
-                  ? f.emails_diretos.split(",").filter((e) => e.trim().includes("@")).length
-                  : l.total_contatos
-                const label = f.emails_diretos
-                  ? `${l.nome} — ${n} e-mail${n !== 1 ? "s" : ""} diretos`
-                  : `${l.nome} — ${n} contato${n !== 1 ? "s" : ""}`
-                return <SelectItem key={l.id} value={l.id}>{label}</SelectItem>
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-        {form.lista_id && (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 shrink-0"
-            title="Editar e-mails da lista"
-            onClick={() => { if (listaAtual) onEditarLista(listaAtual) }}
-          >
-            <Pencil size={14} />
-          </Button>
-        )}
+
+      {listaComInfo.length === 0 && (
+        <p className="text-xs text-muted-foreground py-2">Nenhuma lista disponível.</p>
+      )}
+
+      <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 scrollbar-brand">
+        {listaComInfo.map(({ lista, count, tipo, semConfig }) => {
+          const isSelected = form.lista_id === lista.id
+          return (
+            <button
+              key={lista.id}
+              type="button"
+              onClick={() => onChange("lista_id", lista.id)}
+              className={cn(
+                "w-full flex items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all",
+                isSelected
+                  ? "border-[#164B6E] bg-[#164B6E]/5"
+                  : "border-border hover:border-[#164B6E]/30 hover:bg-muted/30"
+              )}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={cn(
+                  "w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+                  isSelected ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground/40"
+                )}>
+                  {isSelected && <Check size={9} strokeWidth={3} className="text-white" />}
+                </div>
+                <span className="text-sm font-medium truncate">{lista.nome}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {semConfig ? (
+                  <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">
+                    sem config
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-[#164B6E]/8 text-[#164B6E] px-1.5 py-0.5 rounded-full font-semibold">
+                    {count} {tipo === "diretos" ? "e-mails" : "contatos"}
+                  </span>
+                )}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  title="Editar e-mails da lista"
+                  onClick={(e) => { e.stopPropagation(); onEditarLista(lista) }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); onEditarLista(lista) } }}
+                  className="p-1 rounded hover:bg-[#164B6E]/10 text-muted-foreground hover:text-[#164B6E] transition-colors cursor-pointer"
+                >
+                  <Pencil size={12} />
+                </div>
+              </div>
+            </button>
+          )
+        })}
       </div>
-      {semConfig && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+
+      {selecionada?.semConfig && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-1">
           <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-700">
             Esta lista não tem e-mails nem filtros configurados. Clique no lápis para adicionar os e-mails diretos antes de enviar.
@@ -970,7 +988,6 @@ function ListaSalvaSelector({
   )
 }
 
-// ─── Step 2 — Base de Envio ───────────────────────────────────────────────────
 function Step2({
   form, listas, segmentos, estados,
   audienciaCount, audienciaLoading,
@@ -996,13 +1013,12 @@ function Step2({
         ].map(({ key, label, desc, Icon }) => (
           <button
             key={String(key)}
+            type="button"
             onClick={() => onChange("usar_lista_existente", key)}
             disabled={key === true && listas.length === 0}
             className={cn(
               "border-2 rounded-xl p-4 text-left transition-all",
-              form.usar_lista_existente === key
-                ? "border-[#164B6E] bg-[#164B6E]/5"
-                : "border-border hover:border-[#164B6E]/30",
+              form.usar_lista_existente === key ? "border-[#164B6E] bg-[#164B6E]/5" : "border-border hover:border-[#164B6E]/30",
               key === true && listas.length === 0 && "opacity-40 cursor-not-allowed"
             )}
           >
@@ -1019,21 +1035,13 @@ function Step2({
       </div>
 
       {form.usar_lista_existente ? (
-        <ListaSalvaSelector
-          form={form}
-          listas={listas}
-          onChange={onChange}
-          onEditarLista={onEditarLista}
-        />
+        <ListaSalvaSelector form={form} listas={listas} onChange={onChange} onEditarLista={onEditarLista} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold flex items-center gap-1"><Tag size={11} /> Segmento</Label>
-              <Select
-                value={form.filtros.segmento || "todos"}
-                onValueChange={(v) => onFiltro("segmento", v === "todos" ? "" : v)}
-              >
+              <Select value={form.filtros.segmento || "todos"} onValueChange={(v) => onFiltro("segmento", v === "todos" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os segmentos</SelectItem>
@@ -1043,10 +1051,7 @@ function Step2({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Status</Label>
-              <Select
-                value={form.filtros.status || "todos"}
-                onValueChange={(v) => onFiltro("status", v === "todos" ? "" : v)}
-              >
+              <Select value={form.filtros.status || "todos"} onValueChange={(v) => onFiltro("status", v === "todos" ? "" : v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
@@ -1057,10 +1062,7 @@ function Step2({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold flex items-center gap-1"><MapPin size={11} /> Estado</Label>
-              <Select
-                value={form.filtros.estado || "todos"}
-                onValueChange={(v) => onFiltro("estado", v === "todos" ? "" : v)}
-              >
+              <Select value={form.filtros.estado || "todos"} onValueChange={(v) => onFiltro("estado", v === "todos" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os estados</SelectItem>
@@ -1070,10 +1072,7 @@ function Step2({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold flex items-center gap-1"><Star size={11} /> Tipo</Label>
-              <Select
-                value={form.filtros.tipo || "todos"}
-                onValueChange={(v) => onFiltro("tipo", v === "todos" ? "" : v)}
-              >
+              <Select value={form.filtros.tipo || "todos"} onValueChange={(v) => onFiltro("tipo", v === "todos" ? "" : v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
@@ -1083,8 +1082,6 @@ function Step2({
               </Select>
             </div>
           </div>
-
-          {/* Salvar lista */}
           <div className="bg-muted/40 rounded-xl p-4 space-y-3">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -1096,11 +1093,7 @@ function Step2({
               <span className="text-sm font-medium">Salvar como lista reutilizável</span>
             </label>
             {form.salvar_lista && (
-              <Input
-                value={form.nome_lista}
-                onChange={(e) => onChange("nome_lista", e.target.value)}
-                placeholder="Nome da lista (ex: Hotéis SP Ativos VIP)"
-              />
+              <Input value={form.nome_lista} onChange={(e) => onChange("nome_lista", e.target.value)} placeholder="Nome da lista (ex: Hotéis SP Ativos VIP)" />
             )}
           </div>
         </>
@@ -1109,19 +1102,14 @@ function Step2({
       {/* Contador de audiência */}
       <div className={cn(
         "rounded-xl p-4 flex items-center gap-3 border transition-colors",
-        audienciaCount > 0
-          ? "bg-[#164B6E]/5 border-[#164B6E]/20"
-          : "bg-amber-50 border-amber-200"
+        audienciaCount > 0 ? "bg-[#164B6E]/5 border-[#164B6E]/20" : "bg-amber-50 border-amber-200"
       )}>
         {audienciaLoading
           ? <Loader2 size={20} className="animate-spin text-[#164B6E] shrink-0" />
           : <Users size={20} className={audienciaCount > 0 ? "text-[#164B6E] shrink-0" : "text-amber-500 shrink-0"} />
         }
         <div>
-          <p className={cn(
-            "font-bold text-xl leading-none",
-            audienciaCount > 0 ? "text-[#164B6E]" : "text-amber-600"
-          )}>
+          <p className={cn("font-bold text-xl leading-none", audienciaCount > 0 ? "text-[#164B6E]" : "text-amber-600")}>
             {audienciaLoading ? "..." : audienciaCount} contatos
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -1137,9 +1125,7 @@ function Step2({
 }
 
 // ─── Step 3 — Conteúdo ────────────────────────────────────────────────────────
-function Step3({
-  form, onChange, onTemplate,
-}: {
+function Step3({ form, onChange, onTemplate }: {
   form: CampanhaForm
   onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
   onTemplate: (tipo: string) => void
@@ -1147,67 +1133,44 @@ function Step3({
   const [preview, setPreview] = useState(false)
   return (
     <>
-      {/* Templates */}
       <div>
         <Label className="text-xs font-semibold block mb-2">Modelo de E-mail</Label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {Object.entries(TEMPLATES).map(([key, t]) => (
-            <button
-              key={key}
-              onClick={() => onTemplate(key)}
-              className={cn(
-                "border-2 rounded-xl p-3 text-left transition-all",
-                form.template_tipo === key
-                  ? "border-[#164B6E] bg-[#164B6E]/5"
-                  : "border-border hover:border-[#164B6E]/30"
-              )}
-            >
+            <button key={key} type="button" onClick={() => onTemplate(key)}
+              className={cn("border-2 rounded-xl p-3 text-left transition-all",
+                form.template_tipo === key ? "border-[#164B6E] bg-[#164B6E]/5" : "border-border hover:border-[#164B6E]/30")}>
               <p className="text-xs font-bold text-foreground">{t.label}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{t.descricao}</p>
             </button>
           ))}
         </div>
       </div>
-
-      {/* Tokens */}
       <div className="bg-muted/40 rounded-xl p-3">
         <p className="text-[11px] font-semibold text-foreground mb-2">Tokens de personalização:</p>
         <div className="flex flex-wrap gap-1.5">
           {["{{nome}}", "{{empresa}}"].map((t) => (
-            <span key={t} className="text-[11px] bg-white border border-border rounded px-2 py-0.5 font-mono text-[#164B6E]">
-              {t}
-            </span>
+            <span key={t} className="text-[11px] bg-white border border-border rounded px-2 py-0.5 font-mono text-[#164B6E]">{t}</span>
           ))}
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5">
           Substituídos automaticamente pelo nome e empresa de cada destinatário no envio.
         </p>
       </div>
-
-      {/* Editor / Preview */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold">Conteúdo HTML</Label>
-          <button
-            onClick={() => setPreview((p) => !p)}
-            className="flex items-center gap-1 text-[11px] text-[#164B6E] font-semibold hover:underline"
-          >
+          <button type="button" onClick={() => setPreview((p) => !p)}
+            className="flex items-center gap-1 text-[11px] text-[#164B6E] font-semibold hover:underline">
             <Eye size={12} /> {preview ? "Editar" : "Pré-visualizar"}
           </button>
         </div>
         {preview ? (
-          <div
-            className="border rounded-xl p-4 min-h-48 max-h-72 overflow-auto bg-white text-sm scrollbar-brand"
-            dangerouslySetInnerHTML={{ __html: form.conteudo_html }}
-          />
+          <div className="border rounded-xl p-4 min-h-48 max-h-72 overflow-auto bg-white text-sm scrollbar-brand"
+            dangerouslySetInnerHTML={{ __html: form.conteudo_html }} />
         ) : (
-          <Textarea
-            value={form.conteudo_html}
-            onChange={(e) => onChange("conteudo_html", e.target.value)}
-            rows={11}
-            className="font-mono text-xs scrollbar-brand resize-none"
-            placeholder="Cole ou edite o HTML do seu e-mail aqui..."
-          />
+          <Textarea value={form.conteudo_html} onChange={(e) => onChange("conteudo_html", e.target.value)}
+            rows={11} className="font-mono text-xs scrollbar-brand resize-none" placeholder="Cole ou edite o HTML do seu e-mail aqui..." />
         )}
       </div>
     </>
@@ -1215,38 +1178,25 @@ function Step3({
 }
 
 // ─── Step 4 — Agendamento ─────────────────────────────────────────────────────
-function Step4({
-  form, audienciaCount, onChange,
-}: {
+function Step4({ form, audienciaCount, onChange }: {
   form: CampanhaForm
   audienciaCount: number
   onChange: <K extends keyof CampanhaForm>(k: K, v: CampanhaForm[K]) => void
 }) {
   return (
     <>
-      {/* Tipo de envio */}
       <div>
         <Label className="text-xs font-semibold block mb-2">Quando enviar?</Label>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { key: "imediato",   label: "Enviar Agora",  desc: "Assim que confirmar",       Icon: Send },
-            { key: "agendado",   label: "Agendar",       desc: "Data e hora específica",     Icon: Calendar },
-            { key: "recorrente", label: "Recorrente",    desc: "Repetir periodicamente",     Icon: RefreshCw },
+            { key: "imediato",   label: "Enviar Agora", desc: "Assim que confirmar",   Icon: Send },
+            { key: "agendado",   label: "Agendar",      desc: "Data e hora específica", Icon: Calendar },
+            { key: "recorrente", label: "Recorrente",   desc: "Repetir periodicamente", Icon: RefreshCw },
           ] as const).map(({ key, label, desc, Icon }) => (
-            <button
-              key={key}
-              onClick={() => onChange("tipo_envio", key)}
-              className={cn(
-                "border-2 rounded-xl p-3 text-left transition-all",
-                form.tipo_envio === key
-                  ? "border-[#164B6E] bg-[#164B6E]/5"
-                  : "border-border hover:border-[#164B6E]/30"
-              )}
-            >
-              <Icon
-                size={16}
-                className={cn("mb-1.5", form.tipo_envio === key ? "text-[#164B6E]" : "text-muted-foreground")}
-              />
+            <button key={key} type="button" onClick={() => onChange("tipo_envio", key)}
+              className={cn("border-2 rounded-xl p-3 text-left transition-all",
+                form.tipo_envio === key ? "border-[#164B6E] bg-[#164B6E]/5" : "border-border hover:border-[#164B6E]/30")}>
+              <Icon size={16} className={cn("mb-1.5", form.tipo_envio === key ? "text-[#164B6E]" : "text-muted-foreground")} />
               <p className="text-xs font-bold leading-snug">{label}</p>
               <p className="text-[10px] text-muted-foreground leading-snug">{desc}</p>
             </button>
@@ -1258,20 +1208,11 @@ function Step4({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Data</Label>
-            <Input
-              type="date"
-              value={form.agendado_data}
-              onChange={(e) => onChange("agendado_data", e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
-            />
+            <Input type="date" value={form.agendado_data} onChange={(e) => onChange("agendado_data", e.target.value)} min={new Date().toISOString().split("T")[0]} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Hora</Label>
-            <Input
-              type="time"
-              value={form.agendado_hora}
-              onChange={(e) => onChange("agendado_hora", e.target.value)}
-            />
+            <Input type="time" value={form.agendado_hora} onChange={(e) => onChange("agendado_hora", e.target.value)} />
           </div>
         </div>
       )}
@@ -1280,10 +1221,7 @@ function Step4({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Frequência</Label>
-            <Select
-              value={form.recorrencia_frequencia}
-              onValueChange={(v) => onChange("recorrencia_frequencia", v as "semanal" | "mensal")}
-            >
+            <Select value={form.recorrencia_frequencia} onValueChange={(v) => onChange("recorrencia_frequencia", v as "semanal" | "mensal")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="semanal">Semanal</SelectItem>
@@ -1293,29 +1231,22 @@ function Step4({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Horário preferido</Label>
-            <Input
-              type="time"
-              value={form.agendado_hora}
-              onChange={(e) => onChange("agendado_hora", e.target.value)}
-            />
+            <Input type="time" value={form.agendado_hora} onChange={(e) => onChange("agendado_hora", e.target.value)} />
           </div>
         </div>
       )}
 
-      {/* Resumo */}
       <div className="bg-[#164B6E]/5 border border-[#164B6E]/15 rounded-xl p-4 space-y-2.5">
         <p className="text-[10px] font-bold text-[#164B6E] uppercase tracking-wider">Resumo da Campanha</p>
         {[
-          { label: "Nome",         value: form.nome },
-          { label: "Assunto",      value: form.assunto },
-          { label: "Remetente",    value: `${form.remetente_nome} <${form.remetente_email}>` },
-          { label: "Destinatários",value: `${audienciaCount} contatos` },
+          { label: "Nome",          value: form.nome },
+          { label: "Assunto",       value: form.assunto },
+          { label: "Remetente",     value: `${form.remetente_nome} <${form.remetente_email}>` },
+          { label: "Destinatários", value: `${audienciaCount} contatos` },
           {
             label: "Envio",
-            value: form.tipo_envio === "imediato"
-              ? "Imediato"
-              : form.tipo_envio === "agendado"
-              ? `${form.agendado_data} às ${form.agendado_hora}`
+            value: form.tipo_envio === "imediato" ? "Imediato"
+              : form.tipo_envio === "agendado" ? `${form.agendado_data} às ${form.agendado_hora}`
               : `Recorrente — ${form.recorrencia_frequencia}`,
           },
         ].map(({ label, value }) => (
@@ -1329,13 +1260,10 @@ function Step4({
       {audienciaCount === 0 && (
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
           <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-700">
-            Nenhum destinatário selecionado. Volte ao Passo 2 e ajuste o segmento.
-          </p>
+          <p className="text-xs text-amber-700">Nenhum destinatário selecionado. Volte ao Passo 2 e ajuste o segmento.</p>
         </div>
       )}
 
-      {/* Emails de teste — override direto */}
       <div className="space-y-1.5 pt-1">
         <Label className="text-xs font-semibold">E-mails de teste <span className="font-normal text-muted-foreground">(opcional)</span></Label>
         <textarea
