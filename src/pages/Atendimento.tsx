@@ -354,9 +354,15 @@ function ChatView({
     if (!arquivo) return;
     setEnviando(true);
     try {
-      const ext = arquivo.name.split(".").pop() ?? "bin";
+      const ext = (arquivo.name.split(".").pop() ?? "bin").toLowerCase();
       const tipo = arquivo.type.startsWith("image/") ? "imagem" : "documento";
-      const path = `${chat.id}/${Date.now()}-${arquivo.name}`;
+      // Sanitiza o nome: remove acentos, substitui espaços e caracteres inválidos
+      const nomeBase = arquivo.name
+        .normalize("NFD").replace(/[̀-ͯ]/g, "") // remove acentos
+        .replace(/[^a-zA-Z0-9._-]/g, "_")                 // caracteres especiais → _
+        .replace(/_+/g, "_")                               // múltiplos _ consecutivos → 1
+        .toLowerCase();
+      const path = `${chat.id}/${Date.now()}-${nomeBase}`;
       const { error: errUp } = await supabase.storage
         .from("chat-midia")
         .upload(path, arquivo, { upsert: false });
