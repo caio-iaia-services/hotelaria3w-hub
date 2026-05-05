@@ -220,11 +220,17 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
     if (!file) return;
     setNomeArquivo(file.name);
 
+    const isCSV = file.name.toLowerCase().endsWith(".csv");
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
+        let workbook: XLSX.WorkBook;
+        if (isCSV) {
+          workbook = XLSX.read(e.target?.result as string, { type: "string" });
+        } else {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          workbook = XLSX.read(data, { type: "array" });
+        }
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
@@ -238,10 +244,14 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
         setLinhas(parsed);
         setEtapa("preview");
       } catch {
-        toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .xlsx ou .xls válido.", variant: "destructive" });
+        toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .xlsx, .xls ou .csv válido.", variant: "destructive" });
       }
     };
-    reader.readAsArrayBuffer(file);
+    if (isCSV) {
+      reader.readAsText(file, "UTF-8");
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -325,7 +335,7 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
             Importar Clientes via Planilha
           </DialogTitle>
           <DialogDescription>
-            Faça upload de uma planilha Excel (.xlsx, .xls) com os dados dos clientes.
+            Faça upload de uma planilha Excel (.xlsx, .xls) ou arquivo CSV com os dados dos clientes.
           </DialogDescription>
         </DialogHeader>
 
@@ -345,11 +355,11 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
                 <Upload size={36} className="mx-auto mb-3 text-muted-foreground" />
                 <p className="font-medium text-foreground">Arraste sua planilha aqui</p>
                 <p className="text-sm text-muted-foreground mt-1">ou clique para selecionar o arquivo</p>
-                <p className="text-xs text-muted-foreground mt-3">Formatos aceitos: .xlsx, .xls</p>
+                <p className="text-xs text-muted-foreground mt-3">Formatos aceitos: .xlsx, .xls, .csv</p>
                 <input
                   ref={inputRef}
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.csv"
                   className="hidden"
                   onChange={handleFileChange}
                 />
