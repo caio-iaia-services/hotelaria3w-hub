@@ -683,29 +683,27 @@ const watchEstado = watch("estado") || "";
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>CNPJ *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    {...register("cnpj")}
-                    placeholder="00.000.000/0000-00"
-                    maxLength={18}
-                    required
-                    onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 gap-1.5 h-10 px-3 text-xs whitespace-nowrap"
-                    onClick={() => buscarReceita()}
-                    disabled={buscandoCNPJ}
-                    title="Buscar dados na Receita Federal"
-                  >
-                    {buscandoCNPJ
-                      ? <Loader2 size={13} className="animate-spin" />
-                      : <Search size={13} />}
-                    {buscandoCNPJ ? "Buscando..." : "Receita Federal"}
-                  </Button>
-                </div>
+                <Input
+                  {...register("cnpj")}
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                  required
+                  onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 h-9 px-3 text-xs"
+                  onClick={() => buscarReceita()}
+                  disabled={buscandoCNPJ}
+                  title="Buscar dados na Receita Federal"
+                >
+                  {buscandoCNPJ
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <Search size={13} />}
+                  {buscandoCNPJ ? "Buscando..." : "Buscar na Receita Federal"}
+                </Button>
               </div>
               <SegmentoMultiSelect
                 value={novoClienteSegmentos}
