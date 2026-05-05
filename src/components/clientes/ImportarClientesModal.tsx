@@ -98,6 +98,13 @@ function normalizarColuna(col: string): string {
   return col.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
+// Remove prefixo de CNPJ do início do nome (padrão de exportações do gov. br)
+// Ex: "66.179.808 YURY DAVID LIMA" → "YURY DAVID LIMA"
+// Ex: "66.192.760/0001-56 NOME LTDA" → "NOME LTDA"
+function removerPrefixoCNPJ(nome: string): string {
+  return nome.replace(/^\d[\d.\-/]{5,}\s+/, "").trim();
+}
+
 function normalizarCNPJ(cnpj: string): string {
   return String(cnpj).replace(/\D/g, "");
 }
@@ -170,8 +177,8 @@ function parsearLinhas(rows: Record<string, any>[]): LinhaPreview[] {
     }
 
     return {
-      nome_fantasia: mapped.nome_fantasia || mapped.razao_social || "",
-      razao_social: mapped.razao_social || mapped.nome_fantasia || "",
+      nome_fantasia: removerPrefixoCNPJ(mapped.nome_fantasia || mapped.razao_social || ""),
+      razao_social: removerPrefixoCNPJ(mapped.razao_social || mapped.nome_fantasia || ""),
       cnpj: cnpjLimpo,
       email: mapped.email || null,
       telefone: mapped.telefone || null,
