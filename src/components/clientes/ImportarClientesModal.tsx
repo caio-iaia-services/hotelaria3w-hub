@@ -39,7 +39,6 @@ const COLUMN_MAP: Record<string, string> = {
   fone: "telefone",
   celular: "telefone",
   endereco: "endereco",
-  endereço: "endereco",
   "endereço": "endereco",
   logradouro: "endereco",
   numero: "numero",
@@ -263,18 +262,28 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
       return;
     }
 
-    // CSV: lê como ArrayBuffer para SheetJS detectar encoding automaticamente
+    // CSV: lê como ArrayBuffer, converte para string com encoding correto,
+    // depois passa para SheetJS com type:"string" para que o FS seja respeitado.
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
 
-        // Auto-detecta separador: pega a primeira linha e conta ; vs ,
-        const primeirosBytes = new TextDecoder("windows-1252").decode(data.slice(0, 500));
-        const primeiraLinha = primeirosBytes.split(/\r?\n/)[0];
+        // Tenta Windows-1252 (padrão de arquivos brasileiros do gov.br);
+        // fallback para UTF-8 se o browser não suportar.
+        let text: string;
+        try {
+          text = new TextDecoder("windows-1252").decode(data);
+        } catch {
+          text = new TextDecoder("utf-8").decode(data);
+        }
+
+        // Auto-detecta separador pela primeira linha
+        const primeiraLinha = text.split(/\r?\n/)[0];
         const FS = (primeiraLinha.match(/;/g) || []).length > (primeiraLinha.match(/,/g) || []).length ? ";" : ",";
 
-        parsearEExibir(XLSX.read(data, { type: "array", FS, codepage: 1252 }));
+        // type:"string" é obrigatório para o FS funcionar em CSV
+        parsearEExibir(XLSX.read(text, { type: "string", FS }));
       } catch {
         toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .csv válido.", variant: "destructive" });
       }
