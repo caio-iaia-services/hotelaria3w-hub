@@ -21,6 +21,8 @@ const COLUMN_MAP: Record<string, string> = {
   "nome fantasia": "nome_fantasia",
   nome: "nome_fantasia",
   "nome do estabelecimento": "nome_fantasia",
+  fantasia: "nome_fantasia",
+  "nome fantasia/razao social": "nome_fantasia",
   razao_social: "razao_social",
   "razao social": "razao_social",
   razão_social: "razao_social",
@@ -31,9 +33,18 @@ const COLUMN_MAP: Record<string, string> = {
   email: "email",
   "e-mail": "email",
   "e mail": "email",
+  "telefone 1": "telefone",
+  "telefone 2": "telefone",
   telefone: "telefone",
   fone: "telefone",
   celular: "telefone",
+  endereco: "endereco",
+  endereço: "endereco",
+  "endereço": "endereco",
+  logradouro: "endereco",
+  numero: "numero",
+  "número": "numero",
+  complemento: "complemento",
   cidade: "cidade",
   municipio: "cidade",
   município: "cidade",
@@ -44,9 +55,6 @@ const COLUMN_MAP: Record<string, string> = {
   "ramo de atividade": "segmento",
   status: "status",
   tipo: "tipo",
-  endereco: "endereco",
-  endereço: "endereco",
-  logradouro: "endereco",
   bairro: "bairro",
   cep: "cep",
   observacoes: "observacoes",
@@ -216,42 +224,55 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
     onClose();
   }
 
+  function parsearEExibir(workbook: XLSX.WorkBook) {
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if (rows.length === 0) {
+      toast({ title: "Planilha vazia", description: "Nenhum dado encontrado.", variant: "destructive" });
+      return;
+    }
+    setLinhas(parsearLinhas(rows));
+    setEtapa("preview");
+  }
+
   function processarArquivo(file: File) {
     if (!file) return;
     setNomeArquivo(file.name);
 
     const isCSV = file.name.toLowerCase().endsWith(".csv");
+
+    if (!isCSV) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          parsearEExibir(XLSX.read(data, { type: "array" }));
+        } catch {
+          toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .xlsx ou .xls válido.", variant: "destructive" });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    // CSV: lê como ArrayBuffer para SheetJS detectar encoding automaticamente
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        let workbook: XLSX.WorkBook;
-        if (isCSV) {
-          workbook = XLSX.read(e.target?.result as string, { type: "string" });
-        } else {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          workbook = XLSX.read(data, { type: "array" });
-        }
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
 
-        if (rows.length === 0) {
-          toast({ title: "Planilha vazia", description: "Nenhum dado encontrado na primeira aba.", variant: "destructive" });
-          return;
-        }
+        // Auto-detecta separador: pega a primeira linha e conta ; vs ,
+        const primeirosBytes = new TextDecoder("windows-1252").decode(data.slice(0, 500));
+        const primeiraLinha = primeirosBytes.split(/\r?\n/)[0];
+        const FS = (primeiraLinha.match(/;/g) || []).length > (primeiraLinha.match(/,/g) || []).length ? ";" : ",";
 
-        const parsed = parsearLinhas(rows);
-        setLinhas(parsed);
-        setEtapa("preview");
+        parsearEExibir(XLSX.read(data, { type: "array", FS, codepage: 1252 }));
       } catch {
-        toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .xlsx, .xls ou .csv válido.", variant: "destructive" });
+        toast({ title: "Erro ao ler arquivo", description: "Certifique-se de que é um arquivo .csv válido.", variant: "destructive" });
       }
     };
-    if (isCSV) {
-      reader.readAsText(file, "UTF-8");
-    } else {
-      reader.readAsArrayBuffer(file);
-    }
+    reader.readAsArrayBuffer(file);
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
