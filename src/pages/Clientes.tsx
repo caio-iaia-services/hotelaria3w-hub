@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { supabase } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 import ClienteModal from "@/components/clientes/ClienteModal";
+import ImportarClientesModal from "@/components/clientes/ImportarClientesModal";
 
 function formatCNPJ(cnpj: string | null) {
   if (!cnpj) return "-";
@@ -165,6 +166,9 @@ export default function Clientes() {
 
   const [modalCliente, setModalCliente] = useState<Cliente | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Importar Clientes
+  const [modalImportar, setModalImportar] = useState(false);
 
   // Novo Cliente
   const [modalNovoCliente, setModalNovoCliente] = useState(false);
@@ -430,10 +434,20 @@ export default function Clientes() {
             Gestão completa da base de clientes 3W Hotelaria
           </p>
         </div>
-        <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
-          <Plus size={16} />
-          Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setModalImportar(true)}
+            className="gap-2 shrink-0 border-[#1a4168] text-[#1a4168] hover:bg-[#1a4168]/5"
+          >
+            <Upload size={16} />
+            Importar Planilha
+          </Button>
+          <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
+            <Plus size={16} />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
 
       {/* Metrics */}
@@ -620,6 +634,13 @@ export default function Clientes() {
           </div>
         </div>
       )}
+
+      {/* Modal Importar Clientes */}
+      <ImportarClientesModal
+        open={modalImportar}
+        onClose={() => setModalImportar(false)}
+        onImportado={() => { fetchClientes(); fetchMetrics(); }}
+      />
 
       {/* Modal Editar Cliente */}
       <ClienteModal
