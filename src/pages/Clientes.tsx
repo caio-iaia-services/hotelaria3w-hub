@@ -26,6 +26,7 @@ import type { Cliente } from "@/lib/types";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 import ClienteModal from "@/components/clientes/ClienteModal";
 import ImportarClientesModal from "@/components/clientes/ImportarClientesModal";
+import SegmentoMultiSelect from "@/components/clientes/SegmentoMultiSelect";
 
 function formatCNPJ(cnpj: string | null) {
   if (!cnpj) return "-";
@@ -92,7 +93,6 @@ type NovoClienteForm = {
   nome_fantasia: string;
   razao_social: string;
   cnpj: string;
-  segmento: string;
   email: string;
   telefone: string;
   cidade: string;
@@ -172,6 +172,7 @@ export default function Clientes() {
 
   // Novo Cliente
   const [modalNovoCliente, setModalNovoCliente] = useState(false);
+  const [novoClienteSegmentos, setNovoClienteSegmentos] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [buscandoCNPJ, setBuscandoCNPJ] = useState(false);
   const ultimoCNPJBuscado = useRef<string>("");
@@ -266,7 +267,7 @@ export default function Clientes() {
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
     if (filtros.segmento.length > 0) {
-      query = query.in("segmento", filtros.segmento);
+      query = query.overlaps("segmento", filtros.segmento);
     }
     if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
     if (filtros.regiao.length > 0) {
@@ -339,12 +340,17 @@ export default function Clientes() {
 
   const salvarNovoCliente = async (dados: NovoClienteForm) => {
     setSalvando(true);
+    if (novoClienteSegmentos.length === 0) {
+      toast({ title: "Selecione ao menos um segmento", variant: "destructive" });
+      setSalvando(false);
+      return;
+    }
     try {
       const { error } = await supabase.from("clientes").insert({
         nome_fantasia: dados.nome_fantasia,
         razao_social: dados.razao_social,
         cnpj: dados.cnpj ? dados.cnpj.replace(/\D/g, "") : null,
-        segmento: dados.segmento || null,
+        segmento: novoClienteSegmentos,
         email: dados.email || null,
         telefone: dados.telefone || null,
         cidade: dados.cidade,
@@ -363,6 +369,7 @@ export default function Clientes() {
       toast({ title: "Cliente cadastrado com sucesso!" });
       setModalNovoCliente(false);
       reset();
+      setNovoClienteSegmentos([]);
       fetchClientes();
       fetchMetrics();
     } catch (err: any) {
@@ -420,8 +427,7 @@ export default function Clientes() {
   // Watch values for controlled selects
   const tipoValue = watch("tipo");
   const statusValue = watch("status");
-  const segmentoValue = watch("segmento");
-  const watchEstado = watch("estado") || "";
+const watchEstado = watch("estado") || "";
   const watchCidade = watch("cidade") || "";
   const { cidades: cidadesIBGE, loading: loadingCidades } = useCidadesIBGE(watchEstado || null);
   return (
@@ -586,7 +592,9 @@ export default function Clientes() {
                     <TableCell className="text-xs font-mono text-muted-foreground">{formatCNPJ(c.cnpj)}</TableCell>
                     <TableCell className="text-sm">{c.cidade || "-"}/{c.estado || "-"}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{c.segmento || "-"}</Badge>
+                      {c.segmento && c.segmento.length > 0
+                        ? <span className="text-sm">{c.segmento.join(", ")}</span>
+                        : <span className="text-muted-foreground text-sm">-</span>}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className={statusColors[c.status] || ""}>{c.status}</Badge>
@@ -652,7 +660,7 @@ export default function Clientes() {
       />
 
       {/* Modal Novo Cliente */}
-      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) { reset(); ultimoCNPJBuscado.current = ""; } }}>
+      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) { reset(); setNovoClienteSegmentos([]); ultimoCNPJBuscado.current = ""; } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
@@ -699,20 +707,11 @@ export default function Clientes() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Segmento</Label>
-                <Select value={segmentoValue} onValueChange={(v) => setValue("segmento", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="Hotelaria">Hotelaria</SelectItem>
-                    <SelectItem value="Gastronomia">Gastronomia</SelectItem>
-                    <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-                    <SelectItem value="Condominial">Condominial</SelectItem>
-                    <SelectItem value="Exportação">Exportação</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <SegmentoMultiSelect
+                value={novoClienteSegmentos}
+                onChange={setNovoClienteSegmentos}
+                required
+              />
             </div>
 
             {/* Contato */}

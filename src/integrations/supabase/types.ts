@@ -66,7 +66,7 @@ export type Database = {
           observacoes: string | null
           pais: string | null
           razao_social: string
-          segmento: string | null
+          segmento: string[] | null
           segmento_id: string | null
           status: string
           telefone: string | null
@@ -89,7 +89,7 @@ export type Database = {
           observacoes?: string | null
           pais?: string | null
           razao_social: string
-          segmento?: string | null
+          segmento?: string[] | null
           segmento_id?: string | null
           status?: string
           telefone?: string | null
@@ -112,7 +112,7 @@ export type Database = {
           observacoes?: string | null
           pais?: string | null
           razao_social?: string
-          segmento?: string | null
+          segmento?: string[] | null
           segmento_id?: string | null
           status?: string
           telefone?: string | null

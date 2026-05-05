@@ -323,7 +323,7 @@ export default function EmailMarketing() {
       if (camps) setCampanhas(camps as unknown as Campanha[])
       if (lists) setListas(lists as unknown as Lista[])
       if (segs) {
-        const uniq = [...new Set((segs as any[]).map((s) => s.segmento).filter(Boolean))].sort() as string[]
+        const uniq = [...new Set((segs as any[]).flatMap((s) => s.segmento || []).filter(Boolean))].sort() as string[]
         setSegmentos(uniq)
       }
       if (ests) {
@@ -357,7 +357,7 @@ export default function EmailMarketing() {
           return
         }
         let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
-        if (f.segmento) query = query.eq("segmento", f.segmento)
+        if (f.segmento) query = query.overlaps("segmento", [f.segmento])
         if (f.status)   query = query.eq("status", f.status)
         if (f.estado)   query = query.eq("estado", f.estado)
         if (f.tipo)     query = query.eq("tipo", f.tipo)
@@ -367,7 +367,7 @@ export default function EmailMarketing() {
       }
       let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
       const f = form.filtros
-      if (f.segmento) query = query.eq("segmento", f.segmento)
+      if (f.segmento) query = query.overlaps("segmento", [f.segmento])
       if (f.status)   query = query.eq("status", f.status)
       if (f.estado)   query = query.eq("estado", f.estado)
       if (f.tipo)     query = query.eq("tipo", f.tipo)
@@ -443,7 +443,7 @@ export default function EmailMarketing() {
         )
       }
       let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
-      if (f.segmento) query = query.eq("segmento", f.segmento)
+      if (f.segmento) query = query.overlaps("segmento", [f.segmento])
       if (f.status)   query = query.eq("status", f.status)
       if (f.estado)   query = query.eq("estado", f.estado)
       if (f.tipo)     query = query.eq("tipo", f.tipo)
@@ -452,7 +452,7 @@ export default function EmailMarketing() {
     }
     let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
     const f = form.filtros
-    if (f.segmento) query = query.eq("segmento", f.segmento)
+    if (f.segmento) query = query.overlaps("segmento", [f.segmento])
     if (f.status)   query = query.eq("status", f.status)
     if (f.estado)   query = query.eq("estado", f.estado)
     if (f.tipo)     query = query.eq("tipo", f.tipo)

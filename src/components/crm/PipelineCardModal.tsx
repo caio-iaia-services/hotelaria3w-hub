@@ -203,10 +203,10 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
                       <span className="truncate">{cliente.email}</span>
                     </div>
                   )}
-                  {cliente.segmento && (
+                  {cliente.segmento && cliente.segmento.length > 0 && (
                     <div className="flex items-center gap-2 text-white/75 text-[11px]">
                       <Tag size={10} className="shrink-0 opacity-70" />
-                      <span>{cliente.segmento}</span>
+                      <span>{(cliente.segmento as string[]).join(", ")}</span>
                     </div>
                   )}
                 </div>

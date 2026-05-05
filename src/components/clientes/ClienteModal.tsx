@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, X } from "lucide-react";
 import type { Cliente } from "@/lib/types";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
+import SegmentoMultiSelect, { SegmentosBadges } from "@/components/clientes/SegmentoMultiSelect";
 
 interface Props {
   cliente: Cliente | null;
@@ -63,7 +64,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
     }
   };
 
-  const set = (field: keyof Cliente, value: string) =>
+  const set = (field: keyof Cliente, value: string | string[]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
@@ -153,6 +154,11 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                 </Select>
               </div>
             </div>
+            <SegmentoMultiSelect
+              value={form.segmento || []}
+              onChange={(v) => set("segmento", v)}
+              required
+            />
             <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select value={form.tipo || ""} onValueChange={(v) => set("tipo", v)}>
@@ -183,7 +189,10 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Info label="Nome Fantasia" value={cliente.nome_fantasia} />
               <Info label="Razão Social" value={cliente.razao_social} />
               <Info label="CNPJ" value={formatCNPJ(cliente.cnpj)} />
-              <Info label="Segmento" value={cliente.segmento} />
+              <div>
+                <p className="text-xs text-muted-foreground">Segmento</p>
+                <SegmentosBadges segmentos={cliente.segmento} />
+              </div>
               <Info label="E-mail" value={cliente.email} />
               <Info label="Telefone" value={cliente.telefone} />
               <Info label="Cidade/UF" value={`${cliente.cidade || "-"}/${cliente.estado || "-"}`} />

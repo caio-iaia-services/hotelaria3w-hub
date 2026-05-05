@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
+import SegmentoMultiSelect from "@/components/clientes/SegmentoMultiSelect";
 
 // Mapeamento flexível de nomes de colunas do Excel para campos do banco
 const COLUMN_MAP: Record<string, string> = {
@@ -193,6 +194,7 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
   const [etapa, setEtapa] = useState<Etapa>("upload");
   const [nomeArquivo, setNomeArquivo] = useState("");
   const [linhas, setLinhas] = useState<LinhaPreview[]>([]);
+  const [segmentosSelecionados, setSegmentosSelecionados] = useState<string[]>([]);
   const [importando, setImportando] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [resultado, setResultado] = useState<ResultadoImportacao | null>(null);
@@ -202,6 +204,7 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
     setEtapa("upload");
     setNomeArquivo("");
     setLinhas([]);
+    setSegmentosSelecionados([]);
     setImportando(false);
     setProgresso(0);
     setResultado(null);
@@ -259,6 +262,10 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
       toast({ title: "Nenhuma linha válida para importar", variant: "destructive" });
       return;
     }
+    if (segmentosSelecionados.length === 0) {
+      toast({ title: "Selecione ao menos um segmento antes de importar", variant: "destructive" });
+      return;
+    }
 
     setImportando(true);
     setProgresso(0);
@@ -281,8 +288,9 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
     duplicados = validas.length - novas.length;
 
     for (let i = 0; i < novas.length; i += LOTE) {
-      const lote = novas.slice(i, i + LOTE).map(({ _erros, ...resto }) => ({
+      const lote = novas.slice(i, i + LOTE).map(({ _erros, segmento: _seg, ...resto }) => ({
         ...resto,
+        segmento: segmentosSelecionados,
         pais: "Brasil",
       }));
 
@@ -394,6 +402,13 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
                   )}
                 </div>
               )}
+
+              <SegmentoMultiSelect
+                label="Segmento(s) a aplicar nos clientes importados"
+                value={segmentosSelecionados}
+                onChange={setSegmentosSelecionados}
+                required
+              />
 
               <div className="rounded-lg border overflow-hidden">
                 <Table>
