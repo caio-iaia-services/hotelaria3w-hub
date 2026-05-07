@@ -27,6 +27,8 @@ const COLUMN_MAP: Record<string, string> = {
   "razao social": "razao_social",
   razão_social: "razao_social",
   "razão social": "razao_social",
+  razao: "razao_social",   // coluna "Razão" (truncada) em exports do gov.br
+  razão: "razao_social",
   empresa: "razao_social",
   cnpj: "cnpj",
   "cnpj/cpf": "cnpj",
