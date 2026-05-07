@@ -29,6 +29,7 @@ const COLUMN_MAP: Record<string, string> = {
   "razão social": "razao_social",
   razao: "razao_social",   // coluna "Razão" (truncada) em exports do gov.br
   razão: "razao_social",
+  razo: "razao_social",    // "Razão" com replacement char → "Razo" após strip
   empresa: "razao_social",
   cnpj: "cnpj",
   "cnpj/cpf": "cnpj",
@@ -96,7 +97,12 @@ type ResultadoImportacao = {
 };
 
 function normalizarColuna(col: string): string {
-  return col.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return col
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove diacríticos combinantes (ã→a, etc.)
+    .replace(/�/g, "");         // remove replacement character (encoding quebrado)
 }
 
 // Remove prefixo de CNPJ do início do nome (padrão de exportações do gov. br)
@@ -165,6 +171,27 @@ function parsearLinhas(rows: Record<string, any>[]): LinhaPreview[] {
       const campo = COLUMN_MAP[colNorm];
       if (campo && valor !== undefined && valor !== null && String(valor).trim() !== "") {
         mapped[campo] = String(valor).trim();
+      }
+    }
+
+    // Fallback: matching parcial para campos críticos.
+    // Necessário quando o arquivo tem encoding quebrado (ex: "Razão" → "Raz�o")
+    // e o nome da coluna não casa exatamente com nenhuma chave do COLUMN_MAP.
+    if (!mapped.razao_social || !mapped.nome_fantasia) {
+      for (const [colRaw, valor] of Object.entries(row)) {
+        if (!valor || String(valor).trim() === "") continue;
+        const colNorm = normalizarColuna(String(colRaw));
+        // Qualquer coluna que contenha "raz" → razao_social
+        // (cobre: razao, razo, razao social, raz?o, razio, etc.)
+        if (!mapped.razao_social && colNorm.includes("raz")) {
+          mapped.razao_social = String(valor).trim();
+        }
+        // Coluna com "fantasia" ou que começa com "nome" (exceto nome do socio/partner)
+        if (!mapped.nome_fantasia &&
+            (colNorm.includes("fantasia") ||
+             (colNorm.startsWith("nome") && !colNorm.includes("socio") && !colNorm.includes("partner")))) {
+          mapped.nome_fantasia = String(valor).trim();
+        }
       }
     }
 
