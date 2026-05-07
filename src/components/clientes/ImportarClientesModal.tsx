@@ -351,15 +351,20 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
     let erros = 0;
     const detalhes_erros: string[] = [];
 
-    // Buscar CNPJs já existentes em lote
+    // Buscar CNPJs já existentes em lote.
+    // Normaliza os valores do banco (remove máscara) para garantir comparação correta,
+    // independente de como o CNPJ foi salvo originalmente.
     const cnpjsParaImportar = validas.map((l) => l.cnpj).filter(Boolean);
     const { data: existentes } = await supabase
       .from("clientes")
       .select("cnpj")
       .in("cnpj", cnpjsParaImportar);
-    const cnpjsExistentes = new Set((existentes || []).map((c) => c.cnpj));
+    const cnpjsExistentes = new Set(
+      (existentes || []).map((c) => normalizarCNPJ(c.cnpj || ""))
+    );
 
     const LOTE = 50;
+    // Pré-filtra os que o pré-check encontrou (melhora o count de duplicados exibido)
     const novas = validas.filter((l) => !cnpjsExistentes.has(l.cnpj));
     duplicados = validas.length - novas.length;
 
@@ -370,12 +375,21 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
         pais: "Brasil",
       }));
 
-      const { error } = await supabase.from("clientes").insert(lote);
+      // upsert com ignoreDuplicates: o banco nunca retorna erro de constraint.
+      // Registros com CNPJ já existente são ignorados silenciosamente.
+      const { data: inseridos_lote, error } = await supabase
+        .from("clientes")
+        .upsert(lote, { onConflict: "cnpj", ignoreDuplicates: true })
+        .select("id");
+
       if (error) {
         erros += lote.length;
         detalhes_erros.push(`Lote ${Math.floor(i / LOTE) + 1}: ${error.message}`);
       } else {
-        inseridos += lote.length;
+        const qtdInseridos = inseridos_lote?.length ?? lote.length;
+        const qtdIgnorados = lote.length - qtdInseridos;
+        inseridos += qtdInseridos;
+        duplicados += qtdIgnorados; // duplicados que escaparam do pré-check
       }
 
       setProgresso(Math.round(((i + LOTE) / novas.length) * 100));
