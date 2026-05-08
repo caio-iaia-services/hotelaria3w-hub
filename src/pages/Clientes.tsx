@@ -302,56 +302,91 @@ export default function Clientes() {
     setTotalAtivos(ativos || 0);
   }, []);
 
+  // ── Modal de Exportação ──────────────────────────────────────────────────
+  const [modalExportar, setModalExportar] = useState(false);
+  const [exportFiltros, setExportFiltros] = useState<Filtros>(FILTROS_INICIAIS);
+  const [exportCount, setExportCount] = useState<number | null>(null);
+  const [contandoExport, setContandoExport] = useState(false);
   const [exportando, setExportando] = useState(false);
 
-  const exportarCSV = async () => {
+  function buildExportQuery(base: ReturnType<typeof supabase.from>) {
+    let q = base;
+    if (exportFiltros.status.length > 0)   q = q.in("status", exportFiltros.status);
+    if (exportFiltros.tipo.length > 0)     q = q.in("tipo", exportFiltros.tipo);
+    if (exportFiltros.segmento.length > 0) q = q.overlaps("segmento", exportFiltros.segmento);
+    if (exportFiltros.estado.length > 0)   q = q.in("estado", exportFiltros.estado);
+    if (exportFiltros.regiao.length > 0) {
+      const estados = exportFiltros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
+      if (estados.length > 0 && exportFiltros.estado.length === 0) q = q.in("estado", estados);
+    }
+    return q;
+  }
+
+  // Conta quantos registros serão exportados sempre que os filtros mudarem
+  useEffect(() => {
+    if (!modalExportar) return;
+    const semFiltro = Object.values(exportFiltros).every((v) => (Array.isArray(v) ? v.length === 0 : !v));
+    if (semFiltro) {
+      // sem filtros → usa o total já conhecido
+      setExportCount(total);
+      return;
+    }
+    setContandoExport(true);
+    const run = async () => {
+      const q = buildExportQuery(supabase.from("clientes").select("id", { count: "exact", head: true }));
+      const { count } = await q;
+      setExportCount(count ?? 0);
+      setContandoExport(false);
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportFiltros, modalExportar]);
+
+  const exportarXLSX = async () => {
     setExportando(true);
     try {
-      // Monta a mesma query do fetchClientes mas sem paginação
-      let query = supabase.from("clientes").select("*");
+      // Supabase limita 1 000 linhas por request — busca em lotes
+      const LOTE = 1000;
+      let todos: any[] = [];
+      let from = 0;
 
-      if (debouncedBusca) {
-        const buscaDigits = debouncedBusca.replace(/\D/g, "");
-        const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
-        query = query.or(`nome_fantasia.ilike.%${debouncedBusca}%,${cnpjFilter},cidade.ilike.%${debouncedBusca}%`);
+      while (true) {
+        const q = buildExportQuery(supabase.from("clientes").select("*"))
+          .order("nome_fantasia", { ascending: true })
+          .range(from, from + LOTE - 1);
+        const { data, error } = await q;
+        if (error) throw error;
+        todos = [...todos, ...(data || [])];
+        if ((data?.length ?? 0) < LOTE) break;
+        from += LOTE;
       }
-      if (filtros.status.length > 0) query = query.in("status", filtros.status);
-      if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
-      if (filtros.segmento.length > 0) query = query.overlaps("segmento", filtros.segmento);
-      if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
-      if (filtros.regiao.length > 0) {
-        const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
-        if (estados.length > 0 && filtros.estado.length === 0) query = query.in("estado", estados);
-      }
 
-      const { data, error } = await query.order("nome_fantasia", { ascending: true });
-      if (error) throw error;
-
-      const rows = (data || []).map((c: any) => ({
-        "Nome Fantasia": c.nome_fantasia || "",
-        "Razão Social": c.razao_social || "",
-        "CNPJ": c.cnpj ? c.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : "",
-        "Email": c.email || "",
-        "Telefone": c.telefone || "",
-        "Cidade": c.cidade || "",
-        "UF": c.estado || "",
-        "CEP": c.cep || "",
-        "Endereço": c.endereco || "",
-        "Bairro": c.bairro || "",
-        "Segmento": Array.isArray(c.segmento) ? c.segmento.join(", ") : (c.segmento || ""),
-        "Status": c.status || "",
-        "Tipo": c.tipo || "",
-        "Observações": c.observacoes || "",
+      const rows = todos.map((c: any) => ({
+        "Nome Fantasia":  c.nome_fantasia || "",
+        "Razão Social":   c.razao_social  || "",
+        "CNPJ":           c.cnpj ? c.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : "",
+        "Email":          c.email         || "",
+        "Telefone":       c.telefone      || "",
+        "Cidade":         c.cidade        || "",
+        "UF":             c.estado        || "",
+        "CEP":            c.cep           || "",
+        "Endereço":       c.endereco      || "",
+        "Bairro":         c.bairro        || "",
+        "Segmento":       Array.isArray(c.segmento) ? c.segmento.join(", ") : (c.segmento || ""),
+        "Status":         c.status        || "",
+        "Tipo":           c.tipo          || "",
+        "Observações":    c.observacoes   || "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-
       const hoje = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, `clientes_3w_${hoje}.xlsx`);
 
       toast({ title: `${rows.length} clientes exportados com sucesso!` });
+      setModalExportar(false);
+      setExportFiltros(FILTROS_INICIAIS);
     } catch (err: any) {
       toast({ title: "Erro ao exportar", description: err.message, variant: "destructive" });
     } finally {
@@ -501,11 +536,10 @@ const watchEstado = watch("estado") || "";
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={exportarCSV}
-            disabled={exportando}
+            onClick={() => { setExportFiltros(FILTROS_INICIAIS); setExportCount(total); setModalExportar(true); }}
             className="gap-2 shrink-0 border-[#1a4168] text-[#1a4168] hover:bg-[#1a4168]/5"
           >
-            {exportando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            <Download size={16} />
             Exportar
           </Button>
           <Button
@@ -709,6 +743,130 @@ const watchEstado = watch("estado") || "";
           </div>
         </div>
       )}
+
+      {/* Modal Exportar Clientes */}
+      <Dialog open={modalExportar} onOpenChange={(o) => { if (!o) { setModalExportar(false); setExportFiltros(FILTROS_INICIAIS); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download size={18} className="text-[#1a4168]" />
+              Exportar Clientes
+            </DialogTitle>
+            <DialogDescription>
+              Aplique filtros para selecionar quais clientes exportar. Sem filtros, exporta toda a base.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Segmento */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Segmento</p>
+              <div className="flex flex-wrap gap-2">
+                {SEGMENTOS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setExportFiltros((f) => ({ ...f, segmento: f.segmento.includes(s) ? f.segmento.filter((x) => x !== s) : [...f.segmento, s] }))}
+                    className={`px-3 py-1 rounded-full text-xs border transition-colors ${exportFiltros.segmento.includes(s) ? "bg-[#1a4168] text-white border-[#1a4168]" : "border-border text-muted-foreground hover:border-[#1a4168] hover:text-[#1a4168]"}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Status</p>
+              <div className="flex gap-2">
+                {["ativo", "inativo", "revisao"].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setExportFiltros((f) => ({ ...f, status: f.status.includes(s) ? f.status.filter((x) => x !== s) : [...f.status, s] }))}
+                    className={`px-3 py-1 rounded-full text-xs border capitalize transition-colors ${exportFiltros.status.includes(s) ? "bg-[#1a4168] text-white border-[#1a4168]" : "border-border text-muted-foreground hover:border-[#1a4168] hover:text-[#1a4168]"}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Tipo</p>
+              <div className="flex gap-2">
+                {["regular", "vip"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setExportFiltros((f) => ({ ...f, tipo: f.tipo.includes(t) ? f.tipo.filter((x) => x !== t) : [...f.tipo, t] }))}
+                    className={`px-3 py-1 rounded-full text-xs border capitalize transition-colors ${exportFiltros.tipo.includes(t) ? "bg-[#1a4168] text-white border-[#1a4168]" : "border-border text-muted-foreground hover:border-[#1a4168] hover:text-[#1a4168]"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Região */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Região</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(ESTADOS_POR_REGIAO).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setExportFiltros((f) => ({ ...f, regiao: f.regiao.includes(r) ? f.regiao.filter((x) => x !== r) : [...f.regiao, r], estado: [] }))}
+                    className={`px-3 py-1 rounded-full text-xs border transition-colors ${exportFiltros.regiao.includes(r) ? "bg-[#1a4168] text-white border-[#1a4168]" : "border-border text-muted-foreground hover:border-[#1a4168] hover:text-[#1a4168]"}`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Estados (desativado se região selecionada) */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Estado {exportFiltros.regiao.length > 0 && <span className="text-xs text-muted-foreground">(desativado com região selecionada)</span>}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {TODOS_ESTADOS.map((uf) => (
+                  <button
+                    key={uf}
+                    type="button"
+                    disabled={exportFiltros.regiao.length > 0}
+                    onClick={() => setExportFiltros((f) => ({ ...f, estado: f.estado.includes(uf) ? f.estado.filter((x) => x !== uf) : [...f.estado, uf] }))}
+                    className={`w-9 py-1 rounded text-xs border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${exportFiltros.estado.includes(uf) ? "bg-[#1a4168] text-white border-[#1a4168]" : "border-border text-muted-foreground hover:border-[#1a4168] hover:text-[#1a4168]"}`}
+                  >
+                    {uf}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contador */}
+            <div className="rounded-lg bg-[#1a4168]/5 border border-[#1a4168]/20 px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Clientes a exportar:</span>
+              <span className="font-bold text-[#1a4168] text-lg">
+                {contandoExport ? <Loader2 size={16} className="animate-spin inline" /> : (exportCount ?? total).toLocaleString("pt-BR")}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setModalExportar(false); setExportFiltros(FILTROS_INICIAIS); }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={exportarXLSX}
+              disabled={exportando || contandoExport || (exportCount ?? 0) === 0}
+              className="bg-[#1a4168] hover:bg-[#153554] text-white gap-2"
+            >
+              {exportando ? <><Loader2 size={15} className="animate-spin" /> Exportando...</> : <><Download size={15} /> Exportar {(exportCount ?? total).toLocaleString("pt-BR")} clientes</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Importar Clientes */}
       <ImportarClientesModal
