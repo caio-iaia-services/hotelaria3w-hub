@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Upload, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Upload, X, Image as ImageIcon, Star } from "lucide-react";
 import { toast } from "sonner";
 import { getLocalDateString, addDaysToLocalDateString } from "@/lib/date";
 import { montarCondicoesPagamentoPayload } from "@/lib/condicoesPagamento";
@@ -142,6 +142,7 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
   const [operacaoSelecionada, setOperacaoSelecionada] = useState("");
   const [imagemMarketing, setImagemMarketing] = useState<ImagemMarketingState | null>(null);
   const [uploadingImagem, setUploadingImagem] = useState(false);
+  const [salvandoPadrao, setSalvandoPadrao] = useState(false);
   const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([]);
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([]);
   const [dados, setDados] = useState(DADOS_INICIAL);
@@ -347,6 +348,46 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
       URL.revokeObjectURL(imagemMarketing.preview);
     }
     setImagemMarketing(null);
+  }
+
+  async function tornarImagemPadrao() {
+    if (!imagemMarketing || !fornecedorSelecionado?.id) return;
+    setSalvandoPadrao(true);
+    try {
+      let urlFinal: string = imagemMarketing.preview;
+
+      // Se ainda é um arquivo local, precisa fazer upload primeiro
+      if (imagemMarketing.file) {
+        const ext = imagemMarketing.nome.split(".").pop();
+        const path = `padrao_${fornecedorSelecionado.id}_${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabaseCloud.storage
+          .from("orcamentos-marketing")
+          .upload(path, imagemMarketing.file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabaseCloud.storage
+          .from("orcamentos-marketing")
+          .getPublicUrl(path);
+        urlFinal = urlData.publicUrl;
+      }
+
+      // Atualiza APENAS o fornecedor deste orçamento
+      const { error } = await supabase
+        .from("fornecedores")
+        .update({ imagem_template_url: urlFinal })
+        .eq("id", fornecedorSelecionado.id);
+      if (error) throw error;
+
+      // Atualiza estado local para refletir que já é padrão
+      setImagemMarketing((prev) =>
+        prev ? { ...prev, preview: urlFinal, file: null, ehPadrao: true, nome: prev.nome } : prev
+      );
+      toast.success(`Imagem definida como padrão para ${fornecedorSelecionado.nome_fantasia}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar imagem padrão do fornecedor");
+    } finally {
+      setSalvandoPadrao(false);
+    }
   }
 
   function calcularSubtotal() {
@@ -870,8 +911,8 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
                 />
                 <div className="absolute top-2 right-2 flex gap-2">
                   {imagemMarketing.ehPadrao && (
-                    <span className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">
-                      Imagem Padrão
+                    <span className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1">
+                      <Star className="w-3 h-3" /> Imagem Padrão
                     </span>
                   )}
                   <Button
@@ -884,10 +925,29 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
                     Remover
                   </Button>
                 </div>
-                <div className="mt-2 text-xs text-gray-600">
-                  <p>Nome: {imagemMarketing.nome}</p>
-                  {imagemMarketing.tamanho > 0 && (
-                    <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="text-xs text-gray-600">
+                    <p>Nome: {imagemMarketing.nome}</p>
+                    {imagemMarketing.tamanho > 0 && (
+                      <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>
+                    )}
+                  </div>
+                  {!imagemMarketing.ehPadrao && fornecedorSelecionado && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-[#c4942c] text-[#c4942c] hover:bg-[#c4942c]/10 shrink-0"
+                      onClick={tornarImagemPadrao}
+                      disabled={salvandoPadrao}
+                    >
+                      {salvandoPadrao ? (
+                        <div className="w-3.5 h-3.5 border-2 border-[#c4942c]/30 border-t-[#c4942c] rounded-full animate-spin mr-1.5" />
+                      ) : (
+                        <Star className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Tornar Imagem Padrão
+                    </Button>
                   )}
                 </div>
               </div>
