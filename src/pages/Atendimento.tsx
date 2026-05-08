@@ -260,6 +260,29 @@ function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
 
+  const iniciarConversa = async () => {
+    if (enviando) return;
+    setEnviando(true);
+    const tel = chat.contato?.telefone ?? "";
+    const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
+    try {
+      await fetch("/api/enviar-mensagem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chat.id,
+          telefone_cliente: telefoneCliente,
+          tipo_midia: "template",
+          template_name: "abertura_3w",
+        }),
+      });
+      toast.success("Template enviado! Aguarde a resposta do cliente para continuar a conversa.");
+    } catch {
+      toast.error("Falha ao enviar template de abertura");
+    }
+    setEnviando(false);
+  };
+
   const enviar = async () => {
     if (!texto.trim()) return;
     setEnviando(true);
@@ -565,6 +588,16 @@ function ChatView({
                 disabled={enviando}
               >
                 <Paperclip size={18} />
+              </button>
+
+              {/* Botão iniciar conversa via template */}
+              <button
+                onClick={iniciarConversa}
+                className="text-muted-foreground hover:text-green-600 transition-colors shrink-0"
+                title="Iniciar conversa via template WhatsApp (use quando o cliente não está ativo há mais de 24h)"
+                disabled={enviando}
+              >
+                <MessageCircle size={18} />
               </button>
               <input
                 ref={fileInputRef}
