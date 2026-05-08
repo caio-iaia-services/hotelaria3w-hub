@@ -164,7 +164,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
               .maybeSingle()
           : Promise.resolve({ data: null }),
         o.fornecedor_id
-          ? supabase.from('fornecedores').select('tipo_layout').eq('id', o.fornecedor_id).maybeSingle()
+          ? supabase.from('fornecedores').select('tipo_layout, imagem_template_url').eq('id', o.fornecedor_id).maybeSingle()
           : Promise.resolve({ data: null }),
       ])
 
@@ -187,9 +187,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
       })
-      setImagemPreview(o.imagem_marketing_url || null)
+      // Se o orçamento não tem imagem própria, usa a padrão do fornecedor como fallback
+      const imagemFallback = (forn as any)?.imagem_template_url || null
+      const usandoFallback = !o.imagem_marketing_url && !!imagemFallback
+      setImagemPreview(o.imagem_marketing_url || imagemFallback)
       setImagemFile(null)
-      setImagemJaEhPadrao(false)
+      setImagemJaEhPadrao(usandoFallback)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
       setTipoLayout((forn as any)?.tipo_layout || null)
