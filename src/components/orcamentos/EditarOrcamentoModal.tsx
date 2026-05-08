@@ -668,7 +668,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                   </Button>
                   <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
                 </label>
-                {imagemPreview && !imagemJaEhPadrao && orcamento?.fornecedor_id && (
+                {imagemPreview && !imagemJaEhPadrao && (
                   <Button
                     type="button"
                     size="sm"

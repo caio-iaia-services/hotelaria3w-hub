@@ -1478,7 +1478,7 @@ export default function AcoesComerciais() {
                       <p>Nome: {imagemMarketing.nome}</p>
                       {imagemMarketing.tamanho > 0 && <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>}
                     </div>
-                    {!imagemMarketing.ehPadrao && fornecedorSelecionado && (
+                    {!imagemMarketing.ehPadrao && (
                       <Button
                         type="button"
                         size="sm"

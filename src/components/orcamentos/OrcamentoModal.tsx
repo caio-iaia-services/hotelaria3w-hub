@@ -932,7 +932,7 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
                       <p>Tamanho: {(imagemMarketing.tamanho / 1024).toFixed(1)} KB</p>
                     )}
                   </div>
-                  {!imagemMarketing.ehPadrao && fornecedorSelecionado && (
+                  {!imagemMarketing.ehPadrao && (
                     <Button
                       type="button"
                       size="sm"
