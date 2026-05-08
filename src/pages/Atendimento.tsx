@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PainelAtendimento } from "@/components/atendimento/PainelAtendimento";
@@ -260,7 +264,7 @@ function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
 
-  const iniciarConversa = async () => {
+  const iniciarConversa = async (templateName: string) => {
     if (enviando) return;
     setEnviando(true);
     const tel = chat.contato?.telefone ?? "";
@@ -273,12 +277,12 @@ function ChatView({
           chat_id: chat.id,
           telefone_cliente: telefoneCliente,
           tipo_midia: "template",
-          template_name: "abertura_3w",
+          template_name: templateName,
         }),
       });
       toast.success("Template enviado! Aguarde a resposta do cliente para continuar a conversa.");
     } catch {
-      toast.error("Falha ao enviar template de abertura");
+      toast.error("Falha ao enviar template");
     }
     setEnviando(false);
   };
@@ -553,7 +557,44 @@ function ChatView({
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0">
+      <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0 space-y-2">
+
+        {/* Dropdown de templates — sempre visível */}
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
+                disabled={enviando}
+              >
+                <MessageCircle size={13} />
+                Iniciar conversa
+                <ChevronDown size={12} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Enviar template WhatsApp (fora da janela 24h)
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => iniciarConversa("abertura_3w")}>
+                <MessageCircle size={13} className="mr-2 shrink-0 text-[#164B6E]" />
+                <span><span className="font-medium">Abertura</span> — Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => iniciarConversa("retomar_3w")}>
+                <RefreshCw size={13} className="mr-2 shrink-0 text-[#164B6E]" />
+                <span><span className="font-medium">Retomar</span> — Olá, podemos retomar nossa conversa?</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => iniciarConversa("saudacao_3w")}>
+                <Send size={13} className="mr-2 shrink-0 text-[#164B6E]" />
+                <span><span className="font-medium">Saudação</span> — Oi!</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         {!chat.ia_ativa ? (
           <div className="space-y-2">
             {/* Preview do arquivo selecionado */}
@@ -590,15 +631,6 @@ function ChatView({
                 <Paperclip size={18} />
               </button>
 
-              {/* Botão iniciar conversa via template */}
-              <button
-                onClick={iniciarConversa}
-                className="text-muted-foreground hover:text-green-600 transition-colors shrink-0"
-                title="Iniciar conversa via template WhatsApp (use quando o cliente não está ativo há mais de 24h)"
-                disabled={enviando}
-              >
-                <MessageCircle size={18} />
-              </button>
               <input
                 ref={fileInputRef}
                 type="file"
