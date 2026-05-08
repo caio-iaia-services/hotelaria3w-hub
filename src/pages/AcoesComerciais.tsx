@@ -1103,7 +1103,7 @@ export default function AcoesComerciais() {
           cor="green"
         />
         <MetricCard
-          icon={<FileSignature className="w-5 h-5" />}
+          icon={<FileText className="w-5 h-5" />}
           titulo="Aprovados"
           valor={metricas.contratosAnalise}
           cor="orange"
