@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2, Upload, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -301,6 +302,63 @@ export default function Clientes() {
     setTotalAtivos(ativos || 0);
   }, []);
 
+  const [exportando, setExportando] = useState(false);
+
+  const exportarCSV = async () => {
+    setExportando(true);
+    try {
+      // Monta a mesma query do fetchClientes mas sem paginação
+      let query = supabase.from("clientes").select("*");
+
+      if (debouncedBusca) {
+        const buscaDigits = debouncedBusca.replace(/\D/g, "");
+        const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
+        query = query.or(`nome_fantasia.ilike.%${debouncedBusca}%,${cnpjFilter},cidade.ilike.%${debouncedBusca}%`);
+      }
+      if (filtros.status.length > 0) query = query.in("status", filtros.status);
+      if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
+      if (filtros.segmento.length > 0) query = query.overlaps("segmento", filtros.segmento);
+      if (filtros.estado.length > 0) query = query.in("estado", filtros.estado);
+      if (filtros.regiao.length > 0) {
+        const estados = filtros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
+        if (estados.length > 0 && filtros.estado.length === 0) query = query.in("estado", estados);
+      }
+
+      const { data, error } = await query.order("nome_fantasia", { ascending: true });
+      if (error) throw error;
+
+      const rows = (data || []).map((c: any) => ({
+        "Nome Fantasia": c.nome_fantasia || "",
+        "Razão Social": c.razao_social || "",
+        "CNPJ": c.cnpj ? c.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : "",
+        "Email": c.email || "",
+        "Telefone": c.telefone || "",
+        "Cidade": c.cidade || "",
+        "UF": c.estado || "",
+        "CEP": c.cep || "",
+        "Endereço": c.endereco || "",
+        "Bairro": c.bairro || "",
+        "Segmento": Array.isArray(c.segmento) ? c.segmento.join(", ") : (c.segmento || ""),
+        "Status": c.status || "",
+        "Tipo": c.tipo || "",
+        "Observações": c.observacoes || "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+
+      const hoje = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `clientes_3w_${hoje}.xlsx`);
+
+      toast({ title: `${rows.length} clientes exportados com sucesso!` });
+    } catch (err: any) {
+      toast({ title: "Erro ao exportar", description: err.message, variant: "destructive" });
+    } finally {
+      setExportando(false);
+    }
+  };
+
   useEffect(() => { fetchClientes(); }, [fetchClientes]);
   useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
@@ -441,6 +499,15 @@ const watchEstado = watch("estado") || "";
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={exportarCSV}
+            disabled={exportando}
+            className="gap-2 shrink-0 border-[#1a4168] text-[#1a4168] hover:bg-[#1a4168]/5"
+          >
+            {exportando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            Exportar
+          </Button>
           <Button
             variant="outline"
             onClick={() => setModalImportar(true)}
