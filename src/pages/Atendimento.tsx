@@ -702,7 +702,7 @@ function ModalNovaConversa({
       setNome(nomeInicial || "");
     }
   }, [isOpen, telefoneInicial, nomeInicial]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [mensagem, setMensagem] = useState("");
+  const [templateSelecionado, setTemplateSelecionado] = useState("abertura_3w");
   const [enviando, setEnviando] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -744,15 +744,21 @@ function ModalNovaConversa({
 
   const limpar = () => {
     setBusca(""); setResultados([]); setMostrarDropdown(false);
-    setTelefone(""); setNome(""); setMensagem("");
+    setTelefone(""); setNome(""); setTemplateSelecionado("abertura_3w");
   };
 
   const handleClose = () => { limpar(); onClose(); };
 
+  const TEMPLATES_WA = {
+    abertura_3w: "Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?",
+    retomar_3w:  "Olá, podemos retomar nossa conversa?",
+    saudacao_3w: "Oi!",
+  } as const;
+
   const enviarNovaConversa = async () => {
     const telLimpo = telefone.replace(/\D/g, "");
-    if (!telLimpo || !mensagem.trim()) {
-      toast.error("Preencha o telefone e a mensagem");
+    if (!telLimpo || !templateSelecionado) {
+      toast.error("Preencha o telefone e selecione um template");
       return;
     }
     setEnviando(true);
@@ -812,11 +818,12 @@ function ModalNovaConversa({
       chatId = novoChat.id;
     }
 
-    // 3. Salvar mensagem
+    // 3. Salvar mensagem (registra o texto real do template para exibição no chat)
+    const textoTemplate = TEMPLATES_WA[templateSelecionado as keyof typeof TEMPLATES_WA] ?? templateSelecionado;
     const { error: errMsg } = await supabase.from("mensagens").insert({
       chat_id: chatId,
       origem: "humano",
-      conteudo: mensagem.trim(),
+      conteudo: textoTemplate,
       tipo: "texto",
     });
     if (errMsg) {
@@ -826,13 +833,18 @@ function ModalNovaConversa({
     }
     await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chatId);
 
-    // 4. Enviar via WhatsApp
+    // 4. Enviar via WhatsApp como template (obrigatório para conversa nova)
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
       await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telefone_cliente: telWA, mensagem: mensagem.trim() }),
+        body: JSON.stringify({
+          chat_id: chatId,
+          telefone_cliente: telWA,
+          tipo_midia: "template",
+          template_name: templateSelecionado,
+        }),
       });
     } catch {
       toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
@@ -946,20 +958,43 @@ function ModalNovaConversa({
             />
           </div>
 
-          {/* Mensagem */}
+          {/* Template de abertura */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Mensagem inicial <span className="text-red-500">*</span>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+              <MessageCircle size={11} /> Template de abertura <span className="text-red-500">*</span>
             </label>
-            <textarea
-              value={mensagem}
-              onChange={e => setMensagem(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && e.ctrlKey && enviarNovaConversa()}
-              placeholder="Digite a mensagem para iniciar a conversa..."
-              rows={3}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">Ctrl+Enter para enviar</p>
+            <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2.5 text-[11px] text-amber-700">
+              <span className="shrink-0 mt-px">⚠️</span>
+              <span>Toda conversa nova exige um template aprovado pela Meta — mensagens livres não são entregues.</span>
+            </div>
+            <div className="space-y-2">
+              {([
+                { name: "abertura_3w", label: "Abertura", text: "Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?" },
+                { name: "retomar_3w",  label: "Retomar",  text: "Olá, podemos retomar nossa conversa?" },
+                { name: "saudacao_3w", label: "Saudação", text: "Oi!" },
+              ] as const).map(t => (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => setTemplateSelecionado(t.name)}
+                  className={cn(
+                    "w-full flex items-start gap-2.5 p-2.5 rounded-lg border text-left transition-colors",
+                    templateSelecionado === t.name
+                      ? "border-[#164B6E] bg-[#164B6E]/5"
+                      : "border-border hover:border-[#164B6E]/40 hover:bg-muted/40"
+                  )}
+                >
+                  <div className={cn(
+                    "w-3.5 h-3.5 rounded-full border-2 shrink-0 mt-0.5 transition-colors",
+                    templateSelecionado === t.name ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground"
+                  )} />
+                  <div>
+                    <p className="text-xs font-medium">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground">"{t.text}"</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -972,7 +1007,7 @@ function ModalNovaConversa({
             size="sm"
             className="flex-1 h-9 text-sm gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
             onClick={enviarNovaConversa}
-            disabled={enviando || !telefone.trim() || !mensagem.trim()}
+            disabled={enviando || !telefone.trim() || !templateSelecionado}
           >
             {enviando
               ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
