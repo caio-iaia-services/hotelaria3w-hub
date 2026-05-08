@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { addDaysToLocalDateString } from '@/lib/date'
 import { extrairTextoCondicoesPagamento, montarCondicoesPagamentoPayload } from '@/lib/condicoesPagamento'
 import { resolverCondicoesPagamentoMidea } from '@/lib/fornecedorTerms'
-import { Plus, Upload, X } from 'lucide-react'
+import { Plus, Upload, X, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -127,6 +127,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [tipoLayout, setTipoLayout] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const [imagemFile, setImagemFile] = useState<File | null>(null)
+  const [salvandoPadrao, setSalvandoPadrao] = useState(false)
+  const [imagemJaEhPadrao, setImagemJaEhPadrao] = useState(false)
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
   const [imagensAdicionaisFiles, setImagensAdicionaisFiles] = useState<File[]>([])
   const [dados, setDados] = useState({
@@ -187,6 +189,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       })
       setImagemPreview(o.imagem_marketing_url || null)
       setImagemFile(null)
+      setImagemJaEhPadrao(false)
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
       setTipoLayout((forn as any)?.tipo_layout || null)
@@ -266,12 +269,53 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
     if (file) {
       setImagemFile(file)
       setImagemPreview(URL.createObjectURL(file))
+      setImagemJaEhPadrao(false)
     }
   }
 
   function removerImagemMarketing() {
     setImagemFile(null)
     setImagemPreview(null)
+    setImagemJaEhPadrao(false)
+  }
+
+  async function tornarImagemPadrao() {
+    if (!imagemPreview || !orcamento?.fornecedor_id) return
+    setSalvandoPadrao(true)
+    try {
+      let urlFinal = imagemPreview
+
+      // Se é um arquivo local ainda não upado, faz upload primeiro
+      if (imagemFile) {
+        const ext = imagemFile.name.split('.').pop()
+        const path = `padrao_${orcamento.fornecedor_id}_${Date.now()}.${ext}`
+        const { error: uploadError } = await supabaseCloud.storage
+          .from('orcamentos-marketing')
+          .upload(path, imagemFile, { upsert: true })
+        if (uploadError) throw uploadError
+        const { data: urlData } = supabaseCloud.storage
+          .from('orcamentos-marketing')
+          .getPublicUrl(path)
+        urlFinal = urlData.publicUrl
+        setImagemPreview(urlFinal)
+        setImagemFile(null)
+      }
+
+      // Atualiza APENAS este fornecedor
+      const { error } = await supabase
+        .from('fornecedores')
+        .update({ imagem_template_url: urlFinal })
+        .eq('id', orcamento.fornecedor_id)
+      if (error) throw error
+
+      setImagemJaEhPadrao(true)
+      toast.success(`Imagem definida como padrão para ${orcamento.fornecedor_nome || 'o fornecedor'}`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao salvar imagem padrão do fornecedor')
+    } finally {
+      setSalvandoPadrao(false)
+    }
   }
 
   function handleImagensAdicionais(e: React.ChangeEvent<HTMLInputElement>) {
@@ -596,26 +640,52 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                   className="w-full max-h-48 object-cover rounded-lg bg-muted"
                 />
                 {imagemPreview && (
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    {imagemJaEhPadrao && (
+                      <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
+                        <Star className="w-3 h-3" /> Imagem Padrão
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={removerImagemMarketing}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <label className="inline-flex cursor-pointer">
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-1" />
+                      Alterar Imagem
+                    </span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
+                </label>
+                {imagemPreview && !imagemJaEhPadrao && orcamento?.fornecedor_id && (
                   <Button
                     type="button"
-                    variant="destructive"
                     size="sm"
-                    className="absolute top-2 right-2 h-8 w-8 p-0"
-                    onClick={removerImagemMarketing}
+                    variant="outline"
+                    className="border-[#c4942c] text-[#c4942c] hover:bg-[#c4942c]/10"
+                    onClick={tornarImagemPadrao}
+                    disabled={salvandoPadrao}
                   >
-                    <X className="w-4 h-4" />
+                    {salvandoPadrao ? (
+                      <div className="w-3.5 h-3.5 border-2 border-[#c4942c]/30 border-t-[#c4942c] rounded-full animate-spin mr-1.5" />
+                    ) : (
+                      <Star className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    Tornar Imagem Padrão
                   </Button>
                 )}
               </div>
-              <label className="mt-2 inline-flex cursor-pointer">
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <span>
-                    <Upload className="w-4 h-4 mr-1" />
-                    Alterar Imagem
-                  </span>
-                </Button>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImagemMarketing} />
-              </label>
             </div>
 
             {/* IMAGENS ADICIONAIS */}
