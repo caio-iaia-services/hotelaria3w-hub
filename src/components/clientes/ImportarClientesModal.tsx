@@ -98,11 +98,15 @@ type ResultadoImportacao = {
 
 function normalizarColuna(col: string): string {
   return col
+    .replace(/^﻿/, "")          // BOM UTF-8 que vazou (U+FEFF)
+    .replace(/^[\xEF\xBB\xBF]+/, "") // BOM decodificado como Latin-1 (ï»¿)
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // remove diacríticos combinantes (ã→a, etc.)
-    .replace(/�/g, "");         // remove replacement character (encoding quebrado)
+    .replace(/[̀-ͯ]/g, "") // remove diacríticos (ã→a, é→e …)
+    .replace(/�/g, "")          // remove replacement character
+    .replace(/[^\x20-\x7e]/g, "")   // remove qualquer byte não-ASCII restante
+    .trim();
 }
 
 // Remove prefixo de CNPJ do início do nome (padrão de exportações do gov. br)
@@ -162,13 +166,47 @@ function normalizarSegmento(seg: string): string {
   return String(seg).trim();
 }
 
+const CNPJ_RE = /^\d{2}[\.\-]?\d{3}[\.\-]?\d{3}[\/\.\-]?\d{4}[\.\-]?\d{2}$/;
+const CPF_RE  = /^\d{3}[\.\-]?\d{3}[\.\-]?\d{3}[\.\-]?\d{2}$/;
+
 function parsearLinhas(rows: Record<string, any>[]): LinhaPreview[] {
+  // ── Detecção de colunas por conteúdo (fallback quando cabeçalho não casa) ──
+  // Varre as primeiras 5 linhas e identifica qual coluna tem valores que parecem
+  // CNPJ/CPF. Isso resolve arquivos com BOM não tratado, encoding exótico, ou
+  // nomes de coluna completamente diferentes do esperado.
+  const amostra = rows.slice(0, 5);
+  const colunasAutoDetectadas: Record<string, string> = {};
+
+  if (rows.length > 0) {
+    const todasColunas = Object.keys(rows[0]);
+    for (const col of todasColunas) {
+      const colNorm = normalizarColuna(col);
+      // Já mapeada pelo nome → não precisa de auto-detecção
+      if (COLUMN_MAP[colNorm]) continue;
+
+      const valoresNaoVazios = amostra
+        .map((r) => String(r[col] ?? "").trim().replace(/\s/g, ""))
+        .filter(Boolean);
+
+      if (valoresNaoVazios.length === 0) continue;
+
+      // Se ≥ 60% dos valores da amostra parecem CNPJ/CPF → marca como cnpj
+      const pareceCnpj = valoresNaoVazios.filter(
+        (v) => CNPJ_RE.test(v) || CPF_RE.test(v)
+      ).length / valoresNaoVazios.length;
+
+      if (pareceCnpj >= 0.6 && !colunasAutoDetectadas.cnpj) {
+        colunasAutoDetectadas[col] = "cnpj";
+      }
+    }
+  }
+
   return rows.map((row) => {
     const mapped: Record<string, string> = {};
 
     for (const [colRaw, valor] of Object.entries(row)) {
       const colNorm = normalizarColuna(String(colRaw));
-      const campo = COLUMN_MAP[colNorm];
+      const campo = COLUMN_MAP[colNorm] ?? colunasAutoDetectadas[colRaw];
       if (campo && valor !== undefined && valor !== null && String(valor).trim() !== "") {
         mapped[campo] = String(valor).trim();
       }
@@ -182,11 +220,10 @@ function parsearLinhas(rows: Record<string, any>[]): LinhaPreview[] {
         if (!valor || String(valor).trim() === "") continue;
         const colNorm = normalizarColuna(String(colRaw));
         // Qualquer coluna que contenha "raz" → razao_social
-        // (cobre: razao, razo, razao social, raz?o, razio, etc.)
         if (!mapped.razao_social && colNorm.includes("raz")) {
           mapped.razao_social = String(valor).trim();
         }
-        // Coluna com "fantasia" ou que começa com "nome" (exceto nome do socio/partner)
+        // Coluna com "fantasia" ou que começa com "nome" (exceto sócio)
         if (!mapped.nome_fantasia &&
             (colNorm.includes("fantasia") ||
              (colNorm.startsWith("nome") && !colNorm.includes("socio") && !colNorm.includes("partner")))) {
@@ -291,23 +328,28 @@ export default function ImportarClientesModal({ open, onClose, onImportado }: Pr
       return;
     }
 
-    // CSV: lê como ArrayBuffer, converte para string com encoding correto,
-    // depois passa para SheetJS com type:"string" para que o FS seja respeitado.
+    // CSV: lê como ArrayBuffer, detecta encoding e converte para string.
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
 
-        // Tenta Windows-1252 (padrão de arquivos brasileiros do gov.br);
-        // fallback para UTF-8 se o browser não suportar.
+        // Detecta BOM UTF-8 (EF BB BF) — exportações do gov.br frequentemente têm BOM.
+        // Se presente, decodifica como UTF-8 e descarta os 3 bytes do BOM.
+        // Sem BOM, tenta Windows-1252 (padrão de planilhas BR); fallback UTF-8.
         let text: string;
-        try {
-          text = new TextDecoder("windows-1252").decode(data);
-        } catch {
-          text = new TextDecoder("utf-8").decode(data);
+        const hasUtf8Bom = data[0] === 0xEF && data[1] === 0xBB && data[2] === 0xBF;
+        if (hasUtf8Bom) {
+          text = new TextDecoder("utf-8").decode(data.slice(3));
+        } else {
+          try {
+            text = new TextDecoder("windows-1252").decode(data);
+          } catch {
+            text = new TextDecoder("utf-8").decode(data);
+          }
         }
 
-        // Auto-detecta separador pela primeira linha
+        // Auto-detecta separador pela primeira linha (;  vs  ,)
         const primeiraLinha = text.split(/\r?\n/)[0];
         const FS = (primeiraLinha.match(/;/g) || []).length > (primeiraLinha.match(/,/g) || []).length ? ";" : ",";
 
