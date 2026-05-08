@@ -310,9 +310,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
 
       setImagemJaEhPadrao(true)
       toast.success(`Imagem definida como padrão para ${orcamento.fornecedor_nome || 'o fornecedor'}`)
-    } catch (err) {
-      console.error(err)
-      toast.error('Erro ao salvar imagem padrão do fornecedor')
+    } catch (err: any) {
+      console.error('tornarImagemPadrao error:', err)
+      const msg = err?.message || err?.error_description || JSON.stringify(err)
+      toast.error(`Erro ao salvar imagem padrão: ${msg}`)
     } finally {
       setSalvandoPadrao(false)
     }
