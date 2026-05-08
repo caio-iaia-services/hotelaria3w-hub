@@ -127,6 +127,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [tipoLayout, setTipoLayout] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const [imagemFile, setImagemFile] = useState<File | null>(null)
+  const [imagemFallbackFornecedor, setImagemFallbackFornecedor] = useState<string | null>(null)
   const [salvandoPadrao, setSalvandoPadrao] = useState(false)
   const [imagemJaEhPadrao, setImagemJaEhPadrao] = useState(false)
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([])
@@ -187,10 +188,14 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes_gerais: o.observacoes_gerais || '',
         difal_texto: o.difal_texto || '',
       })
-      // Se o orçamento não tem imagem própria, usa a padrão do fornecedor como fallback
-      const imagemFallback = (forn as any)?.imagem_template_url || null
-      const usandoFallback = !o.imagem_marketing_url && !!imagemFallback
-      setImagemPreview(o.imagem_marketing_url || imagemFallback)
+      // Blob URLs são temporárias — expiram com a sessão, não podem ser persistidas
+      const imagemDb = o.imagem_marketing_url
+      const isBlobUrl = typeof imagemDb === 'string' && imagemDb.startsWith('blob:')
+      const imagemValida = imagemDb && !isBlobUrl ? imagemDb : null
+      const imagemFornecedor = (forn as any)?.imagem_template_url || null
+      const usandoFallback = !imagemValida && !!imagemFornecedor
+      setImagemFallbackFornecedor(imagemFornecedor)
+      setImagemPreview(imagemValida || imagemFornecedor)
       setImagemFile(null)
       setImagemJaEhPadrao(usandoFallback)
       setImagensAdicionaisPreview([])
@@ -642,6 +647,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                   src={imagemPreview || '/placeholder.svg'}
                   alt="Preview marketing"
                   className="w-full max-h-48 object-cover rounded-lg bg-muted"
+                  onError={(e) => {
+                    const fallback = imagemFallbackFornecedor || '/placeholder.svg'
+                    if ((e.target as HTMLImageElement).src !== fallback) {
+                      ;(e.target as HTMLImageElement).src = fallback
+                    }
+                  }}
                 />
                 {imagemPreview && (
                   <div className="absolute top-2 right-2 flex gap-2">
