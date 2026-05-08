@@ -7,9 +7,7 @@ import { gestaoOperacoes as gestaoOperacoesBase } from "@/data/mockOportunidades
 import {
   FileText,
   DollarSign,
-  FileSignature,
-  Send,
-  CreditCard,
+  ShoppingCart,
   FolderOpen,
   Zap,
   TrendingUp,
@@ -159,21 +157,10 @@ interface AreaProps {
 }
 
 function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
-  const hasOrcamento = (docs: DocumentoComercial[]) =>
-    docs.some((d) => d.tipo === "orcamento" && d.status !== "rejeitado");
-
-  const hasContrato = (docs: DocumentoComercial[]) =>
-    docs.some((d) => d.tipo === "contrato" && d.status !== "rejeitado");
-
-  const hasContratoAprovado = (docs: DocumentoComercial[]) =>
-    docs.some((d) => d.tipo === "contrato" && d.status === "aprovado");
-
   const getDocumentoIcon = (tipo: string) => {
     const icones: Record<string, React.ReactNode> = {
-      cotacao: <FileText className="w-5 h-5 text-primary" />,
       orcamento: <DollarSign className="w-5 h-5 text-primary" />,
-      contrato: <FileSignature className="w-5 h-5 text-primary" />,
-      cobranca: <CreditCard className="w-5 h-5 text-primary" />,
+      pedido:    <ShoppingCart className="w-5 h-5 text-primary" />,
     };
     return icones[tipo] ?? <FileText className="w-5 h-5 text-muted-foreground" />;
   };
@@ -219,16 +206,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           Ações Disponíveis
         </h3>
 
-        <div className="grid grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao("solicitar_cotacao", card.id)}
-          >
-            <FileText className="w-6 h-6" />
-            <span className="text-sm">Solicitar Cotação</span>
-          </Button>
-
+        <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
@@ -241,40 +219,10 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
           <Button
             variant="outline"
             className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao("gerar_contrato", card.id)}
+            onClick={() => onAcao("fazer_pedido", card.id)}
           >
-            <FileSignature className="w-6 h-6" />
-            <span className="text-sm">Gerar Contrato</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            disabled={!hasOrcamento(documentos)}
-            onClick={() => onAcao("enviar_orcamento", card.id)}
-          >
-            <Send className="w-6 h-6" />
-            <span className="text-sm">Enviar Orçamento</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            disabled={!hasContrato(documentos)}
-            onClick={() => onAcao("enviar_contrato", card.id)}
-          >
-            <Send className="w-6 h-6" />
-            <span className="text-sm">Enviar Contrato</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            disabled={!hasContratoAprovado(documentos)}
-            onClick={() => onAcao("gerar_cobranca", card.id)}
-          >
-            <CreditCard className="w-6 h-6" />
-            <span className="text-sm">Gerar Cobrança</span>
+            <ShoppingCart className="w-6 h-6" />
+            <span className="text-sm">Fazer Pedido</span>
           </Button>
         </div>
       </div>
@@ -577,58 +525,15 @@ export default function AcoesComerciais() {
   async function executarAcao(acao: string, _cardId: string) {
     if (!cardSelecionado) return;
     switch (acao) {
-      case "solicitar_cotacao":
-        await solicitarCotacao();
-        break;
       case "preparar_orcamento":
         abrirModalOrcamento();
         break;
-      case "gerar_contrato":
-        await gerarContrato();
-        break;
-      case "enviar_orcamento":
-        toast.info("Funcionalidade de envio em desenvolvimento");
-        break;
-      case "enviar_contrato":
-        toast.info("Funcionalidade de envio em desenvolvimento");
-        break;
-      case "gerar_cobranca":
-        toast.info("Funcionalidade de cobrança em desenvolvimento");
+      case "fazer_pedido":
+        toast.info("Módulo de Pedidos em desenvolvimento");
         break;
     }
   }
 
-  async function solicitarCotacao() {
-    try {
-      const numero = `COT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-      const { data, error } = await supabase
-        .from("documentos_comerciais")
-        .insert({
-          card_id: cardSelecionado!.id,
-          cliente_id: cardSelecionado!.cliente_id,
-          tipo: "cotacao",
-          numero,
-          titulo: `Cotação ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
-          status: "rascunho",
-          conteudo: { operacao: cardSelecionado!.operacao, observacoes: cardSelecionado!.observacoes },
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      await supabase.from("acoes_comerciais_log").insert({
-        card_id: cardSelecionado!.id,
-        documento_id: data.id,
-        acao: "cotacao_solicitada",
-        descricao: `Cotação ${numero} solicitada`,
-      });
-      toast.success("Cotação criada com sucesso!");
-      buscarDocumentos(cardSelecionado!.id);
-      buscarMetricas();
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao criar cotação");
-    }
-  }
 
   // ─── Modal Orçamento ──────────────────────────────────────────────────────
   async function abrirModalOrcamento() {
@@ -1174,51 +1079,6 @@ export default function AcoesComerciais() {
     }
   }
 
-  async function gerarContrato() {
-    try {
-      const { data: orcamento } = await supabase
-        .from("documentos_comerciais")
-        .select("*")
-        .eq("card_id", cardSelecionado!.id)
-        .eq("tipo", "orcamento")
-        .eq("status", "aprovado")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!orcamento) {
-        toast.error("É necessário ter um orçamento aprovado");
-        return;
-      }
-      const numero = `CTR-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-      const { data, error } = await supabase
-        .from("documentos_comerciais")
-        .insert({
-          card_id: cardSelecionado!.id,
-          cliente_id: cardSelecionado!.cliente_id,
-          tipo: "contrato",
-          numero,
-          titulo: `Contrato ${cardSelecionado!.operacao} - ${cardSelecionado!.cliente_nome}`,
-          status: "rascunho",
-          valor_total: orcamento.valor_total,
-          conteudo: { baseado_orcamento: orcamento.numero, valor_total: orcamento.valor_total },
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      await supabase.from("acoes_comerciais_log").insert({
-        card_id: cardSelecionado!.id,
-        documento_id: data.id,
-        acao: "contrato_gerado",
-        descricao: `Contrato ${numero} gerado`,
-      });
-      toast.success("Contrato gerado com sucesso!");
-      buscarDocumentos(cardSelecionado!.id);
-      buscarMetricas();
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao gerar contrato");
-    }
-  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#dbdbdb] -m-6">
