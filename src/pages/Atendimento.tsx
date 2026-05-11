@@ -270,7 +270,7 @@ function ChatView({
     const tel = chat.contato?.telefone ?? "";
     const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
     try {
-      await fetch("/api/enviar-mensagem", {
+      const res = await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -280,9 +280,16 @@ function ChatView({
           template_name: templateName,
         }),
       });
-      toast.success("Template enviado! Aguarde a resposta do cliente para continuar a conversa.");
-    } catch {
-      toast.error("Falha ao enviar template");
+      const json = await res.json().catch(() => ({}));
+      console.log("[iniciarConversa] n8n response:", res.status, json);
+      if (!res.ok) {
+        toast.error(`Falha ao enviar template (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+      } else {
+        toast.success("Template enviado! Aguarde a resposta do cliente para continuar a conversa.");
+      }
+    } catch (err) {
+      console.error("[iniciarConversa] erro:", err);
+      toast.error("Falha ao enviar template", { description: String(err) });
     }
     setEnviando(false);
   };
@@ -309,14 +316,19 @@ function ChatView({
     const tel = chat.contato?.telefone ?? "";
     const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
     try {
-      await fetch("/api/enviar-mensagem", {
+      const res = await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, mensagem: msg }),
       });
+      const json = await res.json().catch(() => ({}));
+      console.log("[enviar] n8n response:", res.status, json);
+      if (!res.ok) {
+        toast.error(`Mensagem salva, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+      }
     } catch (err) {
       console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
-      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
+      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp", { description: String(err) });
     }
     setEnviando(false);
   };
@@ -413,7 +425,7 @@ function ChatView({
       const tel = chat.contato?.telefone ?? "";
       const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
       try {
-        await fetch("/api/enviar-mensagem", {
+        const res = await fetch("/api/enviar-mensagem", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -424,8 +436,14 @@ function ChatView({
             tipo_midia: tipo,
           }),
         });
-      } catch {
-        toast.error("Arquivo salvo, mas falha ao enviar no WhatsApp");
+        const json = await res.json().catch(() => ({}));
+        console.log("[enviarArquivo] n8n response:", res.status, json);
+        if (!res.ok) {
+          toast.error(`Arquivo salvo, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+        }
+      } catch (err) {
+        console.error("[enviarArquivo] erro:", err);
+        toast.error("Arquivo salvo, mas falha ao enviar no WhatsApp", { description: String(err) });
       }
 
       cancelarArquivo();
@@ -836,7 +854,7 @@ function ModalNovaConversa({
     // 4. Enviar via WhatsApp como template (obrigatório para conversa nova)
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
-      await fetch("/api/enviar-mensagem", {
+      const res = await fetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -846,8 +864,14 @@ function ModalNovaConversa({
           template_name: templateSelecionado,
         }),
       });
-    } catch {
-      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp");
+      const json = await res.json().catch(() => ({}));
+      console.log("[enviarNovaConversa] n8n response:", res.status, json);
+      if (!res.ok) {
+        toast.warning(`Conversa criada, mas falha ao enviar template (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+      }
+    } catch (err) {
+      console.error("[enviarNovaConversa] erro:", err);
+      toast.error("Mensagem salva, mas falha ao enviar no WhatsApp", { description: String(err) });
     }
 
     toast.success("Conversa iniciada!");
