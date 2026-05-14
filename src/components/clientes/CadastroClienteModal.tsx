@@ -16,7 +16,7 @@ import type { Cliente } from "@/lib/types";
 import {
   X, Save, Search, Loader2, ShieldCheck, FileText, Briefcase,
   Users, TrendingUp, Clock, Lightbulb, Plus, Trash2,
-  CheckCircle2, Building2, Phone, Mail, MapPin, User,
+  CheckCircle2, Building2, Phone, Mail, MapPin, User, Pencil,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,7 +66,6 @@ interface HistoricoData {
 }
 
 interface FormState {
-  // Aba 1 — Receita Federal
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
@@ -81,12 +80,10 @@ interface FormState {
   telefone: string;
   whatsapp: string;
   cnpj_validado: boolean;
-  // Aba 2 — Dados Comerciais
   inscricao_estadual_tipo: string;
   inscricao_estadual: string;
   segmento: string[];
   tipo: string;
-  // Aba 4 — Relacionamento
   status: string;
   data_primeira_compra: string;
   data_ultima_compra: string;
@@ -94,7 +91,6 @@ interface FormState {
   qtd_comprada: number;
   total_pedidos_consolidados: number;
   total_pedidos_nao_consolidados: number;
-  // Aba 6 — Inteligência Hotelaria
   hotel_uhs: string;
   hotel_leitos: string;
   hotel_uhs_acessiveis: string;
@@ -130,10 +126,10 @@ const ESTADOS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "inativo",           label: "Inativo" },
-  { value: "ativo",             label: "Ativo" },
+  { value: "inativo",             label: "Inativo" },
+  { value: "ativo",               label: "Ativo" },
   { value: "atendimento_regular", label: "Atendimento Regular" },
-  { value: "atendimento_vip",   label: "Atendimento VIP" },
+  { value: "atendimento_vip",     label: "Atendimento VIP" },
 ];
 
 const HOTEL_TIPOS = [
@@ -148,12 +144,12 @@ const HOTEL_CLASSIFICACOES = [
 const HOTEL_PERFIS = ["Lazer", "Negócios", "Lazer e Negócios", "Trânsito", "All Inclusive"];
 
 const TABS = [
-  { id: "receita",        label: "Receita Federal",  icon: FileText },
-  { id: "comercial",      label: "Dados Comerciais", icon: Briefcase },
-  { id: "contatos",       label: "Contatos",         icon: Users },
-  { id: "relacionamento", label: "Relacionamento",   icon: TrendingUp },
-  { id: "historico",      label: "Histórico",        icon: Clock },
-  { id: "segmento",       label: "Inteligência",     icon: Lightbulb },
+  { id: "receita",        label: "Receita",     icon: FileText },
+  { id: "comercial",      label: "Comercial",   icon: Briefcase },
+  { id: "contatos",       label: "Contatos",    icon: Users },
+  { id: "relacionamento", label: "Relacionam.", icon: TrendingUp },
+  { id: "historico",      label: "Histórico",   icon: Clock },
+  { id: "segmento",       label: "Inteligência",icon: Lightbulb },
 ];
 
 // ─── Prop types ────────────────────────────────────────────────────────────────
@@ -179,6 +175,7 @@ export default function CadastroClienteModal({
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
   const ultimoCNPJBuscado = useRef("");
 
   const { cidades, loading: loadingCidades } = useCidadesIBGE(form.estado || null);
@@ -190,6 +187,7 @@ export default function CadastroClienteModal({
     if (!open) return;
     if (cliente) {
       setClienteId(cliente.id);
+      setIsViewing(true);
       setForm({
         cnpj:               applyMaskCNPJ(cliente.cnpj || ""),
         razao_social:       cliente.razao_social || "",
@@ -229,6 +227,7 @@ export default function CadastroClienteModal({
       loadHistorico(cliente.id);
     } else {
       setClienteId(null);
+      setIsViewing(false);
       setForm({ ...FORM_INICIAL, segmento: segmentoInicial ? [segmentoInicial] : [] });
       setContatos([]);
       setHistorico(null);
@@ -268,7 +267,6 @@ export default function CadastroClienteModal({
       if (marcarValidado) patch.cnpj_validado = true;
       setForm(prev => ({ ...prev, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) }));
       if (marcarValidado) {
-        // save with validado flag
         const fullForm: FormState = { ...form, ...patch, cnpj_validado: true };
         await salvarReceitaInternal(fullForm, true);
         toast.success("CNPJ validado com sucesso! Dados atualizados.");
@@ -286,7 +284,7 @@ export default function CadastroClienteModal({
   // ── Load helpers ─────────────────────────────────────────────────────────────
   const loadContatos = async (id: string) => {
     const { data } = await supabase
-      .from("contatos_cliente" as any)
+      .from("contatos_cliente")
       .select("*")
       .eq("cliente_id", id)
       .order("principal", { ascending: false });
@@ -386,12 +384,10 @@ export default function CadastroClienteModal({
     if (!clienteId) { toast.error("Salve os Dados da Receita primeiro"); return; }
     setSaving(true);
     try {
-      // Deletar os marcados para remoção
       const toDelete = contatos.filter(c => c.isDeleted && c.id);
       for (const c of toDelete) {
-        await supabase.from("contatos_cliente" as any).delete().eq("id", c.id!);
+        await supabase.from("contatos_cliente").delete().eq("id", c.id!);
       }
-      // Salvar/atualizar os restantes
       const toSave = contatos.filter(c => !c.isDeleted);
       for (const c of toSave) {
         const payload = {
@@ -403,9 +399,9 @@ export default function CadastroClienteModal({
           principal:  c.principal,
         };
         if (c.id && !c.isNew) {
-          await supabase.from("contatos_cliente" as any).update(payload).eq("id", c.id);
+          await supabase.from("contatos_cliente").update(payload).eq("id", c.id);
         } else {
-          await supabase.from("contatos_cliente" as any).insert(payload);
+          await supabase.from("contatos_cliente").insert(payload);
         }
       }
       await loadContatos(clienteId);
@@ -494,9 +490,9 @@ export default function CadastroClienteModal({
       <DialogContent className="max-w-4xl h-[92vh] flex flex-col p-0 gap-0 overflow-hidden [&>button]:hidden">
 
         {/* ── Header ── */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b bg-[#164B6E] shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-            <Building2 size={20} className="text-white" />
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b bg-[#164B6E] shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+            <Building2 size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-heading text-white font-semibold text-[15px] leading-tight truncate">
@@ -515,13 +511,33 @@ export default function CadastroClienteModal({
                   <ShieldCheck size={9} /> Validado
                 </Badge>
               )}
-              {clienteId && (
-                <span className="text-white/40 text-[10px] font-mono">
-                  {clienteId.slice(0, 8)}…
-                </span>
+              {isViewing && clienteId && (
+                <Badge className="bg-white/10 text-white/70 border-0 text-[10px] px-2 py-0 h-4">
+                  Visualizando
+                </Badge>
               )}
             </div>
           </div>
+
+          {/* Botão Editar / Cancelar edição */}
+          {clienteId && (
+            isViewing ? (
+              <button
+                onClick={() => setIsViewing(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/25 hover:bg-white/15 text-white text-xs font-medium transition-colors shrink-0"
+              >
+                <Pencil size={12} /> Editar
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsViewing(true)}
+                className="text-white/50 hover:text-white/80 text-xs transition-colors shrink-0"
+              >
+                Cancelar
+              </button>
+            )
+          )}
+
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
@@ -530,8 +546,8 @@ export default function CadastroClienteModal({
           </button>
         </div>
 
-        {/* ── Tab bar ── */}
-        <div className="flex border-b bg-card shrink-0 overflow-x-auto">
+        {/* ── Tab bar — grid 6 colunas, sem scroll ── */}
+        <div className="grid grid-cols-6 border-b bg-card shrink-0">
           {TABS.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -541,26 +557,30 @@ export default function CadastroClienteModal({
                 key={tab.id}
                 onClick={() => !isLocked && setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 whitespace-nowrap transition-colors shrink-0",
+                  "flex flex-col items-center justify-center gap-1 py-2.5 px-1 border-b-2 transition-colors",
                   isActive
                     ? "border-[#164B6E] text-[#164B6E] bg-[#164B6E]/5"
                     : isLocked
-                      ? "border-transparent text-muted-foreground/35 cursor-not-allowed"
+                      ? "border-transparent text-muted-foreground/30 cursor-not-allowed"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer"
                 )}
               >
-                <span className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                  isActive
-                    ? "bg-[#164B6E] text-white"
-                    : isLocked
-                      ? "bg-muted text-muted-foreground/35"
-                      : "bg-muted text-muted-foreground"
-                )}>
-                  {idx + 1}
+                <div className="flex items-center gap-1">
+                  <span className={cn(
+                    "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
+                    isActive
+                      ? "bg-[#164B6E] text-white"
+                      : isLocked
+                        ? "bg-muted text-muted-foreground/30"
+                        : "bg-muted text-muted-foreground"
+                  )}>
+                    {idx + 1}
+                  </span>
+                  <Icon size={12} className="shrink-0" />
+                </div>
+                <span className="text-[10px] font-medium leading-tight text-center truncate w-full px-1">
+                  {tab.label}
                 </span>
-                <Icon size={13} className="shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}
@@ -572,319 +592,273 @@ export default function CadastroClienteModal({
           {/* ════ ABA 1: RECEITA FEDERAL ════ */}
           {activeTab === "receita" && (
             <div className="p-6 space-y-5">
+              <div className={cn(isViewing && "pointer-events-none opacity-60")}>
 
-              {/* CNPJ + Razão Social */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">
-                    CNPJ <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.cnpj}
-                      onChange={e => set("cnpj", applyMaskCNPJ(e.target.value))}
-                      placeholder="00.000.000/0000-00"
-                      className="font-mono"
-                      disabled={form.cnpj_validado}
-                      maxLength={18}
-                    />
-                    {form.cnpj_validado && (
-                      <div className="w-9 flex items-center justify-center text-emerald-600 shrink-0">
-                        <ShieldCheck size={18} />
-                      </div>
+                {/* CNPJ + Razão Social */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      CNPJ <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.cnpj}
+                        onChange={e => set("cnpj", applyMaskCNPJ(e.target.value))}
+                        placeholder="00.000.000/0000-00"
+                        className="font-mono"
+                        disabled={form.cnpj_validado}
+                        maxLength={18}
+                      />
+                      {form.cnpj_validado && (
+                        <div className="w-9 flex items-center justify-center text-emerald-600 shrink-0">
+                          <ShieldCheck size={18} />
+                        </div>
+                      )}
+                    </div>
+                    {validating && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Loader2 size={11} className="animate-spin" />
+                        Consultando Receita Federal…
+                      </p>
                     )}
                   </div>
-                  {validating && (
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Loader2 size={11} className="animate-spin" />
-                      Consultando Receita Federal…
-                    </p>
-                  )}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      Razão Social <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      value={form.razao_social}
+                      onChange={e => set("razao_social", e.target.value)}
+                      disabled={form.cnpj_validado}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
+
+                {/* Nome Fantasia */}
+                <div className="space-y-1.5 mt-4">
                   <Label className="text-xs font-medium">
-                    Razão Social <span className="text-destructive">*</span>
+                    Nome Fantasia <span className="text-destructive">*</span>
                   </Label>
                   <Input
-                    value={form.razao_social}
-                    onChange={e => set("razao_social", e.target.value)}
-                    disabled={form.cnpj_validado}
+                    value={form.nome_fantasia}
+                    onChange={e => set("nome_fantasia", e.target.value)}
+                    placeholder="Como o cliente é conhecido no mercado"
                   />
                 </div>
-              </div>
 
-              {/* Nome Fantasia */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">
-                  Nome Fantasia <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={form.nome_fantasia}
-                  onChange={e => set("nome_fantasia", e.target.value)}
-                  placeholder="Como o cliente é conhecido no mercado"
-                />
-              </div>
-
-              {/* Endereço */}
-              <div className="border-t pt-4">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <MapPin size={11} /> Endereço
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs">Logradouro (Rua / Av.)</Label>
-                    <Input
-                      value={form.logradouro}
-                      onChange={e => set("logradouro", e.target.value)}
-                      placeholder="Rua das Flores"
-                    />
+                {/* Endereço */}
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <MapPin size={11} /> Endereço
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <Label className="text-xs">Logradouro (Rua / Av.)</Label>
+                      <Input value={form.logradouro} onChange={e => set("logradouro", e.target.value)} placeholder="Rua das Flores" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Número</Label>
+                      <Input value={form.numero} onChange={e => set("numero", e.target.value)} placeholder="123" />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Número</Label>
-                    <Input
-                      value={form.numero}
-                      onChange={e => set("numero", e.target.value)}
-                      placeholder="123"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Complemento</Label>
+                      <Input value={form.complemento} onChange={e => set("complemento", e.target.value)} placeholder="Sala 2, Apto 42" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Bairro</Label>
+                      <Input value={form.bairro} onChange={e => set("bairro", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">CEP</Label>
+                      <Input value={form.cep} onChange={e => set("cep", applyMaskCEP(e.target.value))} placeholder="00000-000" maxLength={9} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Estado</Label>
+                      <Select value={form.estado} onValueChange={v => { set("estado", v); set("cidade", ""); }}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="UF" /></SelectTrigger>
+                        <SelectContent className="bg-card z-[100] max-h-60">
+                          {ESTADOS.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Cidade</Label>
+                      <Select value={form.cidade} onValueChange={v => set("cidade", v)} disabled={!form.estado || loadingCidades}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder={
+                            !form.estado ? "Selecione o estado primeiro" :
+                            loadingCidades ? "Carregando…" : "Selecione a cidade"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card z-[100] max-h-60">
+                          {cidades.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Complemento</Label>
-                    <Input value={form.complemento} onChange={e => set("complemento", e.target.value)} placeholder="Sala 2, Apto 42" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Bairro</Label>
-                    <Input value={form.bairro} onChange={e => set("bairro", e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">CEP</Label>
-                    <Input
-                      value={form.cep}
-                      onChange={e => set("cep", applyMaskCEP(e.target.value))}
-                      placeholder="00000-000"
-                      maxLength={9}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Estado</Label>
-                    <Select
-                      value={form.estado}
-                      onValueChange={v => { set("estado", v); set("cidade", ""); }}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder="UF" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card z-[100] max-h-60">
-                        {ESTADOS.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Cidade</Label>
-                    <Select
-                      value={form.cidade}
-                      onValueChange={v => set("cidade", v)}
-                      disabled={!form.estado || loadingCidades}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder={
-                          !form.estado ? "Selecione o estado primeiro" :
-                          loadingCidades ? "Carregando…" :
-                          "Selecione a cidade"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card z-[100] max-h-60">
-                        {cidades.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
 
-              {/* Contato principal */}
-              <div className="border-t pt-4">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <Phone size={11} /> Contato Principal
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs flex items-center gap-1">
-                      <Mail size={11} /> E-mail
-                    </Label>
-                    <Input
-                      type="email"
-                      value={form.email}
-                      onChange={e => set("email", e.target.value)}
-                      placeholder="contato@empresa.com"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs flex items-center gap-1">
-                      <Phone size={11} /> Telefone
-                    </Label>
-                    <Input
-                      value={form.telefone}
-                      onChange={e => set("telefone", e.target.value)}
-                      placeholder="(11) 3333-4444"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">WhatsApp</Label>
-                    <Input
-                      value={form.whatsapp}
-                      onChange={e => set("whatsapp", e.target.value)}
-                      placeholder="(11) 99999-9999"
-                    />
+                {/* Contato principal */}
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Phone size={11} /> Contato Principal
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs flex items-center gap-1"><Mail size={11} /> E-mail</Label>
+                      <Input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="contato@empresa.com" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs flex items-center gap-1"><Phone size={11} /> Telefone</Label>
+                      <Input value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(11) 3333-4444" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">WhatsApp</Label>
+                      <Input value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(11) 99999-9999" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Botões */}
-              <div className="flex items-center gap-3 pt-2 border-t">
-                <Button
-                  variant="outline"
-                  className="gap-1.5 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => buscarCNPJ(form.cnpj.replace(/\D/g, ""), true)}
-                  disabled={saving || validating || form.cnpj_validado || form.cnpj.replace(/\D/g, "").length !== 14}
-                >
-                  {validating
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <ShieldCheck size={14} />}
-                  {form.cnpj_validado ? "Já Validado" : validating ? "Validando…" : "Validar CNPJ"}
-                </Button>
-                <Button
-                  onClick={salvarReceita}
-                  className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white ml-auto"
-                  disabled={saving || validating}
-                >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {saving ? "Salvando…" : "Salvar"}
-                </Button>
-              </div>
+              </div>{/* end pointer-events wrapper */}
+
+              {/* Botões — só no modo edição */}
+              {!isViewing && (
+                <div className="flex items-center gap-3 pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    className="gap-1.5 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => buscarCNPJ(form.cnpj.replace(/\D/g, ""), true)}
+                    disabled={saving || validating || form.cnpj_validado || form.cnpj.replace(/\D/g, "").length !== 14}
+                  >
+                    {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                    {form.cnpj_validado ? "Já Validado" : validating ? "Validando…" : "Validar CNPJ"}
+                  </Button>
+                  <Button
+                    onClick={salvarReceita}
+                    className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white ml-auto"
+                    disabled={saving || validating}
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? "Salvando…" : "Salvar"}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {/* ════ ABA 2: DADOS COMERCIAIS ════ */}
           {activeTab === "comercial" && (!clienteId ? renderNeedsSave() : (
             <div className="p-6 space-y-6">
+              <div className={cn(isViewing && "pointer-events-none opacity-60")}>
 
-              {/* Inscrição Estadual */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Inscrição Estadual
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: "isento",          label: "Isento" },
-                    { value: "sem_informacao",   label: "Sem Informação" },
-                    { value: "numero",           label: "Número" },
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => set("inscricao_estadual_tipo", opt.value)}
-                      className={cn(
-                        "flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all",
-                        form.inscricao_estadual_tipo === opt.value
-                          ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
-                          : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-3 h-3 rounded-full border-2",
-                        form.inscricao_estadual_tipo === opt.value
-                          ? "border-[#164B6E] bg-[#164B6E]"
-                          : "border-muted-foreground"
-                      )} />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {form.inscricao_estadual_tipo === "numero" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Número da Inscrição Estadual</Label>
-                    <Input
-                      value={form.inscricao_estadual}
-                      onChange={e => set("inscricao_estadual", e.target.value)}
-                      placeholder="000.000.000.000"
-                      className="font-mono max-w-xs"
-                    />
+                {/* Inscrição Estadual */}
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                    Inscrição Estadual
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: "isento",        label: "Isento" },
+                      { value: "sem_informacao", label: "Sem Informação" },
+                      { value: "numero",         label: "Número" },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => set("inscricao_estadual_tipo", opt.value)}
+                        className={cn(
+                          "flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all",
+                          form.inscricao_estadual_tipo === opt.value
+                            ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                            : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                        )}
+                      >
+                        <div className={cn("w-3 h-3 rounded-full border-2", form.inscricao_estadual_tipo === opt.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
-
-              {/* Segmento */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Segmento
-                </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {SEGMENTOS.map(seg => (
-                    <label
-                      key={seg}
-                      className={cn(
-                        "flex items-center gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all select-none",
-                        form.segmento.includes(seg)
-                          ? "border-[#164B6E] bg-[#164B6E]/5"
-                          : "border-border hover:border-[#164B6E]/40"
-                      )}
-                    >
-                      <Checkbox
-                        checked={form.segmento.includes(seg)}
-                        onCheckedChange={() => {
-                          const cur = form.segmento;
-                          set("segmento", cur.includes(seg) ? cur.filter(s => s !== seg) : [...cur, seg]);
-                        }}
+                  {form.inscricao_estadual_tipo === "numero" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Número da Inscrição Estadual</Label>
+                      <Input
+                        value={form.inscricao_estadual}
+                        onChange={e => set("inscricao_estadual", e.target.value)}
+                        placeholder="000.000.000.000"
+                        className="font-mono max-w-xs"
                       />
-                      <span className="text-sm font-medium">{seg}</span>
-                    </label>
-                  ))}
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Tipo */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Tipo de Cliente
-                </Label>
-                <div className="grid grid-cols-2 gap-3 max-w-sm">
-                  {[
-                    { value: "regular", label: "Regular", desc: "Cliente padrão da base" },
-                    { value: "vip",     label: "VIP",     desc: "Atendimento diferenciado" },
-                  ].map(t => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => set("tipo", t.value)}
-                      className={cn(
-                        "flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all",
-                        form.tipo === t.value
-                          ? "border-[#164B6E] bg-[#164B6E]/5"
-                          : "border-border hover:border-[#164B6E]/40"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 transition-colors",
-                        form.tipo === t.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground"
-                      )} />
-                      <div>
-                        <p className="font-semibold text-sm">{t.label}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                {/* Segmento */}
+                <div className="space-y-3 mt-6">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Segmento</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {SEGMENTOS.map(seg => (
+                      <label
+                        key={seg}
+                        className={cn(
+                          "flex items-center gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all select-none",
+                          form.segmento.includes(seg)
+                            ? "border-[#164B6E] bg-[#164B6E]/5"
+                            : "border-border hover:border-[#164B6E]/40"
+                        )}
+                      >
+                        <Checkbox
+                          checked={form.segmento.includes(seg)}
+                          onCheckedChange={() => {
+                            const cur = form.segmento;
+                            set("segmento", cur.includes(seg) ? cur.filter(s => s !== seg) : [...cur, seg]);
+                          }}
+                        />
+                        <span className="text-sm font-medium">{seg}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2 border-t">
-                <Button onClick={salvarComercial} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {saving ? "Salvando…" : "Salvar"}
-                </Button>
-              </div>
+                {/* Tipo */}
+                <div className="space-y-3 mt-6">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Tipo de Cliente</Label>
+                  <div className="grid grid-cols-2 gap-3 max-w-sm">
+                    {[
+                      { value: "regular", label: "Regular", desc: "Cliente padrão da base" },
+                      { value: "vip",     label: "VIP",     desc: "Atendimento diferenciado" },
+                    ].map(t => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => set("tipo", t.value)}
+                        className={cn(
+                          "flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all",
+                          form.tipo === t.value ? "border-[#164B6E] bg-[#164B6E]/5" : "border-border hover:border-[#164B6E]/40"
+                        )}
+                      >
+                        <div className={cn("w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 transition-colors", form.tipo === t.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                        <div>
+                          <p className="font-semibold text-sm">{t.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>{/* end pointer-events wrapper */}
+
+              {!isViewing && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button onClick={salvarComercial} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? "Salvando…" : "Salvar"}
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
 
@@ -894,64 +868,51 @@ export default function CadastroClienteModal({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold">Contatos da Empresa</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Cadastre os responsáveis pelo relacionamento comercial
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Cadastre os responsáveis pelo relacionamento comercial</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={addContato} className="gap-1.5 h-8 text-xs">
-                  <Plus size={13} /> Adicionar
-                </Button>
+                {!isViewing && (
+                  <Button variant="outline" size="sm" onClick={addContato} className="gap-1.5 h-8 text-xs">
+                    <Plus size={13} /> Adicionar
+                  </Button>
+                )}
               </div>
 
               {visibleContatos.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-xl text-muted-foreground">
                   <User size={28} className="mb-2 opacity-30" />
                   <p className="text-sm">Nenhum contato cadastrado</p>
-                  <Button variant="ghost" size="sm" onClick={addContato} className="mt-2 gap-1.5 text-xs">
-                    <Plus size={13} /> Adicionar primeiro contato
-                  </Button>
+                  {!isViewing && (
+                    <Button variant="ghost" size="sm" onClick={addContato} className="mt-2 gap-1.5 text-xs">
+                      <Plus size={13} /> Adicionar primeiro contato
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className={cn("space-y-3", isViewing && "pointer-events-none opacity-60")}>
                   {visibleContatos.map((contato, visIdx) => {
                     const realIdx = contatos.indexOf(contato);
                     return (
                       <div
                         key={visIdx}
-                        className={cn(
-                          "border rounded-xl p-4 space-y-3",
-                          contato.principal
-                            ? "border-[#164B6E]/30 bg-[#164B6E]/3"
-                            : "border-border"
-                        )}
+                        className={cn("border rounded-xl p-4 space-y-3", contato.principal ? "border-[#164B6E]/30 bg-[#164B6E]/3" : "border-border")}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
                               <User size={13} className="text-slate-600" />
                             </div>
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Contato {visIdx + 1}
-                            </span>
+                            <span className="text-xs font-medium text-muted-foreground">Contato {visIdx + 1}</span>
                             {contato.principal && (
-                              <Badge className="text-[10px] h-4 px-1.5 bg-[#164B6E] text-white border-0">
-                                Principal
-                              </Badge>
+                              <Badge className="text-[10px] h-4 px-1.5 bg-[#164B6E] text-white border-0">Principal</Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
                             {!contato.principal && (
-                              <button
-                                onClick={() => setPrincipal(realIdx)}
-                                className="text-[10px] text-muted-foreground hover:text-[#164B6E] underline underline-offset-2"
-                              >
+                              <button onClick={() => setPrincipal(realIdx)} className="text-[10px] text-muted-foreground hover:text-[#164B6E] underline underline-offset-2">
                                 Definir como principal
                               </button>
                             )}
-                            <button
-                              onClick={() => removeContato(realIdx)}
-                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                            >
+                            <button onClick={() => removeContato(realIdx)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
                               <Trash2 size={12} />
                             </button>
                           </div>
@@ -959,40 +920,19 @@ export default function CadastroClienteModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <Label className="text-xs">Nome <span className="text-destructive">*</span></Label>
-                            <Input
-                              value={contato.nome}
-                              onChange={e => updateContato(realIdx, "nome", e.target.value)}
-                              placeholder="João Silva"
-                              className="h-8 text-sm"
-                            />
+                            <Input value={contato.nome} onChange={e => updateContato(realIdx, "nome", e.target.value)} placeholder="João Silva" className="h-8 text-sm" />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">E-mail</Label>
-                            <Input
-                              type="email"
-                              value={contato.email}
-                              onChange={e => updateContato(realIdx, "email", e.target.value)}
-                              placeholder="joao@empresa.com"
-                              className="h-8 text-sm"
-                            />
+                            <Input type="email" value={contato.email} onChange={e => updateContato(realIdx, "email", e.target.value)} placeholder="joao@empresa.com" className="h-8 text-sm" />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">Telefone</Label>
-                            <Input
-                              value={contato.telefone}
-                              onChange={e => updateContato(realIdx, "telefone", e.target.value)}
-                              placeholder="(11) 3333-4444"
-                              className="h-8 text-sm"
-                            />
+                            <Input value={contato.telefone} onChange={e => updateContato(realIdx, "telefone", e.target.value)} placeholder="(11) 3333-4444" className="h-8 text-sm" />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">WhatsApp</Label>
-                            <Input
-                              value={contato.whatsapp}
-                              onChange={e => updateContato(realIdx, "whatsapp", e.target.value)}
-                              placeholder="(11) 99999-9999"
-                              className="h-8 text-sm"
-                            />
+                            <Input value={contato.whatsapp} onChange={e => updateContato(realIdx, "whatsapp", e.target.value)} placeholder="(11) 99999-9999" className="h-8 text-sm" />
                           </div>
                         </div>
                       </div>
@@ -1001,110 +941,84 @@ export default function CadastroClienteModal({
                 </div>
               )}
 
-              <div className="flex justify-end pt-2 border-t">
-                <Button onClick={salvarContatos} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {saving ? "Salvando…" : "Salvar Contatos"}
-                </Button>
-              </div>
+              {!isViewing && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button onClick={salvarContatos} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? "Salvando…" : "Salvar Contatos"}
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
 
           {/* ════ ABA 4: RELACIONAMENTO ════ */}
           {activeTab === "relacionamento" && (!clienteId ? renderNeedsSave() : (
             <div className="p-6 space-y-6">
+              <div className={cn(isViewing && "pointer-events-none opacity-60")}>
 
-              {/* Status */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Status do Cliente
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {STATUS_OPTIONS.map(s => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => set("status", s.value)}
-                      className={cn(
-                        "flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all text-left",
-                        form.status === s.value
-                          ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
-                          : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-3 h-3 rounded-full border-2 shrink-0",
-                        form.status === s.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground"
-                      )} />
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Compras */}
-              <div className="space-y-3">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Histórico de Compras
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Quantidade Orçada</Label>
-                    <Input
-                      type="number" min={0}
-                      value={form.qtd_orcada}
-                      onChange={e => set("qtd_orcada", parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Quantidade Comprada</Label>
-                    <Input
-                      type="number" min={0}
-                      value={form.qtd_comprada}
-                      onChange={e => set("qtd_comprada", parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Data da Primeira Compra</Label>
-                    <Input
-                      type="date"
-                      value={form.data_primeira_compra}
-                      onChange={e => set("data_primeira_compra", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Data da Última Compra</Label>
-                    <Input
-                      type="date"
-                      value={form.data_ultima_compra}
-                      onChange={e => set("data_ultima_compra", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Total de Pedidos Consolidados (R$)</Label>
-                    <Input
-                      type="number" min={0} step={0.01}
-                      value={form.total_pedidos_consolidados}
-                      onChange={e => set("total_pedidos_consolidados", parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Total de Pedidos Não Consolidados (R$)</Label>
-                    <Input
-                      type="number" min={0} step={0.01}
-                      value={form.total_pedidos_nao_consolidados}
-                      onChange={e => set("total_pedidos_nao_consolidados", parseFloat(e.target.value) || 0)}
-                    />
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status do Cliente</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {STATUS_OPTIONS.map(s => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => set("status", s.value)}
+                        className={cn(
+                          "flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all text-left",
+                          form.status === s.value
+                            ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                            : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                        )}
+                      >
+                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.status === s.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                        {s.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2 border-t">
-                <Button onClick={salvarRelacionamento} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {saving ? "Salvando…" : "Salvar"}
-                </Button>
-              </div>
+                <div className="space-y-3 mt-6">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Histórico de Compras</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Quantidade Orçada</Label>
+                      <Input type="number" min={0} value={form.qtd_orcada} onChange={e => set("qtd_orcada", parseInt(e.target.value) || 0)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Quantidade Comprada</Label>
+                      <Input type="number" min={0} value={form.qtd_comprada} onChange={e => set("qtd_comprada", parseInt(e.target.value) || 0)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data da Primeira Compra</Label>
+                      <Input type="date" value={form.data_primeira_compra} onChange={e => set("data_primeira_compra", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data da Última Compra</Label>
+                      <Input type="date" value={form.data_ultima_compra} onChange={e => set("data_ultima_compra", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Total de Pedidos Consolidados (R$)</Label>
+                      <Input type="number" min={0} step={0.01} value={form.total_pedidos_consolidados} onChange={e => set("total_pedidos_consolidados", parseFloat(e.target.value) || 0)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Total de Pedidos Não Consolidados (R$)</Label>
+                      <Input type="number" min={0} step={0.01} value={form.total_pedidos_nao_consolidados} onChange={e => set("total_pedidos_nao_consolidados", parseFloat(e.target.value) || 0)} />
+                    </div>
+                  </div>
+                </div>
+
+              </div>{/* end pointer-events wrapper */}
+
+              {!isViewing && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button onClick={salvarRelacionamento} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? "Salvando…" : "Salvar"}
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
 
@@ -1119,13 +1033,10 @@ export default function CadastroClienteModal({
                 <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-xl text-center text-muted-foreground">
                   <Clock size={32} className="mb-3 opacity-30" />
                   <p className="text-sm font-semibold">Sem Histórico</p>
-                  <p className="text-xs mt-1 opacity-70 max-w-xs">
-                    Nenhum orçamento ou pedido registrado para este cliente
-                  </p>
+                  <p className="text-xs mt-1 opacity-70 max-w-xs">Nenhum orçamento ou pedido registrado para este cliente</p>
                 </div>
               ) : (
                 <>
-                  {/* Badge recorrente */}
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
                     <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
                     <div>
@@ -1136,13 +1047,12 @@ export default function CadastroClienteModal({
                     </div>
                   </div>
 
-                  {/* Stats */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                      { label: "Orçamentos",      value: historico.total,     color: "bg-blue-50 border-blue-200 text-blue-700" },
-                      { label: "Pedidos",          value: historico.pedidos,   color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-                      { label: "Recusados",        value: historico.recusados, color: "bg-red-50 border-red-200 text-red-700" },
-                      { label: "Orç. Ativos",      value: historico.ativos,    color: "bg-amber-50 border-amber-200 text-amber-700" },
+                      { label: "Orçamentos",  value: historico.total,     color: "bg-blue-50 border-blue-200 text-blue-700" },
+                      { label: "Pedidos",     value: historico.pedidos,   color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+                      { label: "Recusados",   value: historico.recusados, color: "bg-red-50 border-red-200 text-red-700" },
+                      { label: "Orç. Ativos", value: historico.ativos,    color: "bg-amber-50 border-amber-200 text-amber-700" },
                     ].map(stat => (
                       <div key={stat.label} className={cn("rounded-xl border p-4 text-center", stat.color)}>
                         <p className="text-2xl font-bold">{stat.value}</p>
@@ -1151,7 +1061,6 @@ export default function CadastroClienteModal({
                     ))}
                   </div>
 
-                  {/* Volume pedidos */}
                   {historico.volumePedidos > 0 && (
                     <div className="rounded-xl bg-[#164B6E]/5 border border-[#164B6E]/20 p-4 flex items-center justify-between">
                       <div className="flex items-center gap-2 text-[#164B6E]">
@@ -1164,19 +1073,16 @@ export default function CadastroClienteModal({
                     </div>
                   )}
 
-                  {/* Lista recente */}
                   <div className="space-y-2">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      Últimos Registros
-                    </p>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Últimos Registros</p>
                     <div className="space-y-1.5">
                       {historico.recentes.slice(0, 8).map(orc => {
                         const statusMap: Record<string, { label: string; cls: string }> = {
-                          rascunho:  { label: "Rascunho",     cls: "bg-slate-100 text-slate-600" },
-                          enviado:   { label: "Ativo",        cls: "bg-amber-100 text-amber-700" },
-                          aprovado:  { label: "Pedido",       cls: "bg-emerald-100 text-emerald-700" },
-                          rejeitado: { label: "Recusado",     cls: "bg-red-100 text-red-700" },
-                          expirado:  { label: "Expirado",     cls: "bg-slate-100 text-slate-500" },
+                          rascunho:  { label: "Rascunho", cls: "bg-slate-100 text-slate-600" },
+                          enviado:   { label: "Ativo",    cls: "bg-amber-100 text-amber-700" },
+                          aprovado:  { label: "Pedido",   cls: "bg-emerald-100 text-emerald-700" },
+                          rejeitado: { label: "Recusado", cls: "bg-red-100 text-red-700" },
+                          expirado:  { label: "Expirado", cls: "bg-slate-100 text-slate-500" },
                         };
                         const s = statusMap[orc.status] || { label: orc.status, cls: "bg-slate-100 text-slate-600" };
                         return (
@@ -1185,9 +1091,7 @@ export default function CadastroClienteModal({
                             <Badge variant="outline" className={cn("text-[10px] px-2 h-5 shrink-0", s.cls)}>{s.label}</Badge>
                             <span className="text-xs text-muted-foreground flex-1 truncate">{orc.fornecedor_nome || "—"}</span>
                             <span className="text-xs font-medium tabular-nums shrink-0">
-                              {orc.total
-                                ? orc.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                                : "—"}
+                              {orc.total ? orc.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
                             </span>
                             <span className="text-[10px] text-muted-foreground shrink-0">
                               {orc.data_emissao ? new Date(orc.data_emissao).toLocaleDateString("pt-BR") : "—"}
@@ -1199,13 +1103,7 @@ export default function CadastroClienteModal({
                   </div>
 
                   <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs"
-                      onClick={() => clienteId && loadHistorico(clienteId)}
-                      disabled={loadingHistorico}
-                    >
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => clienteId && loadHistorico(clienteId)} disabled={loadingHistorico}>
                       <Loader2 size={12} className={loadingHistorico ? "animate-spin" : ""} />
                       Atualizar
                     </Button>
@@ -1223,120 +1121,110 @@ export default function CadastroClienteModal({
                   <Lightbulb size={18} className="text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">
-                    Dados de Inteligência — {segPrincipal || "Segmento"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Informações específicas do segmento para análise estratégica
-                  </p>
+                  <p className="font-semibold text-sm">Dados de Inteligência — {segPrincipal || "Segmento"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Informações específicas do segmento para análise estratégica</p>
                 </div>
               </div>
 
               {segPrincipal === "Hotelaria" ? (
                 <>
-                  {/* Capacidade */}
-                  <div className="space-y-3">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                      Capacidade
-                    </Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {([
-                        { field: "hotel_uhs",              label: "UHs",              desc: "Unidades habitacionais" },
-                        { field: "hotel_leitos",           label: "Leitos",           desc: "Total de leitos" },
-                        { field: "hotel_uhs_acessiveis",   label: "UHs Acess.",       desc: "UHs para PCD" },
-                        { field: "hotel_leitos_acessiveis",label: "Leitos Acess.",    desc: "Leitos para PCD" },
-                      ] as const).map(({ field, label, desc }) => (
-                        <div key={field} className="space-y-1.5">
-                          <Label className="text-xs font-medium">{label}</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={(form as any)[field]}
-                            onChange={e => set(field as keyof FormState, e.target.value)}
-                            className="text-center font-mono"
-                            placeholder="0"
-                          />
-                          <p className="text-[10px] text-muted-foreground text-center">{desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <div className={cn(isViewing && "pointer-events-none opacity-60")}>
 
-                  {/* Classificação */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Tipo do Hotel</Label>
-                      <Select value={form.hotel_tipo} onValueChange={v => set("hotel_tipo", v)}>
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card z-[100]">
-                          {HOTEL_TIPOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Classificação</Label>
-                      <Select value={form.hotel_classificacao} onValueChange={v => set("hotel_classificacao", v)}>
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card z-[100]">
-                          {HOTEL_CLASSIFICACOES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Perfil do Hotel</Label>
-                      <Select value={form.hotel_perfil} onValueChange={v => set("hotel_perfil", v)}>
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="Selecione o perfil" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card z-[100]">
-                          {HOTEL_PERFIS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Tem SPA?</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { value: true,  label: "Sim" },
-                          { value: false, label: "Não" },
-                          { value: null,  label: "Não informado" },
-                        ].map(opt => (
-                          <button
-                            key={String(opt.value)}
-                            type="button"
-                            onClick={() => set("hotel_tem_spa", opt.value)}
-                            className={cn(
-                              "py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all",
-                              form.hotel_tem_spa === opt.value
-                                ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
-                                : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
-                            )}
-                          >
-                            {opt.label}
-                          </button>
+                    <div className="space-y-3">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Capacidade</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {([
+                          { field: "hotel_uhs",               label: "UHs",           desc: "Unidades habitacionais" },
+                          { field: "hotel_leitos",            label: "Leitos",         desc: "Total de leitos" },
+                          { field: "hotel_uhs_acessiveis",    label: "UHs Acess.",     desc: "UHs para PCD" },
+                          { field: "hotel_leitos_acessiveis", label: "Leitos Acess.",  desc: "Leitos para PCD" },
+                        ] as const).map(({ field, label, desc }) => (
+                          <div key={field} className="space-y-1.5">
+                            <Label className="text-xs font-medium">{label}</Label>
+                            <Input
+                              type="number" min={0}
+                              value={(form as any)[field]}
+                              onChange={e => set(field as keyof FormState, e.target.value)}
+                              className="text-center font-mono"
+                              placeholder="0"
+                            />
+                            <p className="text-[10px] text-muted-foreground text-center">{desc}</p>
+                          </div>
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-end pt-2 border-t">
-                    <Button onClick={salvarSegmento} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
-                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                      {saving ? "Salvando…" : "Salvar"}
-                    </Button>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Tipo do Hotel</Label>
+                        <Select value={form.hotel_tipo} onValueChange={v => set("hotel_tipo", v)}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                          <SelectContent className="bg-card z-[100]">
+                            {HOTEL_TIPOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Classificação</Label>
+                        <Select value={form.hotel_classificacao} onValueChange={v => set("hotel_classificacao", v)}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent className="bg-card z-[100]">
+                            {HOTEL_CLASSIFICACOES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Perfil do Hotel</Label>
+                        <Select value={form.hotel_perfil} onValueChange={v => set("hotel_perfil", v)}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione o perfil" /></SelectTrigger>
+                          <SelectContent className="bg-card z-[100]">
+                            {HOTEL_PERFIS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Tem SPA?</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: true,  label: "Sim" },
+                            { value: false, label: "Não" },
+                            { value: null,  label: "Não informado" },
+                          ].map(opt => (
+                            <button
+                              key={String(opt.value)}
+                              type="button"
+                              onClick={() => set("hotel_tem_spa", opt.value)}
+                              className={cn(
+                                "py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all",
+                                form.hotel_tem_spa === opt.value
+                                  ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                                  : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>{/* end pointer-events wrapper */}
+
+                  {!isViewing && (
+                    <div className="flex justify-end pt-2 border-t">
+                      <Button onClick={salvarSegmento} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                        {saving ? "Salvando…" : "Salvar"}
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-xl text-center text-muted-foreground">
                   <Lightbulb size={32} className="mb-3 opacity-30 text-amber-500" />
                   <p className="text-sm font-semibold">Em Desenvolvimento</p>
                   <p className="text-xs mt-2 opacity-70 max-w-xs leading-relaxed">
-                    Os dados de inteligência para o segmento
-                    {segPrincipal ? ` "${segPrincipal}"` : ""} estão sendo desenvolvidos e estarão disponíveis em breve.
+                    Os dados de inteligência para o segmento{segPrincipal ? ` "${segPrincipal}"` : ""} estão sendo desenvolvidos e estarão disponíveis em breve.
                   </p>
                 </div>
               )}
