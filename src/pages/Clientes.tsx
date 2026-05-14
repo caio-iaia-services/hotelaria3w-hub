@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
-import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Check, Loader2, Upload, Download } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Search, X, Plus, ChevronDown, Loader2, Upload, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -21,28 +20,17 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import type { Cliente } from "@/lib/types";
-import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
-import ClienteModal from "@/components/clientes/ClienteModal";
 import ImportarClientesModal from "@/components/clientes/ImportarClientesModal";
-import SegmentoMultiSelect from "@/components/clientes/SegmentoMultiSelect";
+import SelecionarSegmentoModal from "@/components/clientes/SelecionarSegmentoModal";
+import CadastroClienteModal from "@/components/clientes/CadastroClienteModal";
 
 function formatCNPJ(cnpj: string | null) {
   if (!cnpj) return "-";
   const d = cnpj.replace(/\D/g, "");
   if (d.length !== 14) return cnpj;
   return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-}
-
-function applyMaskCNPJ(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 14);
-  return d
-    .replace(/(\d{2})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1/$2")
-    .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
 const statusColors: Record<string, string> = {
@@ -88,22 +76,6 @@ const FILTROS_INICIAIS: Filtros = {
   segmento: [],
   estado: [],
   regiao: [],
-};
-
-type NovoClienteForm = {
-  nome_fantasia: string;
-  razao_social: string;
-  cnpj: string;
-  email: string;
-  telefone: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  endereco: string;
-  complemento: string;
-  bairro: string;
-  tipo: string;
-  status: string;
 };
 
 function MultiSelectFilter({
@@ -165,81 +137,28 @@ export default function Clientes() {
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIAIS);
   const [debouncedBusca, setDebouncedBusca] = useState("");
 
-  const [modalCliente, setModalCliente] = useState<Cliente | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-
   // Importar Clientes
   const [modalImportar, setModalImportar] = useState(false);
 
-  // Novo Cliente
-  const [modalNovoCliente, setModalNovoCliente] = useState(false);
-  const [novoClienteSegmentos, setNovoClienteSegmentos] = useState<string[]>([]);
-  const [salvando, setSalvando] = useState(false);
-  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false);
-  const ultimoCNPJBuscado = useRef<string>("");
-  const { register, handleSubmit, reset, setValue, watch } = useForm<NovoClienteForm>({
-    defaultValues: { tipo: "regular", status: "ativo" },
-  });
+  // Selecionar Segmento (antes de novo cadastro)
+  const [modalSelecionarSegmento, setModalSelecionarSegmento] = useState(false);
+  const [segmentoParaCadastro, setSegmentoParaCadastro] = useState("");
 
-  // Busca automática quando CNPJ fica completo (14 dígitos)
-  const cnpjWatch = watch("cnpj");
-  useEffect(() => {
-    const digits = (cnpjWatch || "").replace(/\D/g, "");
-    if (digits.length === 14 && digits !== ultimoCNPJBuscado.current) {
-      ultimoCNPJBuscado.current = digits;
-      buscarReceita(cnpjWatch);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cnpjWatch]);
+  // Cadastro / Edição de Cliente
+  const [modalCadastroOpen, setModalCadastroOpen] = useState(false);
+  const [clienteParaCadastro, setClienteParaCadastro] = useState<Cliente | null>(null);
 
-  const buscarReceita = async (cnpjRaw?: string) => {
-    const cnpj = (cnpjRaw || watch("cnpj") || "").replace(/\D/g, "");
-    if (cnpj.length !== 14) {
-      toast({ title: "CNPJ incompleto", description: "Digite os 14 dígitos do CNPJ antes de buscar.", variant: "destructive" });
-      return;
-    }
-    setBuscandoCNPJ(true);
-    try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-      if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
-      const d = await res.json();
+  const abrirNovoCliente = (segmento: string) => {
+    setSegmentoParaCadastro(segmento);
+    setClienteParaCadastro(null);
+    setModalSelecionarSegmento(false);
+    setModalCadastroOpen(true);
+  };
 
-      if (d.razao_social)  setValue("razao_social",  d.razao_social);
-      if (d.nome_fantasia) setValue("nome_fantasia",  d.nome_fantasia || d.razao_social);
-      if (d.email)         setValue("email",          d.email.toLowerCase());
-      if (d.telefone)      setValue("telefone",       d.telefone);
-      if (d.cep)           setValue("cep",            d.cep.replace(/(\d{5})(\d{3})/, "$1-$2"));
-      if (d.bairro)        setValue("bairro",         d.bairro);
-      if (d.complemento)   setValue("complemento",    d.complemento);
-      if (d.logradouro) {
-        setValue("endereco", d.numero ? `${d.logradouro}, ${d.numero}` : d.logradouro);
-      }
-
-      // Estado + Cidade (busca match case-insensitive sem acentos)
-      if (d.uf) {
-        const uf = d.uf.toUpperCase();
-        setValue("estado", uf);
-        // Cidade vinda do ViaCEP j\u00e1 \u00e9 o nome oficial do IBGE \u2014 usa diretamente
-        setValue("cidade", d.municipio || "");
-      }
-
-      // Auto-detecção de segmento pelo CNAE principal
-      const cnae = ((d.atividade_principal?.[0]?.code) || "").replace(/\D/g, "").substring(0, 4);
-      const segMap: Record<string, string> = {
-        "5510": "Hotelaria", "5590": "Hotelaria",
-        "5610": "Gastronomia", "5620": "Gastronomia", "5630": "Gastronomia",
-        "8610": "Hospitalar", "8620": "Hospitalar", "8630": "Hospitalar",
-        "8110": "Condominial", "8120": "Condominial",
-      };
-      if (segMap[cnae]) setValue("segmento", segMap[cnae]);
-
-      setValue("status", "revisao");
-      toast({ title: "Dados encontrados!", description: `${d.razao_social} · dados preenchidos automaticamente.` });
-    } catch (err: any) {
-      toast({ title: "CNPJ não encontrado", description: err.message || "Verifique o número e tente novamente.", variant: "destructive" });
-    } finally {
-      setBuscandoCNPJ(false);
-    }
+  const abrirEditarCliente = (cliente: Cliente) => {
+    setClienteParaCadastro(cliente);
+    setSegmentoParaCadastro("");
+    setModalCadastroOpen(true);
   };
 
   // Debounce busca
@@ -250,8 +169,6 @@ export default function Clientes() {
     }, 400);
     return () => clearTimeout(t);
   }, [filtros.busca]);
-
-  // No more city fetch needed
 
   const fetchClientes = useCallback(async () => {
     setLoading(true);
@@ -327,7 +244,6 @@ export default function Clientes() {
     if (!modalExportar) return;
     const semFiltro = Object.values(exportFiltros).every((v) => (Array.isArray(v) ? v.length === 0 : !v));
     if (semFiltro) {
-      // sem filtros → usa o total já conhecido
       setExportCount(total);
       return;
     }
@@ -345,7 +261,6 @@ export default function Clientes() {
   const exportarXLSX = async () => {
     setExportando(true);
     try {
-      // Supabase limita 1 000 linhas por request — busca em lotes
       const LOTE = 1000;
       let todos: any[] = [];
       let from = 0;
@@ -370,7 +285,7 @@ export default function Clientes() {
         "Cidade":         c.cidade        || "",
         "UF":             c.estado        || "",
         "CEP":            c.cep           || "",
-        "Endereço":       c.endereco      || "",
+        "Endereço":       c.logradouro    || "",
         "Bairro":         c.bairro        || "",
         "Segmento":       Array.isArray(c.segmento) ? c.segmento.join(", ") : (c.segmento || ""),
         "Status":         c.status        || "",
@@ -405,79 +320,6 @@ export default function Clientes() {
   const totalPages = Math.ceil(total / pageSize);
   const taxaRetencao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
 
-  const handleSave = async (dados: Partial<Cliente>) => {
-    if (!dados.id) return;
-    const { id, created_at, ...rest } = dados as any;
-    if (rest.cnpj) rest.cnpj = rest.cnpj.replace(/\D/g, "");
-    const { error } = await supabase.from("clientes").update(rest).eq("id", id);
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Cliente atualizado com sucesso!" });
-      fetchClientes();
-      fetchMetrics();
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("clientes").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Cliente deletado!" });
-      setModalOpen(false);
-      fetchClientes();
-      fetchMetrics();
-    }
-  };
-
-  const salvarNovoCliente = async (dados: NovoClienteForm) => {
-    setSalvando(true);
-    if (novoClienteSegmentos.length === 0) {
-      toast({ title: "Selecione ao menos um segmento", variant: "destructive" });
-      setSalvando(false);
-      return;
-    }
-    try {
-      const { error } = await supabase.from("clientes").insert({
-        nome_fantasia: dados.nome_fantasia,
-        razao_social: dados.razao_social,
-        cnpj: dados.cnpj ? dados.cnpj.replace(/\D/g, "") : null,
-        segmento: novoClienteSegmentos,
-        email: dados.email || null,
-        telefone: dados.telefone || null,
-        cidade: dados.cidade,
-        estado: dados.estado?.toUpperCase() || null,
-        cep: dados.cep || null,
-        endereco: dados.endereco || null,
-        complemento: dados.complemento || null,
-        bairro: dados.bairro || null,
-        tipo: dados.tipo || "regular",
-        status: dados.status || "ativo",
-        pais: "Brasil",
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Cliente cadastrado com sucesso!" });
-      setModalNovoCliente(false);
-      reset();
-      setNovoClienteSegmentos([]);
-      fetchClientes();
-      fetchMetrics();
-    } catch (err: any) {
-      console.error(err);
-      const isDuplicateCnpj = err.message?.includes("clientes_cnpj_key") || err.code === "23505";
-      toast({
-        title: isDuplicateCnpj ? "CNPJ já cadastrado" : "Erro ao cadastrar cliente",
-        description: isDuplicateCnpj ? "Já existe um cliente com esse CNPJ na base." : err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSalvando(false);
-    }
-  };
-
   const toggleFiltro = (key: keyof Filtros, value: string) => {
     if (key === "busca") {
       setFiltros((prev) => ({ ...prev, busca: value }));
@@ -487,7 +329,6 @@ export default function Clientes() {
       const arr = prev[key] as string[];
       const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
       const updated = { ...prev, [key]: next };
-      // When region changes, remove selected states that are no longer in valid regions
       if (key === "regiao") {
         const validEstados = next.length > 0
           ? next.flatMap((r) => ESTADOS_POR_REGIAO[r] || [])
@@ -517,12 +358,6 @@ export default function Clientes() {
     { label: "Taxa de Retenção", value: `${taxaRetencao}%`, icon: TrendingUp },
   ];
 
-  // Watch values for controlled selects
-  const tipoValue = watch("tipo");
-  const statusValue = watch("status");
-const watchEstado = watch("estado") || "";
-  const watchCidade = watch("cidade") || "";
-  const { cidades: cidadesIBGE, loading: loadingCidades } = useCidadesIBGE(watchEstado || null);
   return (
     <div className="space-y-4 bg-[#dbdbdb] min-h-screen p-6 -m-6">
       {/* Header */}
@@ -550,7 +385,10 @@ const watchEstado = watch("estado") || "";
             <Upload size={16} />
             Importar Planilha
           </Button>
-          <Button onClick={() => setModalNovoCliente(true)} className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white">
+          <Button
+            onClick={() => setModalSelecionarSegmento(true)}
+            className="gap-2 shrink-0 bg-[#1a4168] hover:bg-[#153554] text-white"
+          >
             <Plus size={16} />
             Novo Cliente
           </Button>
@@ -595,7 +433,6 @@ const watchEstado = watch("estado") || "";
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {/* Status multi-select */}
           <MultiSelectFilter
             label="Status"
             selected={filtros.status}
@@ -605,8 +442,6 @@ const watchEstado = watch("estado") || "";
             ]}
             onToggle={(v) => toggleFiltro("status", v)}
           />
-
-          {/* Tipo multi-select */}
           <MultiSelectFilter
             label="Tipo"
             selected={filtros.tipo}
@@ -616,24 +451,18 @@ const watchEstado = watch("estado") || "";
             ]}
             onToggle={(v) => toggleFiltro("tipo", v)}
           />
-
-          {/* Segmento multi-select */}
           <MultiSelectFilter
             label="Segmento"
             selected={filtros.segmento}
             options={SEGMENTOS.map((s) => ({ value: s, label: s }))}
             onToggle={(v) => toggleFiltro("segmento", v)}
           />
-
-          {/* Região multi-select */}
           <MultiSelectFilter
             label="Região"
             selected={filtros.regiao}
             options={Object.keys(ESTADOS_POR_REGIAO).map((r) => ({ value: r, label: r }))}
             onToggle={(v) => toggleFiltro("regiao", v)}
           />
-
-          {/* Estado multi-select (filtrado pela região selecionada) */}
           <MultiSelectFilter
             label="Estado"
             selected={filtros.estado}
@@ -672,13 +501,17 @@ const watchEstado = watch("estado") || "";
                 ))
               ) : clientes.length === 0 ? (
                 <TableRow>
-                 <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 clientes.map((c) => (
-                  <TableRow key={c.id} className="cursor-pointer" onClick={() => { setModalCliente(c); setModalOpen(true); }}>
+                  <TableRow
+                    key={c.id}
+                    className="cursor-pointer"
+                    onClick={() => abrirEditarCliente(c)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div>
@@ -704,7 +537,11 @@ const watchEstado = watch("estado") || "";
                       <Badge variant="outline" className={tipoColors[c.tipo] || tipoColors.regular}>{c.tipo?.toUpperCase()}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setModalCliente(c); setModalOpen(true); }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); abrirEditarCliente(c); }}
+                      >
                         <Search size={16} />
                       </Button>
                     </TableCell>
@@ -758,7 +595,6 @@ const watchEstado = watch("estado") || "";
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Segmento */}
             <div>
               <p className="text-sm font-medium mb-1.5">Segmento</p>
               <div className="flex flex-wrap gap-2">
@@ -775,7 +611,6 @@ const watchEstado = watch("estado") || "";
               </div>
             </div>
 
-            {/* Status */}
             <div>
               <p className="text-sm font-medium mb-1.5">Status</p>
               <div className="flex gap-2">
@@ -792,7 +627,6 @@ const watchEstado = watch("estado") || "";
               </div>
             </div>
 
-            {/* Tipo */}
             <div>
               <p className="text-sm font-medium mb-1.5">Tipo</p>
               <div className="flex gap-2">
@@ -809,7 +643,6 @@ const watchEstado = watch("estado") || "";
               </div>
             </div>
 
-            {/* Região */}
             <div>
               <p className="text-sm font-medium mb-1.5">Região</p>
               <div className="flex flex-wrap gap-2">
@@ -826,7 +659,6 @@ const watchEstado = watch("estado") || "";
               </div>
             </div>
 
-            {/* Estados (desativado se região selecionada) */}
             <div>
               <p className="text-sm font-medium mb-1.5">Estado {exportFiltros.regiao.length > 0 && <span className="text-xs text-muted-foreground">(desativado com região selecionada)</span>}</p>
               <div className="flex flex-wrap gap-1.5">
@@ -844,7 +676,6 @@ const watchEstado = watch("estado") || "";
               </div>
             </div>
 
-            {/* Contador */}
             <div className="rounded-lg bg-[#1a4168]/5 border border-[#1a4168]/20 px-4 py-3 flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Clientes a exportar:</span>
               <span className="font-bold text-[#1a4168] text-lg">
@@ -862,7 +693,9 @@ const watchEstado = watch("estado") || "";
               disabled={exportando || contandoExport || (exportCount ?? 0) === 0}
               className="bg-[#1a4168] hover:bg-[#153554] text-white gap-2"
             >
-              {exportando ? <><Loader2 size={15} className="animate-spin" /> Exportando...</> : <><Download size={15} /> Exportar {(exportCount ?? total).toLocaleString("pt-BR")} clientes</>}
+              {exportando
+                ? <><Loader2 size={15} className="animate-spin" /> Exportando...</>
+                : <><Download size={15} /> Exportar {(exportCount ?? total).toLocaleString("pt-BR")} clientes</>}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -875,173 +708,21 @@ const watchEstado = watch("estado") || "";
         onImportado={() => { fetchClientes(); fetchMetrics(); }}
       />
 
-      {/* Modal Editar Cliente */}
-      <ClienteModal
-        cliente={modalCliente}
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleSave}
-        onDelete={handleDelete}
+      {/* Modal Selecionar Segmento (pré-cadastro) */}
+      <SelecionarSegmentoModal
+        open={modalSelecionarSegmento}
+        onClose={() => setModalSelecionarSegmento(false)}
+        onSelect={abrirNovoCliente}
       />
 
-      {/* Modal Novo Cliente */}
-      <Dialog open={modalNovoCliente} onOpenChange={(open) => { setModalNovoCliente(open); if (!open) { reset(); setNovoClienteSegmentos([]); ultimoCNPJBuscado.current = ""; } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-            <DialogDescription>Cadastre um novo cliente no sistema</DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit(salvarNovoCliente)} className="space-y-4 pt-2">
-            {/* Dados Básicos */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Nome Fantasia *</Label>
-                <Input {...register("nome_fantasia")} placeholder="Hotel Paradise" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Razão Social *</Label>
-                <Input {...register("razao_social")} placeholder="Paradise Hotéis Ltda" required />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>CNPJ *</Label>
-                <Input
-                  {...register("cnpj")}
-                  placeholder="00.000.000/0000-00"
-                  maxLength={18}
-                  required
-                  onChange={(e) => setValue("cnpj", applyMaskCNPJ(e.target.value))}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-1.5 h-9 px-3 text-xs"
-                  onClick={() => buscarReceita()}
-                  disabled={buscandoCNPJ}
-                  title="Buscar dados na Receita Federal"
-                >
-                  {buscandoCNPJ
-                    ? <Loader2 size={13} className="animate-spin" />
-                    : <Search size={13} />}
-                  {buscandoCNPJ ? "Buscando..." : "Buscar na Receita Federal"}
-                </Button>
-              </div>
-              <SegmentoMultiSelect
-                value={novoClienteSegmentos}
-                onChange={setNovoClienteSegmentos}
-                required
-              />
-            </div>
-
-            {/* Contato */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>E-mail</Label>
-                <Input {...register("email")} type="email" placeholder="contato@hotel.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input {...register("telefone")} placeholder="(11) 99999-9999" maxLength={15} />
-              </div>
-            </div>
-
-            {/* Endereço */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Estado *</Label>
-                <Select value={watchEstado} onValueChange={(v) => { setValue("estado", v); setValue("cidade", ""); }}>
-                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                  <SelectContent className="bg-card z-50 max-h-60">
-                    {["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"].map(uf => (
-                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Cidade *</Label>
-                <Select value={watchCidade} onValueChange={(v) => setValue("cidade", v)} disabled={!watchEstado || loadingCidades}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      !watchEstado ? "Selecione o estado" :
-                      loadingCidades ? "Carregando cidades..." :
-                      "Selecione a cidade"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card z-50 max-h-60">
-                    {cidadesIBGE.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>CEP</Label>
-                <Input {...register("cep")} placeholder="00000-000" maxLength={9} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Logradouro</Label>
-                <Input {...register("endereco")} placeholder="Rua das Flores, 123" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Bairro</Label>
-                <Input {...register("bairro")} placeholder="Centro" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Complemento de endereço</Label>
-              <Input {...register("complemento")} placeholder="Sala 201, Bloco B, Andar 3..." />
-            </div>
-
-            {/* Configurações */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Select value={tipoValue} onValueChange={(v) => setValue("tipo", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={statusValue} onValueChange={(v) => setValue("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-card z-50">
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                    <SelectItem value="revisao">Revisão</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setModalNovoCliente(false); reset(); }}
-                disabled={salvando}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar Cliente"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Modal Cadastro / Edição de Cliente */}
+      <CadastroClienteModal
+        open={modalCadastroOpen}
+        onClose={() => { setModalCadastroOpen(false); setClienteParaCadastro(null); setSegmentoParaCadastro(""); }}
+        onSaved={() => { fetchClientes(); fetchMetrics(); }}
+        cliente={clienteParaCadastro}
+        segmentoInicial={segmentoParaCadastro}
+      />
     </div>
   );
 }

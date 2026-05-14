@@ -5,18 +5,51 @@ export interface Cliente {
   cnpj: string
   email: string | null
   telefone: string | null
+  whatsapp?: string | null
   cidade: string | null
   estado: string | null
+  logradouro?: string | null
+  numero?: string | null
+  complemento?: string | null
+  bairro?: string | null
+  cep?: string | null
+  pais?: string | null
   segmento_id: string | null
   segmento: string[] | null
   status: string
   tipo: string
-  created_at?: string
-  endereco?: string | null
-  bairro?: string | null
-  cep?: string | null
+  cnpj_validado?: boolean
+  inscricao_estadual_tipo?: string | null   // 'isento' | 'sem_informacao' | 'numero'
+  inscricao_estadual?: string | null
+  data_primeira_compra?: string | null
+  data_ultima_compra?: string | null
+  qtd_orcada?: number | null
+  qtd_comprada?: number | null
+  total_pedidos_consolidados?: number | null
+  total_pedidos_nao_consolidados?: number | null
+  // Inteligência: Hotelaria
+  hotel_uhs?: number | null
+  hotel_leitos?: number | null
+  hotel_uhs_acessiveis?: number | null
+  hotel_leitos_acessiveis?: number | null
+  hotel_tipo?: string | null
+  hotel_classificacao?: string | null
+  hotel_perfil?: string | null
+  hotel_tem_spa?: boolean | null
   observacoes?: string | null
-  pais?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ContatoCliente {
+  id: string
+  cliente_id: string
+  nome: string
+  email: string | null
+  telefone: string | null
+  whatsapp: string | null
+  principal: boolean
+  created_at: string
 }
 
 export interface Oportunidade {

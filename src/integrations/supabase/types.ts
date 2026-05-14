@@ -55,71 +55,166 @@ export type Database = {
           cep: string | null
           cidade: string | null
           cnpj: string
+          cnpj_validado: boolean | null
           complemento: string | null
           created_at: string
+          data_primeira_compra: string | null
+          data_ultima_compra: string | null
           email: string | null
           estado: string | null
+          hotel_classificacao: string | null
+          hotel_leitos: number | null
+          hotel_leitos_acessiveis: number | null
+          hotel_perfil: string | null
+          hotel_tem_spa: boolean | null
+          hotel_tipo: string | null
+          hotel_uhs: number | null
+          hotel_uhs_acessiveis: number | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_estadual_tipo: string | null
           logradouro: string | null
           nome_fantasia: string
           numero: string | null
           observacoes: string | null
           pais: string | null
+          qtd_comprada: number | null
+          qtd_orcada: number | null
           razao_social: string
           segmento: string[] | null
           segmento_id: string | null
           status: string
           telefone: string | null
           tipo: string
+          total_pedidos_consolidados: number | null
+          total_pedidos_nao_consolidados: number | null
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj: string
+          cnpj_validado?: boolean | null
           complemento?: string | null
           created_at?: string
+          data_primeira_compra?: string | null
+          data_ultima_compra?: string | null
           email?: string | null
           estado?: string | null
+          hotel_classificacao?: string | null
+          hotel_leitos?: number | null
+          hotel_leitos_acessiveis?: number | null
+          hotel_perfil?: string | null
+          hotel_tem_spa?: boolean | null
+          hotel_tipo?: string | null
+          hotel_uhs?: number | null
+          hotel_uhs_acessiveis?: number | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_estadual_tipo?: string | null
           logradouro?: string | null
           nome_fantasia: string
           numero?: string | null
           observacoes?: string | null
           pais?: string | null
+          qtd_comprada?: number | null
+          qtd_orcada?: number | null
           razao_social: string
           segmento?: string[] | null
           segmento_id?: string | null
           status?: string
           telefone?: string | null
           tipo?: string
+          total_pedidos_consolidados?: number | null
+          total_pedidos_nao_consolidados?: number | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj?: string
+          cnpj_validado?: boolean | null
           complemento?: string | null
           created_at?: string
+          data_primeira_compra?: string | null
+          data_ultima_compra?: string | null
           email?: string | null
           estado?: string | null
+          hotel_classificacao?: string | null
+          hotel_leitos?: number | null
+          hotel_leitos_acessiveis?: number | null
+          hotel_perfil?: string | null
+          hotel_tem_spa?: boolean | null
+          hotel_tipo?: string | null
+          hotel_uhs?: number | null
+          hotel_uhs_acessiveis?: number | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_estadual_tipo?: string | null
           logradouro?: string | null
           nome_fantasia?: string
           numero?: string | null
           observacoes?: string | null
           pais?: string | null
+          qtd_comprada?: number | null
+          qtd_orcada?: number | null
           razao_social?: string
           segmento?: string[] | null
           segmento_id?: string | null
           status?: string
           telefone?: string | null
           tipo?: string
+          total_pedidos_consolidados?: number | null
+          total_pedidos_nao_consolidados?: number | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: []
+      }
+      contatos_cliente: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          principal: boolean
+          telefone: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          principal?: boolean
+          telefone?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          principal?: boolean
+          telefone?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_cliente_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_cards: {
         Row: {

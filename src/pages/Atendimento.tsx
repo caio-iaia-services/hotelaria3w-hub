@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import {
   MessageCircle, Send, RefreshCw, Pause, Play,
-  User, Users, Phone, Search, ChevronRight,
+  User, Users, Phone, Search, ChevronRight, ChevronLeft,
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
   Paperclip, FileText, Image,
@@ -175,12 +175,13 @@ const LABEL_CANAL: Record<string, string> = {
 
 // ─── ChatView ─────────────────────────────────────────────────────────────────
 function ChatView({
-  chat, onToggleIA, onTransferir, onMarcarLidas,
+  chat, onToggleIA, onTransferir, onMarcarLidas, onVoltar,
 }: {
   chat: Chat;
   onToggleIA: (chat: Chat) => void;
   onTransferir: (chat: Chat, novoCanal: string) => void;
   onMarcarLidas: (chatId: string) => void;
+  onVoltar?: () => void;
 }) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -484,6 +485,14 @@ function ChatView({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">
+          {onVoltar && (
+            <button
+              onClick={onVoltar}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground shrink-0"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
           <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
             <Phone size={15} className="text-slate-600" />
           </div>
@@ -1493,8 +1502,11 @@ export default function Atendimento() {
                 value={canal.key}
                 className="flex-1 min-h-0 m-0 data-[state=active]:flex"
               >
-                {/* Lista de chats */}
-                <div className="w-72 border-r border-border/50 flex flex-col shrink-0">
+                {/* Lista de chats — hidden no mobile quando um chat está aberto */}
+                <div className={cn(
+                  "w-72 border-r border-border/50 flex-col shrink-0",
+                  chatDoCanal ? "hidden md:flex" : "flex"
+                )}>
                   {loading ? (
                     <div className="p-3 space-y-2">
                       {[1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />)}
@@ -1510,10 +1522,13 @@ export default function Atendimento() {
                   )}
                 </div>
 
-                {/* Área de chat */}
-                <div className="flex-1 min-w-0 flex flex-col">
+                {/* Área de chat — ocupa tela toda no mobile quando selecionado */}
+                <div className={cn(
+                  "min-w-0 flex-col",
+                  chatDoCanal ? "flex flex-1" : "hidden md:flex md:flex-1"
+                )}>
                   {chatDoCanal ? (
-                    <ChatView key={chatDoCanal.id} chat={chatDoCanal} onToggleIA={toggleIA} onTransferir={transferirConversa} onMarcarLidas={marcarLidas} />
+                    <ChatView key={chatDoCanal.id} chat={chatDoCanal} onToggleIA={toggleIA} onTransferir={transferirConversa} onMarcarLidas={marcarLidas} onVoltar={() => setChatSelecionado(null)} />
                   ) : (
                     <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
                       <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-4", canal.bg)}>
@@ -1529,12 +1544,14 @@ export default function Atendimento() {
                   )}
                 </div>
 
-                {/* Painel de atendimento — apenas canais G1/G4/ADM */}
+                {/* Painel de atendimento — apenas canais G1/G4/ADM, hidden no mobile */}
                 {canal.key !== "IA" && (
-                  <PainelAtendimento
-                    chat={chatDoCanal}
-                    onCriarOportunidade={handleCriarOportunidade}
-                  />
+                  <div className="hidden lg:contents">
+                    <PainelAtendimento
+                      chat={chatDoCanal}
+                      onCriarOportunidade={handleCriarOportunidade}
+                    />
+                  </div>
                 )}
               </TabsContent>
             );
