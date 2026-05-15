@@ -1009,16 +1009,25 @@ export default function Orcamentos() {
       }
 
       // ── Lookup CNPJ → cliente ───────────────────────────────────────────
-      const { data: todosClientes } = await supabase
+      const { data: todosClientes, error: erroClientes } = await supabase
         .from("clientes")
         .select("id, cnpj, nome_fantasia, razao_social");
-      const cnpjToCliente: Record<string, { id: string; nome: string }> = {};
-      if (todosClientes) {
-        for (const c of todosClientes as any[]) {
-          const raw = String(c.cnpj || "").replace(/\D/g, "");
-          if (raw) cnpjToCliente[raw] = { id: c.id, nome: c.nome_fantasia || c.razao_social || "" };
-        }
+
+      if (erroClientes) {
+        toast.error(`Erro ao buscar clientes: ${erroClientes.message}`, { duration: 10000 });
+        return;
       }
+      if (!todosClientes || todosClientes.length === 0) {
+        toast.error("Nenhum cliente encontrado no sistema. Verifique o cadastro de clientes.", { duration: 8000 });
+        return;
+      }
+
+      const cnpjToCliente: Record<string, { id: string; nome: string }> = {};
+      for (const c of todosClientes as any[]) {
+        const raw = String(c.cnpj || "").replace(/\D/g, "");
+        if (raw) cnpjToCliente[raw] = { id: c.id, nome: c.nome_fantasia || c.razao_social || "" };
+      }
+      console.log("[Importar] Clientes carregados:", todosClientes.length, "| Lookup CNPJ:", Object.keys(cnpjToCliente).slice(0, 5));
 
       // ── Verifica números já existentes no banco ─────────────────────────
       const numerosArquivo = rows
@@ -1047,12 +1056,14 @@ export default function Orcamentos() {
         }
 
         // cliente_id é NOT NULL no banco → precisa encontrar pelo CNPJ
-        const cnpjRaw     = colCnpj ? String(row[colCnpj] || "").replace(/\D/g, "") : "";
-        const clienteInfo = cnpjRaw ? cnpjToCliente[cnpjRaw] : null;
+        const cnpjOriginal = colCnpj ? String(row[colCnpj] || "").trim() : "";
+        const cnpjRaw      = cnpjOriginal.replace(/\D/g, "");
+        const clienteInfo  = cnpjRaw ? cnpjToCliente[cnpjRaw] : null;
+
+        console.log(`[Importar] Nº ${numero} | CNPJ lido: "${cnpjOriginal}" | raw: "${cnpjRaw}" | encontrado: ${!!clienteInfo}`);
 
         if (!clienteInfo) {
-          const cnpjExibido = colCnpj ? String(row[colCnpj] || "não informado").trim() : "não informado";
-          puladosSemCliente.push(`Nº ${numero} — CNPJ: ${cnpjExibido}`);
+          puladosSemCliente.push(`Nº ${numero} — CNPJ: ${cnpjOriginal || "não informado"}`);
           continue;
         }
 
