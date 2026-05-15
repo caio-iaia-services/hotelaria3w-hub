@@ -1077,12 +1077,12 @@ export default function Orcamentos() {
         );
       }
 
-      // ── Avisos de CNPJ não cadastrado ───────────────────────────────────
+      // ── Avisos de cliente não cadastrado ────────────────────────────────
       if (puladosSemCliente.length > 0) {
         const lista = puladosSemCliente.slice(0, 4).join("\n") +
           (puladosSemCliente.length > 4 ? `\n...e mais ${puladosSemCliente.length - 4}` : "");
         toast.warning(
-          `${puladosSemCliente.length} linha(s) puladas — CNPJ não encontrado no cadastro de clientes:\n${lista}`,
+          `${puladosSemCliente.length} linha(s) puladas — cliente não cadastrado no sistema:\n${lista}`,
           { duration: 12000 }
         );
       }
