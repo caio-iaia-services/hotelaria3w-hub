@@ -240,7 +240,7 @@ export default function Orcamentos() {
     }
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, to);
+    const { data, count, error } = await query.order("numero", { ascending: true }).range(from, to);
 
     if (!error) {
       let rows = (data || []) as any[];
@@ -1353,9 +1353,13 @@ export default function Orcamentos() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {orcamento.data_validade
-                        ? formatDate(orcamento.data_validade)
-                        : `${orcamento.validade_dias} dias`}
+                      {orcamento.status === "aprovado"
+                        ? null
+                        : orcamento.data_validade
+                          ? formatDate(orcamento.data_validade)
+                          : orcamento.validade_dias
+                            ? `${orcamento.validade_dias} dias`
+                            : null}
                     </span>
                   </TableCell>
                   <TableCell>
