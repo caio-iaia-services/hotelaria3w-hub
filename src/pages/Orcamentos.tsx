@@ -864,7 +864,7 @@ export default function Orcamentos() {
       enviado: "enviado", sent: "enviado",
       pendente: "rascunho", rascunho: "rascunho", draft: "rascunho",
       rejeitado: "rejeitado", recusado: "rejeitado", rejected: "rejeitado",
-      expirado: "expirado", vencido: "expirado", expired: "expirado",
+      expirado: "expirado", vencido: "expirado", expired: "expirado", "em aberto": "expirado", emaberto: "expirado",
       cancelado: "cancelado", cancelled: "cancelado", canceled: "cancelado",
     };
     return m[String(s || "").toLowerCase().trim()] || "rascunho";
