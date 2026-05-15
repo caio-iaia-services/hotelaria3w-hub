@@ -1228,7 +1228,7 @@ export default function Orcamentos() {
           setPage(1);
         }}
       >
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="todos">
             Todos{" "}
             <Badge variant="secondary" className="ml-2">
