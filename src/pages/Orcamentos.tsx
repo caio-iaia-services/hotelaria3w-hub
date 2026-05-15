@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 import ReactDOM from "react-dom/client";
@@ -21,6 +22,7 @@ import {
   Paperclip,
   RotateCcw,
   Loader2,
+  Upload,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -175,6 +177,9 @@ export default function Orcamentos() {
   const [gerandoPDF, setGerandoPDF] = useState(false);
   // ── NOVO: state para endereço editável no modal de envio ──
   const [enderecoEntregaEditado, setEnderecoEntregaEditado] = useState("");
+  // ── Import/Export ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importando, setImportando] = useState(false);
 
   const getTotalExibicao = useCallback(
     (orcamento: Orcamento) => {
@@ -845,10 +850,236 @@ export default function Orcamentos() {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Helpers para import/export
+  // ─────────────────────────────────────────────────────────────
+  function mapStatusImport(s: string): string {
+    const m: Record<string, string> = {
+      aceito: "aprovado", aprovado: "aprovado", accepted: "aprovado",
+      enviado: "enviado", sent: "enviado",
+      pendente: "rascunho", rascunho: "rascunho", draft: "rascunho",
+      rejeitado: "rejeitado", recusado: "rejeitado", rejected: "rejeitado",
+      expirado: "expirado", vencido: "expirado", expired: "expirado",
+    };
+    return m[String(s || "").toLowerCase().trim()] || "rascunho";
+  }
+
+  function parseDateImport(d: any): string | null {
+    if (d === null || d === undefined || d === "") return null;
+    if (typeof d === "number") {
+      // Excel serial date
+      const date = new Date(Math.round((d - 25569) * 86400 * 1000));
+      if (!isNaN(date.getTime())) return date.toISOString().substring(0, 10);
+      return null;
+    }
+    const s = String(d).trim();
+    // DD-MMM-YY ou DD-MMM-YYYY (ex: 17-Mar-25)
+    const m1 = s.match(/^(\d{1,2})-([A-Za-z]{3,})-(\d{2,4})$/);
+    if (m1) {
+      const meses: Record<string, string> = {
+        jan:"01",fev:"02",feb:"02",mar:"03",abr:"04",apr:"04",
+        mai:"05",may:"05",jun:"06",jul:"07",ago:"08",aug:"08",
+        set:"09",sep:"09",out:"10",oct:"10",nov:"11",dez:"12",dec:"12",
+      };
+      const day = m1[1].padStart(2, "0");
+      const month = meses[m1[2].toLowerCase().substring(0, 3)] || "01";
+      const year = m1[3].length === 2 ? `20${m1[3]}` : m1[3];
+      return `${year}-${month}-${day}`;
+    }
+    // DD/MM/YYYY
+    const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m2) return `${m2[3]}-${m2[2].padStart(2,"0")}-${m2[1].padStart(2,"0")}`;
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    return null;
+  }
+
+  function parseValorImport(v: any): number {
+    if (!v && v !== 0) return 0;
+    if (typeof v === "number") return isNaN(v) ? 0 : v;
+    let s = String(v).replace(/R\$/gi, "").replace(/\s/g, "");
+    const lastDot = s.lastIndexOf(".");
+    const lastComma = s.lastIndexOf(",");
+    if (lastDot > -1 && lastComma > -1) {
+      // Decide qual é separador decimal: o que vier por último
+      if (lastDot > lastComma) s = s.replace(/,/g, ""); // US: 1,234.56
+      else s = s.replace(/\./g, "").replace(",", "."); // BR: 1.234,56
+    } else if (lastComma > -1) {
+      s = s.replace(",", ".");
+    }
+    return parseFloat(s) || 0;
+  }
+
+  async function exportarExcel() {
+    toast.info("Gerando planilha...");
+    let query = supabase.from("orcamentos").select("*");
+    if (statusAtivo !== "todos") query = query.eq("status", statusAtivo);
+    if (filtros.busca) query = query.or(`numero.ilike.%${filtros.busca}%`);
+    if (gestaoFiltro) query = query.eq("gestao", gestaoFiltro);
+    else if (filtros.gestao) query = query.eq("gestao", filtros.gestao);
+    const { data, error } = await query.order("created_at", { ascending: false });
+    if (error || !data) { toast.error("Erro ao buscar dados para exportação"); return; }
+
+    // Enriquecer com nome do cliente pelo cliente_id
+    const clienteIds = [...new Set(data.filter((r: any) => r.cliente_id).map((r: any) => r.cliente_id))];
+    let idToCliente: Record<string, { nome: string; cnpj: string }> = {};
+    if (clienteIds.length > 0) {
+      const { data: clientes } = await supabase
+        .from("clientes")
+        .select("id, cnpj, nome_fantasia, razao_social")
+        .in("id", clienteIds);
+      if (clientes) {
+        idToCliente = Object.fromEntries(
+          clientes.map((c: any) => [c.id, { nome: c.nome_fantasia || c.razao_social || "", cnpj: c.cnpj || "" }])
+        );
+      }
+    }
+
+    const rows = data.map((o: any) => {
+      const c = o.cliente_id ? idToCliente[o.cliente_id] : null;
+      const cnpj = o.cliente_cnpj || c?.cnpj || "";
+      const nome = o.cliente_nome || c?.nome || "";
+      return {
+        "Número":        o.numero || "",
+        "Status":        getStatusLabel(o.status || ""),
+        "Data Emissão":  o.data_emissao ? formatDate(o.data_emissao) : "",
+        "CNPJ":          cnpj,
+        "Cliente":       nome,
+        "Fornecedor":    o.fornecedor_nome || o.operacao || "",
+        "Valor Total":   parseNum(o.total) || parseNum(o.valor_total) || 0,
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 12 }, { wch: 15 },
+      { wch: 22 }, { wch: 38 }, { wch: 28 }, { wch: 15 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, "Orçamentos");
+    XLSX.writeFile(wb, `Orcamentos_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success(`${rows.length} orçamento(s) exportado(s)!`);
+  }
+
+  async function importarExcel(file: File) {
+    setImportando(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: "array", cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" }) as any[];
+
+      if (rows.length === 0) { toast.error("Planilha vazia"); return; }
+
+      // Detecta colunas pelo nome (tolerante a acentos/espaços)
+      const headers = Object.keys(rows[0]);
+      const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s/g, "");
+      function findCol(kws: string[]): string | null {
+        return headers.find(h => kws.some(k => norm(h).includes(norm(k)))) || null;
+      }
+
+      const colNumero    = findCol(["orcamento","numero"]);
+      const colStatus    = findCol(["situacao","status"]);
+      const colData      = findCol(["emissao","dataemiss"]);
+      const colCnpj      = findCol(["cnpj"]);
+      const colFornecedor = findCol(["fornecedor"]);
+      const colValor     = findCol(["valortotal","valor"]);
+
+      if (!colNumero) { toast.error('Coluna "Orçamento / Número" não encontrada'); return; }
+
+      // Busca todos os clientes para montar lookup por CNPJ
+      const { data: todosClientes } = await supabase
+        .from("clientes")
+        .select("id, cnpj, nome_fantasia, razao_social");
+      const cnpjToCliente: Record<string, { id: string; nome: string }> = {};
+      if (todosClientes) {
+        for (const c of todosClientes as any[]) {
+          const raw = String(c.cnpj || "").replace(/\D/g, "");
+          if (raw) cnpjToCliente[raw] = { id: c.id, nome: c.nome_fantasia || c.razao_social || "" };
+        }
+      }
+
+      // Descobre quais números já existem no banco
+      const numerosArquivo = rows
+        .map(r => String(r[colNumero!] || "").trim())
+        .filter(Boolean);
+
+      const { data: existentes } = await supabase
+        .from("orcamentos")
+        .select("numero")
+        .in("numero", numerosArquivo);
+      const numerosExistentes = new Set((existentes || []).map((e: any) => String(e.numero)));
+
+      const inserts: any[] = [];
+      for (const row of rows) {
+        const numero = String(row[colNumero!] || "").trim();
+        if (!numero) continue;
+        if (numerosExistentes.has(numero)) continue; // pula duplicatas
+
+        const cnpjRaw   = colCnpj ? String(row[colCnpj] || "").replace(/\D/g, "") : "";
+        const clienteInfo = cnpjRaw ? cnpjToCliente[cnpjRaw] : null;
+
+        inserts.push({
+          numero,
+          status:        colStatus    ? mapStatusImport(String(row[colStatus] || "")) : "rascunho",
+          data_emissao:  colData      ? parseDateImport(row[colData]) : null,
+          cliente_id:    clienteInfo?.id   || null,
+          cliente_nome:  clienteInfo?.nome || null,
+          cliente_cnpj:  colCnpj ? String(row[colCnpj] || "").trim() : null,
+          fornecedor_nome: colFornecedor ? String(row[colFornecedor] || "").trim() : null,
+          total:         colValor ? parseValorImport(row[colValor]) : 0,
+        });
+      }
+
+      const pulados = numerosArquivo.filter(n => numerosExistentes.has(n)).length;
+
+      if (inserts.length === 0) {
+        toast.info(
+          pulados > 0
+            ? `${pulados} orçamento(s) já existem no sistema — nada novo importado.`
+            : "Nenhuma linha válida encontrada na planilha.",
+          { duration: 6000 }
+        );
+        return;
+      }
+
+      // Insere em lotes
+      let importados = 0;
+      const BATCH = 50;
+      for (let i = 0; i < inserts.length; i += BATCH) {
+        const { error } = await supabase.from("orcamentos").insert(inserts.slice(i, i + BATCH));
+        if (!error) importados += Math.min(BATCH, inserts.length - i);
+        else console.error("Erro ao inserir lote:", error);
+      }
+
+      toast.success(
+        `${importados} importado(s)` + (pulados > 0 ? ` · ${pulados} já existiam (pulados)` : ""),
+        { duration: 6000 }
+      );
+      buscarOrcamentos();
+      buscarContadores();
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao importar: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setImportando(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="space-y-6 bg-[#dbdbdb] min-h-screen p-6 -m-6">
+      {/* Input oculto para importação */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) importarExcel(e.target.files[0]); }}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <FileText className="h-6 w-6 text-[#1a4168]" />
@@ -858,6 +1089,30 @@ export default function Orcamentos() {
               {statusAtivo === "todos" ? `${total} orçamentos` : `${total} orçamento(s) ${getStatusLabel(statusAtivo)}`}
             </Badge>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importando}
+            className="border-[#1a4168] text-[#1a4168] hover:bg-[#1a4168] hover:text-white"
+          >
+            {importando
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              : <Upload className="h-4 w-4 mr-2" />
+            }
+            {importando ? "Importando..." : "Importar"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportarExcel}
+            className="border-[#1a4168] text-[#1a4168] hover:bg-[#1a4168] hover:text-white"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
         </div>
       </div>
 
