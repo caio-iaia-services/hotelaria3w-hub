@@ -240,7 +240,7 @@ export default function Orcamentos() {
     }
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    const { data, count, error } = await query.order("numero", { ascending: true }).range(from, to);
+    const { data, count, error } = await query.order("numero", { ascending: false }).range(from, to);
 
     if (!error) {
       let rows = (data || []) as any[];
