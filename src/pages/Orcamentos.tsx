@@ -979,14 +979,20 @@ export default function Orcamentos() {
           .replace(/[̀-ͯ]/g, "")
           .replace(/\s+/g, "");
 
+      // Prioriza: match exato → começa com → contém
       function findCol(kws: string[]): string | null {
-        return headers.find(h => kws.some(k => norm(h).includes(norm(k)))) || null;
+        return (
+          headers.find(h => kws.some(k => norm(h) === norm(k))) ||
+          headers.find(h => kws.some(k => norm(h).startsWith(norm(k)))) ||
+          headers.find(h => kws.some(k => norm(h).includes(norm(k)))) ||
+          null
+        );
       }
 
       const colNumero     = findCol(["orcamento", "numero"]);
       const colStatus     = findCol(["situacao", "status"]);
-      const colData       = findCol(["emissao", "dataemiss"]);
-      const colCnpj       = findCol(["cnpj"]);
+      const colData       = findCol(["dataemissao", "emissao"]);
+      const colCnpj       = findCol(["cnpj"]);          // match exato "CNPJ", ignora "TEM CNPJ?"
       const colFornecedor = findCol(["fornecedor"]);
       const colValor      = findCol(["valortotal", "valor"]);
 
