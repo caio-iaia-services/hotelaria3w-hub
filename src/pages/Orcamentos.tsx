@@ -971,23 +971,38 @@ export default function Orcamentos() {
 
       if (rows.length === 0) { toast.error("Planilha vazia"); return; }
 
-      // Detecta colunas pelo nome (tolerante a acentos/espaços)
+      // Normalização tolerante: remove acentos, espaços e converte para minúsculo
       const headers = Object.keys(rows[0]);
-      const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s/g, "");
+      const norm = (s: string) =>
+        String(s).toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/\s+/g, "");
+
       function findCol(kws: string[]): string | null {
         return headers.find(h => kws.some(k => norm(h).includes(norm(k)))) || null;
       }
 
-      const colNumero    = findCol(["orcamento","numero"]);
-      const colStatus    = findCol(["situacao","status"]);
-      const colData      = findCol(["emissao","dataemiss"]);
-      const colCnpj      = findCol(["cnpj"]);
+      const colNumero     = findCol(["orcamento", "numero"]);
+      const colStatus     = findCol(["situacao", "status"]);
+      const colData       = findCol(["emissao", "dataemiss"]);
+      const colCnpj       = findCol(["cnpj"]);
       const colFornecedor = findCol(["fornecedor"]);
-      const colValor     = findCol(["valortotal","valor"]);
+      const colValor      = findCol(["valortotal", "valor"]);
 
-      if (!colNumero) { toast.error('Coluna "Orçamento / Número" não encontrada'); return; }
+      // Debug no console para diagnóstico
+      console.log("[Importar] Headers:", headers);
+      console.log("[Importar] Colunas detectadas:", { colNumero, colStatus, colData, colCnpj, colFornecedor, colValor });
 
-      // Busca todos os clientes para montar lookup por CNPJ
+      if (!colNumero) {
+        toast.error(
+          `Coluna "Número/Orçamento" não encontrada. Colunas disponíveis: ${headers.slice(0, 6).join(", ")}`,
+          { duration: 8000 }
+        );
+        return;
+      }
+
+      // ── Lookup CNPJ → cliente ───────────────────────────────────────────
       const { data: todosClientes } = await supabase
         .from("clientes")
         .select("id, cnpj, nome_fantasia, razao_social");
@@ -999,7 +1014,7 @@ export default function Orcamentos() {
         }
       }
 
-      // Descobre quais números já existem no banco
+      // ── Verifica números já existentes no banco ─────────────────────────
       const numerosArquivo = rows
         .map(r => String(r[colNumero!] || "").trim())
         .filter(Boolean);
@@ -1010,57 +1025,108 @@ export default function Orcamentos() {
         .in("numero", numerosArquivo);
       const numerosExistentes = new Set((existentes || []).map((e: any) => String(e.numero)));
 
+      // ── Classifica cada linha ───────────────────────────────────────────
       const inserts: any[] = [];
+      const puladosDuplicata: string[] = [];
+      const puladosSemCliente: string[] = [];
+
       for (const row of rows) {
         const numero = String(row[colNumero!] || "").trim();
         if (!numero) continue;
-        if (numerosExistentes.has(numero)) continue; // pula duplicatas
 
-        const cnpjRaw   = colCnpj ? String(row[colCnpj] || "").replace(/\D/g, "") : "";
+        // Regra de duplicidade: número já existe → avisa e pula
+        if (numerosExistentes.has(numero)) {
+          puladosDuplicata.push(numero);
+          continue;
+        }
+
+        // cliente_id é NOT NULL no banco → precisa encontrar pelo CNPJ
+        const cnpjRaw     = colCnpj ? String(row[colCnpj] || "").replace(/\D/g, "") : "";
         const clienteInfo = cnpjRaw ? cnpjToCliente[cnpjRaw] : null;
+
+        if (!clienteInfo) {
+          const cnpjExibido = colCnpj ? String(row[colCnpj] || "não informado").trim() : "não informado";
+          puladosSemCliente.push(`Nº ${numero} — CNPJ: ${cnpjExibido}`);
+          continue;
+        }
 
         inserts.push({
           numero,
-          status:        colStatus    ? mapStatusImport(String(row[colStatus] || "")) : "rascunho",
-          data_emissao:  colData      ? parseDateImport(row[colData]) : null,
-          cliente_id:    clienteInfo?.id   || null,
-          cliente_nome:  clienteInfo?.nome || null,
-          cliente_cnpj:  colCnpj ? String(row[colCnpj] || "").trim() : null,
+          status:          colStatus     ? mapStatusImport(String(row[colStatus] || "")) : "rascunho",
+          data_emissao:    colData       ? parseDateImport(row[colData]) : null,
+          cliente_id:      clienteInfo.id,
+          cliente_nome:    clienteInfo.nome,
+          cliente_cnpj:    colCnpj ? String(row[colCnpj] || "").trim() : null,
           fornecedor_nome: colFornecedor ? String(row[colFornecedor] || "").trim() : null,
-          total:         colValor ? parseValorImport(row[colValor]) : 0,
+          total:           colValor ? parseValorImport(row[colValor]) : 0,
         });
       }
 
-      const pulados = numerosArquivo.filter(n => numerosExistentes.has(n)).length;
+      // ── Avisos de duplicatas ────────────────────────────────────────────
+      if (puladosDuplicata.length > 0) {
+        const lista = puladosDuplicata.slice(0, 8).join(", ") + (puladosDuplicata.length > 8 ? "..." : "");
+        toast.warning(
+          `${puladosDuplicata.length} orçamento(s) já existem no sistema e serão ignorados: ${lista}`,
+          { duration: 10000 }
+        );
+      }
 
+      // ── Avisos de CNPJ não cadastrado ───────────────────────────────────
+      if (puladosSemCliente.length > 0) {
+        const lista = puladosSemCliente.slice(0, 4).join("\n") +
+          (puladosSemCliente.length > 4 ? `\n...e mais ${puladosSemCliente.length - 4}` : "");
+        toast.warning(
+          `${puladosSemCliente.length} linha(s) puladas — CNPJ não encontrado no cadastro de clientes:\n${lista}`,
+          { duration: 12000 }
+        );
+      }
+
+      // ── Nada para importar ──────────────────────────────────────────────
       if (inserts.length === 0) {
         toast.info(
-          pulados > 0
-            ? `${pulados} orçamento(s) já existem no sistema — nada novo importado.`
-            : "Nenhuma linha válida encontrada na planilha.",
-          { duration: 6000 }
+          "Nenhum orçamento novo para importar após verificar duplicatas e CNPJs não cadastrados.",
+          { duration: 7000 }
         );
         return;
       }
 
-      // Insere em lotes
+      // ── Confirmação antes de inserir ────────────────────────────────────
+      const linhasConfirmacao = [
+        `${inserts.length} orçamento(s) serão importados.`,
+        puladosDuplicata.length > 0 ? `${puladosDuplicata.length} já existem (serão ignorados).` : "",
+        puladosSemCliente.length > 0 ? `${puladosSemCliente.length} com CNPJ não encontrado (serão ignorados).` : "",
+        "\nDeseja continuar?",
+      ].filter(Boolean).join("\n");
+
+      if (!confirm(linhasConfirmacao)) return;
+
+      // ── Insere em lotes com tratamento de erro visível ──────────────────
       let importados = 0;
+      let erros = 0;
       const BATCH = 50;
       for (let i = 0; i < inserts.length; i += BATCH) {
-        const { error } = await supabase.from("orcamentos").insert(inserts.slice(i, i + BATCH));
-        if (!error) importados += Math.min(BATCH, inserts.length - i);
-        else console.error("Erro ao inserir lote:", error);
+        const batch = inserts.slice(i, i + BATCH);
+        const { error } = await supabase.from("orcamentos").insert(batch);
+        if (!error) {
+          importados += batch.length;
+        } else {
+          erros += batch.length;
+          console.error("[Importar] Erro no lote:", error);
+          toast.error(`Erro ao inserir: ${error.message}`, { duration: 10000 });
+        }
       }
 
-      toast.success(
-        `${importados} importado(s)` + (pulados > 0 ? ` · ${pulados} já existiam (pulados)` : ""),
-        { duration: 6000 }
-      );
-      buscarOrcamentos();
-      buscarContadores();
+      if (importados > 0) {
+        toast.success(`${importados} orçamento(s) importado(s) com sucesso!`, { duration: 6000 });
+        buscarOrcamentos();
+        buscarContadores();
+      }
+      if (erros > 0) {
+        toast.error(`${erros} orçamento(s) falharam na inserção. Veja o console (F12) para detalhes.`, { duration: 10000 });
+      }
     } catch (err: any) {
-      console.error(err);
-      toast.error("Erro ao importar: " + (err?.message || "Erro desconhecido"));
+      console.error("[Importar] Erro geral:", err);
+      toast.error("Erro ao processar arquivo: " + (err?.message || "Erro desconhecido"), { duration: 8000 });
     } finally {
       setImportando(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
