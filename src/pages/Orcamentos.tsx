@@ -68,6 +68,7 @@ function getStatusVariant(status: string): "default" | "secondary" | "destructiv
     aprovado: "default",
     rejeitado: "destructive",
     expirado: "secondary",
+    cancelado: "destructive",
   };
   return variants[status] || "secondary";
 }
@@ -79,6 +80,7 @@ function getStatusLabel(status: string) {
     aprovado: "Aprovado",
     rejeitado: "Rejeitado",
     expirado: "Expirado",
+    cancelado: "Cancelado",
   };
   return labels[status] || status;
 }
@@ -159,6 +161,7 @@ export default function Orcamentos() {
     aprovado: 0,
     rejeitado: 0,
     expirado: 0,
+    cancelado: 0,
   });
   const [filtros, setFiltros] = useState({ busca: "", gestao: "" });
   const [modalVisualizar, setModalVisualizar] = useState(false);
@@ -216,6 +219,7 @@ export default function Orcamentos() {
       base().eq("status", "aprovado"),
       base().eq("status", "rejeitado"),
       base().eq("status", "expirado"),
+      base().eq("status", "cancelado"),
     ]);
     setContadores({
       todos: counts[0].count || 0,
@@ -224,6 +228,7 @@ export default function Orcamentos() {
       aprovado: counts[3].count || 0,
       rejeitado: counts[4].count || 0,
       expirado: counts[5].count || 0,
+      cancelado: counts[6].count || 0,
     });
   }, []);
 
@@ -860,6 +865,7 @@ export default function Orcamentos() {
       pendente: "rascunho", rascunho: "rascunho", draft: "rascunho",
       rejeitado: "rejeitado", recusado: "rejeitado", rejected: "rejeitado",
       expirado: "expirado", vencido: "expirado", expired: "expirado",
+      cancelado: "cancelado", cancelled: "cancelado", canceled: "cancelado",
     };
     return m[String(s || "").toLowerCase().trim()] || "rascunho";
   }
@@ -1257,6 +1263,12 @@ export default function Orcamentos() {
             Expirado{" "}
             <Badge variant="secondary" className="ml-2">
               {contadores.expirado}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="cancelado">
+            Cancelado{" "}
+            <Badge variant="secondary" className="ml-2">
+              {contadores.cancelado}
             </Badge>
           </TabsTrigger>
         </TabsList>
