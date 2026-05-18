@@ -854,19 +854,19 @@ export default function AcoesComerciais() {
 
     try {
       // 1. Gerar número do orçamento (numérico sequencial a partir de 13001)
-      const { data: ultimoOrc } = await supabase
+      // Busca o maior número numérico real (filtra 10000-99999 para evitar erro de sort alfabético com texto)
+      const { data: todosNums } = await supabase
         .from("orcamentos")
         .select("numero")
-        .order("numero", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .gte("numero", "10000")
+        .lte("numero", "99999");
 
       let proximoSeq = 13001;
-      if (ultimoOrc?.numero) {
-        const numerico = parseInt(ultimoOrc.numero, 10);
-        if (!isNaN(numerico) && numerico >= 13001) {
-          proximoSeq = numerico + 1;
-        }
+      if (todosNums && todosNums.length > 0) {
+        const maxNum = Math.max(
+          ...todosNums.map(o => parseInt(o.numero, 10)).filter(n => !isNaN(n))
+        );
+        if (maxNum > 0) proximoSeq = Math.max(maxNum + 1, 13001);
       }
       const numero = String(proximoSeq);
 
