@@ -434,21 +434,10 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
     }
 
     try {
-      // Busca o maior número numérico real (filtra 10000-99999 para evitar erro de sort alfabético com texto)
-      const { data: todosNums } = await supabase
-        .from("orcamentos")
-        .select("numero")
-        .gte("numero", "10000")
-        .lte("numero", "99999");
-
-      let proximoSeq = 13001;
-      if (todosNums && todosNums.length > 0) {
-        const maxNum = Math.max(
-          ...todosNums.map(o => parseInt(o.numero, 10)).filter(n => !isNaN(n))
-        );
-        if (maxNum > 0) proximoSeq = Math.max(maxNum + 1, 13001);
-      }
-      const numero = String(proximoSeq);
+      // Usa função do banco para obter próximo número de forma segura e atômica
+      const { data: nextNumData, error: nextNumError } = await supabase.rpc("get_next_orcamento_numero");
+      if (nextNumError) throw new Error("Erro ao gerar número do orçamento: " + nextNumError.message);
+      const numero = String(nextNumData);
 
       const subtotal = itens.reduce(
         (sum, item) => sum + (parseFloat(String(item.total).replace(",", ".")) || 0),

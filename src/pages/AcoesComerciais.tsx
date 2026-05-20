@@ -854,21 +854,10 @@ export default function AcoesComerciais() {
 
     try {
       // 1. Gerar número do orçamento (numérico sequencial a partir de 13001)
-      // Busca o maior número numérico real (filtra 10000-99999 para evitar erro de sort alfabético com texto)
-      const { data: todosNums } = await supabase
-        .from("orcamentos")
-        .select("numero")
-        .gte("numero", "10000")
-        .lte("numero", "99999");
-
-      let proximoSeq = 13001;
-      if (todosNums && todosNums.length > 0) {
-        const maxNum = Math.max(
-          ...todosNums.map(o => parseInt(o.numero, 10)).filter(n => !isNaN(n))
-        );
-        if (maxNum > 0) proximoSeq = Math.max(maxNum + 1, 13001);
-      }
-      const numero = String(proximoSeq);
+      // Usa função do banco para obter próximo número de forma segura e atômica
+      const { data: nextNumData, error: nextNumError } = await supabase.rpc("get_next_orcamento_numero");
+      if (nextNumError) throw new Error("Erro ao gerar número do orçamento: " + nextNumError.message);
+      const numero = String(nextNumData);
 
       // 2. Calcular valores ANTES de salvar - garantir parsing numérico
       const subtotal = itensOrcamento.reduce((sum, item) => {
