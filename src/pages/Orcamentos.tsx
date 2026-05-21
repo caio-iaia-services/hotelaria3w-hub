@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -148,6 +149,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 
 export default function Orcamentos() {
   const { user, gestaoFiltro } = useAuth();
+  const location = useLocation();
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -348,6 +350,17 @@ export default function Orcamentos() {
   useEffect(() => {
     buscarOrcamentos();
   }, [buscarOrcamentos]);
+
+  // Abre visualização direta quando navegado com state.orcamentoId
+  useEffect(() => {
+    const orcamentoId = (location.state as any)?.orcamentoId;
+    if (!orcamentoId) return;
+    async function abrirDireto() {
+      const { data } = await supabase.from("orcamentos").select("*").eq("id", orcamentoId).maybeSingle();
+      if (data) visualizarOrcamento(data as Orcamento);
+    }
+    abrirDireto();
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBuscaChange = (valor: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
