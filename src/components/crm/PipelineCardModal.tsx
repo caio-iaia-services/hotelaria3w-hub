@@ -354,7 +354,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
             {orcamentoExistente ? (
               <>
                 <Button
-                  onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id } }); }}
+                  onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, returnTo: "/acoes-comerciais" } }); }}
                   className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
                   size="sm"
                 >

@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -150,6 +150,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 export default function Orcamentos() {
   const { user, gestaoFiltro } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -497,6 +498,12 @@ export default function Orcamentos() {
     setOrcamentoVisualizar(orcamento);
     setItensVisualizar(itens);
     setModalVisualizar(true);
+  }
+
+  function fecharModalVisualizar() {
+    setModalVisualizar(false);
+    const returnTo = (location.state as any)?.returnTo;
+    if (returnTo) navigate(returnTo);
   }
 
   function editarOrcamento(o: Orcamento) {
@@ -1477,7 +1484,7 @@ export default function Orcamentos() {
       )}
 
       {/* MODAL VISUALIZAR */}
-      <Dialog open={modalVisualizar} onOpenChange={setModalVisualizar}>
+      <Dialog open={modalVisualizar} onOpenChange={(open) => { if (!open) fecharModalVisualizar(); }}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Visualização do orçamento {orcamentoVisualizar?.numero}</DialogTitle>
@@ -1513,7 +1520,7 @@ export default function Orcamentos() {
                   </DropdownMenu>
                 </>
               )}
-              <Button variant="outline" size="sm" onClick={() => setModalVisualizar(false)}>
+              <Button variant="outline" size="sm" onClick={fecharModalVisualizar}>
                 <X className="w-4 h-4 mr-2" />
                 Fechar
               </Button>

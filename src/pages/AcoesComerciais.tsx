@@ -227,7 +227,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
               <Button
                 variant="outline"
                 className="h-auto py-4 flex-col gap-2 border-green-600 text-green-700 hover:bg-green-50"
-                onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id } })}
+                onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, returnTo: "/acoes-comerciais" } })}
               >
                 <Eye className="w-6 h-6" />
                 <span className="text-sm">Visualizar Orçamento</span>
@@ -248,10 +248,10 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "email" } })}>
+                  <DropdownMenuItem onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "email", returnTo: "/acoes-comerciais" } })}>
                     <Mail className="h-4 w-4 mr-2" /> Enviar por E-mail
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "whatsapp" } })}>
+                  <DropdownMenuItem onClick={() => navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "whatsapp", returnTo: "/acoes-comerciais" } })}>
                     <MessageCircle className="h-4 w-4 mr-2" /> Enviar por WhatsApp
                   </DropdownMenuItem>
                 </DropdownMenuContent>
