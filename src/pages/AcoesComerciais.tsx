@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { supabase as supabaseCloud } from "@/integrations/supabase/client";
 import { CRMCard, DocumentoComercial } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { gestaoOperacoes as gestaoOperacoesBase } from "@/data/mockOportunidades";
 import {
@@ -158,6 +159,9 @@ interface AreaProps {
 }
 
 function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
+  const navigate = useNavigate();
+  const orcamentoExistente = documentos.find(d => d.tipo === "orcamento");
+
   const getDocumentoIcon = (tipo: string) => {
     const icones: Record<string, React.ReactNode> = {
       orcamento: <DollarSign className="w-5 h-5 text-primary" />,
@@ -208,14 +212,28 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
         </h3>
 
         <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => onAcao("preparar_orcamento", card.id)}
-          >
-            <DollarSign className="w-6 h-6" />
-            <span className="text-sm">Preparar Orçamento</span>
-          </Button>
+          {orcamentoExistente ? (
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex-col gap-2 border-green-600 text-green-700 hover:bg-green-50"
+              onClick={() => navigate("/orcamentos")}
+            >
+              <Eye className="w-6 h-6" />
+              <span className="text-sm">Visualizar Orçamento</span>
+              {orcamentoExistente.numero && (
+                <span className="text-xs text-muted-foreground">Nº {orcamentoExistente.numero}</span>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => onAcao("preparar_orcamento", card.id)}
+            >
+              <DollarSign className="w-6 h-6" />
+              <span className="text-sm">Preparar Orçamento</span>
+            </Button>
+          )}
 
           <Button
             variant="outline"

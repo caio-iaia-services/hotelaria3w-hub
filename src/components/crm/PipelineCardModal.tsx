@@ -21,6 +21,7 @@ import {
   Tag,
   Save,
   DollarSign,
+  Eye,
   MessageSquare,
   PlusCircle,
 } from "lucide-react";
@@ -68,6 +69,9 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
   // Modal de orçamento
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
 
+  // Orçamento existente para este card
+  const [orcamentoExistente, setOrcamentoExistente] = useState<{ id: string; numero: string } | null>(null);
+
   // ── Carregar dados ao abrir ──
   useEffect(() => {
     if (open && card) {
@@ -79,6 +83,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
       setNotas("");
       setPrioridade("media");
       setProximaAcao("");
+      setOrcamentoExistente(null);
     }
   }, [open, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -112,6 +117,17 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
       .maybeSingle();
 
     setChatId(chatData?.id || null);
+
+    // 3. Verificar se já existe orçamento para este card
+    const { data: orcData } = await supabase
+      .from("orcamentos")
+      .select("id, numero")
+      .eq("card_id", c.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    setOrcamentoExistente(orcData ? { id: orcData.id, numero: orcData.numero || "" } : null);
 
     setCarregando(false);
   }
@@ -326,15 +342,26 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
               </Button>
             )}
 
-            {/* Preparar Orçamento */}
-            <Button
-              onClick={() => setOrcamentoOpen(true)}
-              className="w-full gap-2 bg-[#164B6E] hover:bg-[#164B6E]/90 text-white"
-              size="sm"
-            >
-              <DollarSign size={14} />
-              Preparar Orçamento
-            </Button>
+            {/* Orçamento */}
+            {orcamentoExistente ? (
+              <Button
+                onClick={() => { onOpenChange(false); navigate("/orcamentos"); }}
+                className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
+                size="sm"
+              >
+                <Eye size={14} />
+                Visualizar Orçamento {orcamentoExistente.numero ? `Nº ${orcamentoExistente.numero}` : ""}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setOrcamentoOpen(true)}
+                className="w-full gap-2 bg-[#164B6E] hover:bg-[#164B6E]/90 text-white"
+                size="sm"
+              >
+                <DollarSign size={14} />
+                Preparar Orçamento
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
