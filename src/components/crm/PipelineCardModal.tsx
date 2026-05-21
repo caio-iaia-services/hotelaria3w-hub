@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import type { CRMCard, Cliente } from "@/lib/types";
 import { OrcamentoModal } from "@/components/orcamentos/OrcamentoModal";
+import { VisualizarOrcamentoModal } from "@/components/orcamentos/VisualizarOrcamentoModal";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const PRIORIDADE_COR: Record<string, string> = {
@@ -76,6 +77,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
 
   // Modal de orçamento
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
+  const [visualizarOpen, setVisualizarOpen] = useState(false);
 
   // Orçamento existente para este card
   const [orcamentoExistente, setOrcamentoExistente] = useState<{ id: string; numero: string } | null>(null);
@@ -354,7 +356,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
             {orcamentoExistente ? (
               <>
                 <Button
-                  onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}`, "_blank")}
+                  onClick={() => setVisualizarOpen(true)}
                   className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
                   size="sm"
                 >
@@ -405,6 +407,12 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
           setOrcamentoOpen(false);
           onOpenChange(false);
         }}
+      />
+
+      <VisualizarOrcamentoModal
+        orcamentoId={orcamentoExistente?.id ?? null}
+        open={visualizarOpen}
+        onClose={() => setVisualizarOpen(false)}
       />
     </>
   );
