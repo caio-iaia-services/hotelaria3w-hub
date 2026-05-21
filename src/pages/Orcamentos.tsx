@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -149,8 +149,7 @@ function aplicarDadosClienteNoOrcamento(orcamento: Orcamento, cliente?: ClienteA
 
 export default function Orcamentos() {
   const { user, gestaoFiltro } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -352,25 +351,25 @@ export default function Orcamentos() {
     buscarOrcamentos();
   }, [buscarOrcamentos]);
 
-  // Abre visualização ou envio direto quando navegado com state.orcamentoId
+  // Abre visualização ou envio direto quando aberto com ?viewId=
   useEffect(() => {
-    const state = location.state as any;
-    const orcamentoId = state?.orcamentoId;
-    if (!orcamentoId) return;
+    const viewId = searchParams.get("viewId");
+    const send = searchParams.get("send");
+    if (!viewId) return;
     async function abrirDireto() {
-      const { data } = await supabase.from("orcamentos").select("*").eq("id", orcamentoId).maybeSingle();
+      const { data } = await supabase.from("orcamentos").select("*").eq("id", viewId).maybeSingle();
       if (!data) return;
       const orc = data as Orcamento;
-      if (state?.abrirEnvio === "email") {
+      if (send === "email") {
         enviarPorEmail(orc);
-      } else if (state?.abrirEnvio === "whatsapp") {
+      } else if (send === "whatsapp") {
         enviarPorWhatsApp(orc);
       } else {
         visualizarOrcamento(orc);
       }
     }
     abrirDireto();
-  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBuscaChange = (valor: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -502,8 +501,6 @@ export default function Orcamentos() {
 
   function fecharModalVisualizar() {
     setModalVisualizar(false);
-    const returnTo = (location.state as any)?.returnTo;
-    if (returnTo) navigate(returnTo);
   }
 
   function editarOrcamento(o: Orcamento) {

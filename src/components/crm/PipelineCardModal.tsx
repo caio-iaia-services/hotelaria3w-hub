@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,6 @@ interface PipelineCardModalProps {
 
 export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModalProps) {
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Dados completos do cliente
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -355,7 +354,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
             {orcamentoExistente ? (
               <>
                 <Button
-                  onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, returnTo: location.pathname, returnCardId: card.id } }); }}
+                  onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}`, "_blank")}
                   className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
                   size="sm"
                 >
@@ -375,10 +374,10 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "email" } }); }}>
+                    <DropdownMenuItem onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}&send=email`, "_blank")}>
                       <Mail size={14} className="mr-2" /> Enviar por E-mail
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "whatsapp" } }); }}>
+                    <DropdownMenuItem onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}&send=whatsapp`, "_blank")}>
                       <MessageSquare size={14} className="mr-2" /> Enviar por WhatsApp
                     </DropdownMenuItem>
                   </DropdownMenuContent>
