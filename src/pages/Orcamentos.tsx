@@ -351,13 +351,22 @@ export default function Orcamentos() {
     buscarOrcamentos();
   }, [buscarOrcamentos]);
 
-  // Abre visualização direta quando navegado com state.orcamentoId
+  // Abre visualização ou envio direto quando navegado com state.orcamentoId
   useEffect(() => {
-    const orcamentoId = (location.state as any)?.orcamentoId;
+    const state = location.state as any;
+    const orcamentoId = state?.orcamentoId;
     if (!orcamentoId) return;
     async function abrirDireto() {
       const { data } = await supabase.from("orcamentos").select("*").eq("id", orcamentoId).maybeSingle();
-      if (data) visualizarOrcamento(data as Orcamento);
+      if (!data) return;
+      const orc = data as Orcamento;
+      if (state?.abrirEnvio === "email") {
+        enviarPorEmail(orc);
+      } else if (state?.abrirEnvio === "whatsapp") {
+        enviarPorWhatsApp(orc);
+      } else {
+        visualizarOrcamento(orc);
+      }
     }
     abrirDireto();
   }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps

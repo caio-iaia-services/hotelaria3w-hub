@@ -22,9 +22,17 @@ import {
   Save,
   DollarSign,
   Eye,
+  Send,
+  ChevronDown,
   MessageSquare,
   PlusCircle,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import type { CRMCard, Cliente } from "@/lib/types";
 import { OrcamentoModal } from "@/components/orcamentos/OrcamentoModal";
@@ -344,14 +352,37 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
 
             {/* Orçamento */}
             {orcamentoExistente ? (
-              <Button
-                onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id } }); }}
-                className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
-                size="sm"
-              >
-                <Eye size={14} />
-                Visualizar Orçamento {orcamentoExistente.numero ? `Nº ${orcamentoExistente.numero}` : ""}
-              </Button>
+              <>
+                <Button
+                  onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id } }); }}
+                  className="w-full gap-2 bg-green-700 hover:bg-green-800 text-white"
+                  size="sm"
+                >
+                  <Eye size={14} />
+                  Visualizar Orçamento {orcamentoExistente.numero ? `Nº ${orcamentoExistente.numero}` : ""}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 border-green-600 text-green-700 hover:bg-green-50"
+                      size="sm"
+                    >
+                      <Send size={14} />
+                      Enviar Orçamento
+                      <ChevronDown size={12} className="ml-auto" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "email" } }); }}>
+                      <Mail size={14} className="mr-2" /> Enviar por E-mail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { onOpenChange(false); navigate("/orcamentos", { state: { orcamentoId: orcamentoExistente.id, abrirEnvio: "whatsapp" } }); }}>
+                      <MessageSquare size={14} className="mr-2" /> Enviar por WhatsApp
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <Button
                 onClick={() => setOrcamentoOpen(true)}
