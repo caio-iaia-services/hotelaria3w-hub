@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn, type KanbanColumnData } from "./KanbanColumn";
 import { PipelineCardModal } from "./PipelineCardModal";
@@ -16,6 +17,21 @@ interface KanbanBoardProps {
 export function KanbanBoard({ columns, onRefresh, operationColors, showOperationBadge }: KanbanBoardProps) {
   const [selectedCard, setSelectedCard] = useState<CRMCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Reabre o modal do card quando retorna da visualização de orçamento
+  useEffect(() => {
+    const returnCardId = (location.state as any)?.returnCardId;
+    if (!returnCardId) return;
+    const card = columns.flatMap(c => c.cards).find(c => c.id === returnCardId);
+    if (card) {
+      setSelectedCard(card);
+      setModalOpen(true);
+      // Limpa o state para não reabrir em próximas renderizações
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, columns]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
