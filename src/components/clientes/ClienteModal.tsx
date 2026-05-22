@@ -111,13 +111,12 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                 <Input value={form.telefone || ""} onChange={(e) => set("telefone", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={form.status || ""} onValueChange={(v) => set("status", v)}>
+                <Label>Tipo</Label>
+                <Select value={form.tipo || ""} onValueChange={(v) => set("tipo", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-card z-50">
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                    <SelectItem value="revisao">Revisão</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
+                    <SelectItem value="vip">VIP</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -159,16 +158,6 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               onChange={(v) => set("segmento", v)}
               required
             />
-            <div className="space-y-1.5">
-              <Label>Tipo</Label>
-              <Select value={form.tipo || ""} onValueChange={(v) => set("tipo", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-card z-50">
-                  <SelectItem value="regular">Regular</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Status de Prospecção</Label>
@@ -227,13 +216,6 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Info label="Cidade/UF" value={`${cliente.cidade || "-"}/${cliente.estado || "-"}`} />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Badge variant="outline" className={
-                cliente.status === "ativo" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" :
-                cliente.status === "revisao" ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" :
-                "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-              }>
-                {cliente.status === "revisao" ? "REVISÃO" : cliente.status}
-              </Badge>
               <Badge variant="outline" className={cliente.tipo === "vip" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" : "bg-muted text-muted-foreground"}>
                 {cliente.tipo?.toUpperCase()}
               </Badge>

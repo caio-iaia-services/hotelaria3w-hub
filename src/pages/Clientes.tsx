@@ -485,7 +485,6 @@ export default function Clientes() {
                 <TableHead className="text-white">CNPJ</TableHead>
                 <TableHead className="text-white">Cidade/UF</TableHead>
                 <TableHead className="text-white">Segmento</TableHead>
-                <TableHead className="text-center text-white">Status</TableHead>
                 <TableHead className="text-center text-white">Prospecção</TableHead>
                 <TableHead className="text-center text-white">Relação Comercial</TableHead>
                 <TableHead className="text-center text-white">Tipo</TableHead>
@@ -496,14 +495,14 @@ export default function Clientes() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
@@ -531,9 +530,6 @@ export default function Clientes() {
                       {c.segmento && c.segmento.length > 0
                         ? <span className="text-sm">{c.segmento.join(", ")}</span>
                         : <span className="text-muted-foreground text-sm">-</span>}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={statusColors[c.status] || ""}>{c.status}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px]">
