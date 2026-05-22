@@ -486,6 +486,8 @@ export default function Clientes() {
                 <TableHead className="text-white">Cidade/UF</TableHead>
                 <TableHead className="text-white">Segmento</TableHead>
                 <TableHead className="text-center text-white">Status</TableHead>
+                <TableHead className="text-center text-white">Prospecção</TableHead>
+                <TableHead className="text-center text-white">Relação Comercial</TableHead>
                 <TableHead className="text-center text-white">Tipo</TableHead>
                 <TableHead className="text-center text-white">Ações</TableHead>
               </TableRow>
@@ -494,14 +496,14 @@ export default function Clientes() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
@@ -532,6 +534,31 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className={statusColors[c.status] || ""}>{c.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px]">
+                        {
+                          !c.status_prospeccao || c.status_prospeccao === "cadastrado" ? "Cadastrado" :
+                          c.status_prospeccao === "higienizado" ? "Higienizado" :
+                          c.status_prospeccao === "aquecido" ? "Aquecido" :
+                          c.status_prospeccao === "em_prospeccao" ? "Em Prospecção" :
+                          c.status_prospeccao === "ativo" ? "Ativo" :
+                          c.status_prospeccao === "inativo" ? "Inativo" :
+                          c.status_prospeccao
+                        }
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[10px]">
+                        {
+                          !c.relacao_comercial || c.relacao_comercial === "sem_historico" ? "Sem Histórico" :
+                          c.relacao_comercial === "orcamento" ? "Orçamento" :
+                          c.relacao_comercial === "cliente" ? "Cliente" :
+                          c.relacao_comercial === "recorrente" ? "Recorrente" :
+                          c.relacao_comercial === "suspenso" ? "Suspenso" :
+                          c.relacao_comercial
+                        }
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="outline" className={tipoColors[c.tipo] || tipoColors.regular}>{c.tipo?.toUpperCase()}</Badge>

@@ -37,6 +37,8 @@ export interface Cliente {
   hotel_perfil?: string | null
   hotel_tem_spa?: boolean | null
   observacoes?: string | null
+  status_prospeccao?: string | null
+  relacao_comercial?: string | null
   created_at?: string
   updated_at?: string
 }

@@ -99,6 +99,8 @@ interface FormState {
   hotel_classificacao: string;
   hotel_perfil: string;
   hotel_tem_spa: boolean | null;
+  status_prospeccao: string;
+  relacao_comercial: string;
 }
 
 const FORM_INICIAL: FormState = {
@@ -113,6 +115,8 @@ const FORM_INICIAL: FormState = {
   total_pedidos_consolidados: 0, total_pedidos_nao_consolidados: 0,
   hotel_uhs: "", hotel_leitos: "", hotel_uhs_acessiveis: "", hotel_leitos_acessiveis: "",
   hotel_tipo: "", hotel_classificacao: "", hotel_perfil: "", hotel_tem_spa: null,
+  status_prospeccao: "cadastrado",
+  relacao_comercial: "sem_historico",
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -130,6 +134,23 @@ const STATUS_OPTIONS = [
   { value: "ativo",               label: "Ativo" },
   { value: "atendimento_regular", label: "Atendimento Regular" },
   { value: "atendimento_vip",     label: "Atendimento VIP" },
+];
+
+const STATUS_PROSPECCAO_OPTIONS = [
+  { value: "cadastrado",     label: "Cadastrado" },
+  { value: "higienizado",    label: "Higienizado" },
+  { value: "aquecido",       label: "Aquecido" },
+  { value: "em_prospeccao",  label: "Em Prospecção" },
+  { value: "ativo",          label: "Ativo" },
+  { value: "inativo",        label: "Inativo" },
+];
+
+const RELACAO_COMERCIAL_OPTIONS = [
+  { value: "sem_historico", label: "Sem Histórico" },
+  { value: "orcamento",     label: "Orçamento" },
+  { value: "cliente",       label: "Cliente" },
+  { value: "recorrente",    label: "Recorrente" },
+  { value: "suspenso",      label: "Suspenso" },
 ];
 
 const HOTEL_TIPOS = [
@@ -222,6 +243,8 @@ export default function CadastroClienteModal({
         hotel_classificacao:   cliente.hotel_classificacao || "",
         hotel_perfil:          cliente.hotel_perfil || "",
         hotel_tem_spa:         cliente.hotel_tem_spa ?? null,
+        status_prospeccao:     cliente.status_prospeccao || "cadastrado",
+        relacao_comercial:     cliente.relacao_comercial || "sem_historico",
       });
       loadContatos(cliente.id);
       loadHistorico(cliente.id);
@@ -417,6 +440,8 @@ export default function CadastroClienteModal({
     try {
       const { error } = await supabase.from("clientes").update({
         status:                         form.status,
+        status_prospeccao:              form.status_prospeccao || "cadastrado",
+        relacao_comercial:              form.relacao_comercial || "sem_historico",
         data_primeira_compra:           form.data_primeira_compra || null,
         data_ultima_compra:             form.data_ultima_compra || null,
         qtd_orcada:                     form.qtd_orcada || 0,
@@ -973,6 +998,50 @@ export default function CadastroClienteModal({
                         )}
                       >
                         <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.status === s.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 mt-6">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status de Prospecção</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {STATUS_PROSPECCAO_OPTIONS.map(s => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => set("status_prospeccao", s.value)}
+                        className={cn(
+                          "flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all text-left",
+                          form.status_prospeccao === s.value
+                            ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                            : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                        )}
+                      >
+                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.status_prospeccao === s.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 mt-6">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Relação Comercial</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {RELACAO_COMERCIAL_OPTIONS.map(s => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => set("relacao_comercial", s.value)}
+                        className={cn(
+                          "flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all text-left",
+                          form.relacao_comercial === s.value
+                            ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                            : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                        )}
+                      >
+                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.relacao_comercial === s.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
                         {s.label}
                       </button>
                     ))}

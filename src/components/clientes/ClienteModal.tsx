@@ -169,6 +169,35 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Status de Prospecção</Label>
+                <Select value={form.status_prospeccao || "cadastrado"} onValueChange={(v) => set("status_prospeccao", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-card z-50">
+                    <SelectItem value="cadastrado">Cadastrado</SelectItem>
+                    <SelectItem value="higienizado">Higienizado</SelectItem>
+                    <SelectItem value="aquecido">Aquecido</SelectItem>
+                    <SelectItem value="em_prospeccao">Em Prospecção</SelectItem>
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Relação Comercial</Label>
+                <Select value={form.relacao_comercial || "sem_historico"} onValueChange={(v) => set("relacao_comercial", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-card z-50">
+                    <SelectItem value="sem_historico">Sem Histórico</SelectItem>
+                    <SelectItem value="orcamento">Orçamento</SelectItem>
+                    <SelectItem value="cliente">Cliente</SelectItem>
+                    <SelectItem value="recorrente">Recorrente</SelectItem>
+                    <SelectItem value="suspenso">Suspenso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Observações</Label>
               <Textarea rows={3} value={form.observacoes || ""} onChange={(e) => set("observacoes", e.target.value)} />
@@ -197,7 +226,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Info label="Telefone" value={cliente.telefone} />
               <Info label="Cidade/UF" value={`${cliente.cidade || "-"}/${cliente.estado || "-"}`} />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Badge variant="outline" className={
                 cliente.status === "ativo" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" :
                 cliente.status === "revisao" ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" :
@@ -208,6 +237,31 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
               <Badge variant="outline" className={cliente.tipo === "vip" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" : "bg-muted text-muted-foreground"}>
                 {cliente.tipo?.toUpperCase()}
               </Badge>
+              {cliente.status_prospeccao && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  {
+                    cliente.status_prospeccao === "cadastrado" ? "Cadastrado" :
+                    cliente.status_prospeccao === "higienizado" ? "Higienizado" :
+                    cliente.status_prospeccao === "aquecido" ? "Aquecido" :
+                    cliente.status_prospeccao === "em_prospeccao" ? "Em Prospecção" :
+                    cliente.status_prospeccao === "ativo" ? "Ativo (Prosp.)" :
+                    cliente.status_prospeccao === "inativo" ? "Inativo (Prosp.)" :
+                    cliente.status_prospeccao
+                  }
+                </Badge>
+              )}
+              {cliente.relacao_comercial && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                  {
+                    cliente.relacao_comercial === "sem_historico" ? "Sem Histórico" :
+                    cliente.relacao_comercial === "orcamento" ? "Orçamento" :
+                    cliente.relacao_comercial === "cliente" ? "Cliente" :
+                    cliente.relacao_comercial === "recorrente" ? "Recorrente" :
+                    cliente.relacao_comercial === "suspenso" ? "Suspenso" :
+                    cliente.relacao_comercial
+                  }
+                </Badge>
+              )}
             </div>
             {cliente.observacoes && (
               <div>
