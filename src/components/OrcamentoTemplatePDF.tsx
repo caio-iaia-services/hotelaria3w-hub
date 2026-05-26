@@ -1,3 +1,4 @@
+import React from "react";
 import { Orcamento, OrcamentoItem } from "@/lib/types";
 import { Mail, MapPin, Phone, Truck, Package, CreditCard, AlertCircle, DollarSign, Globe } from "lucide-react";
 import { formatDateBR } from "@/lib/date";
@@ -130,10 +131,88 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
 
   const numero = orcamento?.numero || '';
 
+  /* ── Paginação de itens ── */
+  const ITENS_POR_PAGINA = 18;
+  const chunksItens: OrcamentoItem[][] = [];
+  if (itens.length === 0) {
+    chunksItens.push([]);
+  } else {
+    for (let i = 0; i < itens.length; i += ITENS_POR_PAGINA) {
+      chunksItens.push(itens.slice(i, i + ITENS_POR_PAGINA));
+    }
+  }
+
+  const pageStyle: React.CSSProperties = { width: '210mm', height: '297mm', overflow: 'hidden', display: 'flex', flexDirection: 'column' };
+
+  const renderMiniCabecalho = () => (
+    <div style={{ backgroundColor: '#1a4168', color: 'white', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <img src="/logo_3Whotelaria.jpeg" alt="3W Hotelaria" style={{ height: '28px' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      <div style={{ fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Globe style={{ width: '10px', height: '10px' }} /><span>www.3whotelaria.com.br</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone style={{ width: '10px', height: '10px' }} /><span>+55 (11) 5197-5779</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail style={{ width: '10px', height: '10px' }} /><span>{emailExibicao}</span></div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {logotipoFornecedor && <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} style={{ height: '28px', maxWidth: '90px', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+        <div style={{ backgroundColor: '#c4942c', color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px' }}>
+          Orçamento {numero}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTabelaCabecalho = () => (
+    <thead>
+      <tr style={{ backgroundColor: '#1a4168', color: 'white' }}>
+        <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'center', width: '30px' }}>Item</th>
+        {tipoLayout === 'castor' ? (
+          <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'center' }} colSpan={5}>Código</th>
+        ) : (
+          <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'center' }}>Código</th>
+        )}
+        <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'left' }}>Descrição</th>
+        {tipoLayout === 'castor' && <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'center' }}>Medidas</th>}
+        <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'center', width: '40px' }}>Qtd</th>
+        <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'right' }}>Unitário</th>
+        <th style={{ border: '1px solid white', padding: '5px 7px', textAlign: 'right' }}>Total</th>
+      </tr>
+    </thead>
+  );
+
+  const renderItemRow = (item: OrcamentoItem, globalIndex: number) => {
+    const codigoDividido = dividirCodigo(item.codigo || '');
+    return (
+      <tr key={item.id} style={{ backgroundColor: globalIndex % 2 === 0 ? '#f9fafb' : 'white' }}>
+        <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'center', fontWeight: 'bold' }}>{globalIndex + 1}</td>
+        {tipoLayout === 'castor' ? (
+          <>
+            {codigoDividido.slice(0, 5).map((digito, i) => (
+              <td key={i} style={{ border: '1px solid #d1d5db', padding: '4px', textAlign: 'center', fontFamily: 'monospace', backgroundColor: '#eff6ff' }}>{digito}</td>
+            ))}
+            {Array(Math.max(0, 5 - codigoDividido.length)).fill(null).map((_, i) => (
+              <td key={`empty-${i}`} style={{ border: '1px solid #d1d5db', padding: '4px', backgroundColor: '#f3f4f6' }}></td>
+            ))}
+          </>
+        ) : (
+          <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'center', fontFamily: 'monospace' }}>{item.codigo || '-'}</td>
+        )}
+        <td style={{ border: '1px solid #d1d5db', padding: '5px 7px' }}>
+          <p style={{ fontWeight: 600, margin: 0, fontSize: '11px' }}>{item.descricao}</p>
+          {item.especificacoes && <p style={{ fontSize: '9px', color: '#6b7280', margin: '2px 0 0 0' }}>{item.especificacoes}</p>}
+        </td>
+        {tipoLayout === 'castor' && <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'center', fontSize: '10px' }}>{(item as any).medidas || '-'}</td>}
+        <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px' }}>{item.quantidade}</td>
+        <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'right', fontSize: '11px' }}>{formatCurrency(item.preco_unitario)}</td>
+        <td style={{ border: '1px solid #d1d5db', padding: '5px 7px', textAlign: 'right', fontWeight: 'bold', fontSize: '11px' }}>{formatCurrency(item.total)}</td>
+      </tr>
+    );
+  };
+
   return (
     <div style={{ width: '210mm', margin: '0 auto', background: 'white', fontFamily: 'Arial, sans-serif' }}>
-      {/* PÁGINA 1 */}
+      {/* PÁGINA 1: CAPA */}
       <div
+        data-pdf-page
         className="pagina-1"
         style={{
           width: '210mm',
@@ -250,75 +329,32 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
         </div>
       </div>
 
-      {/* PÁGINA 2 */}
-      <div
-        className="pagina-2"
-        style={{
-          width: '210mm',
-          height: '297mm',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div style={{ flex: 1, padding: '16px 20px' }}>
-          {/* TABELA DE ITENS */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#1a4168', color: 'white' }}>
-                <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'center' }}>Item</th>
-                {tipoLayout === "castor" ? (
-                  <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'center' }} colSpan={5}>Código</th>
-                ) : (
-                  <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'center' }}>Código</th>
-                )}
-                <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'left' }}>Descrição</th>
-                {tipoLayout === "castor" && <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'center' }}>Medidas</th>}
-                <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'center' }}>Qtd</th>
-                <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'right' }}>Unitário</th>
-                <th style={{ border: '1px solid white', padding: '6px 8px', textAlign: 'right' }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itens.map((item, index) => {
-                const codigoDividido = dividirCodigo(item.codigo || "");
-                return (
-                  <tr key={item.id} style={{ backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' }}>
-                    <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'center', fontWeight: 'bold' }}>{index + 1}</td>
-                    {tipoLayout === "castor" ? (
-                      <>
-                        {codigoDividido.slice(0, 5).map((digito, i) => (
-                          <td key={i} style={{ border: '1px solid #d1d5db', padding: '4px', textAlign: 'center', fontFamily: 'monospace', backgroundColor: '#eff6ff' }}>
-                            {digito}
-                          </td>
-                        ))}
-                        {Array(Math.max(0, 5 - codigoDividido.length))
-                          .fill(null)
-                          .map((_, i) => (
-                            <td key={`empty-${i}`} style={{ border: '1px solid #d1d5db', padding: '4px', backgroundColor: '#f3f4f6' }}></td>
-                          ))}
-                      </>
-                    ) : (
-                      <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace' }}>{item.codigo || "-"}</td>
-                    )}
-                    <td style={{ border: '1px solid #d1d5db', padding: '6px 8px' }}>
-                      <p style={{ fontWeight: 600, margin: 0 }}>{item.descricao}</p>
-                      {item.especificacoes && <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', marginBottom: 0 }}>{item.especificacoes}</p>}
-                    </td>
-                    {tipoLayout === "castor" && (
-                      <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'center', fontSize: '10px' }}>
-                        {(item as any).medidas || "-"}
-                      </td>
-                    )}
-                    <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantidade}</td>
-                    <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'right' }}>{formatCurrency(item.preco_unitario)}</td>
-                    <td style={{ border: '1px solid #d1d5db', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(item.total)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* PÁGINAS DE ITENS */}
+      {chunksItens.map((chunk, pageIdx) => (
+        <div key={`itens-${pageIdx}`} data-pdf-page className={`pagina-itens pagina-${pageIdx + 2}`} style={pageStyle}>
+          {renderMiniCabecalho()}
+          <div style={{ flex: 1, overflow: 'hidden', padding: '10px 16px 8px 16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              {renderTabelaCabecalho()}
+              <tbody>
+                {chunk.map((item, idx) => renderItemRow(item, pageIdx * ITENS_POR_PAGINA + idx))}
+              </tbody>
+            </table>
+          </div>
+          {pageIdx < chunksItens.length - 1 && (
+            <div style={{ padding: '6px 16px', borderTop: '1px solid #d1d5db', backgroundColor: '#f9fafb', flexShrink: 0 }}>
+              <p style={{ fontSize: '10px', color: '#6b7280', margin: 0, textAlign: 'right', fontStyle: 'italic' }}>
+                Continua na próxima página… ({pageIdx * ITENS_POR_PAGINA + chunk.length} de {itens.length} itens)
+              </p>
+            </div>
+          )}
+        </div>
+      ))}
 
+      {/* PÁGINA COMERCIAL */}
+      <div data-pdf-page className={`pagina-comercial pagina-${chunksItens.length + 2}`} style={pageStyle}>
+        {renderMiniCabecalho()}
+        <div style={{ flex: 1, overflow: 'hidden', padding: '12px 16px 10px 16px' }}>
           {/* ATENÇÃO + TOTAIS */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
             <div style={{ backgroundColor: '#f3f4f6', border: '2px solid #d1d5db', borderRadius: '8px', padding: '12px' }}>
@@ -475,22 +511,12 @@ export function OrcamentoTemplatePDF({ orcamento, itens, emailUsuario, enderecoE
               <p style={{ margin: '3px 0' }}>• Para eventuais questões pós-venda, o cliente deverá fazer contato diretamente com o SAC da {orcamento.fornecedor_nome || "Fabricante"}.</p>
             </div>
           </div>
-        </div>
-      </div>
+        </div>{/* fim padding */}
+      </div>{/* fim pagina-comercial */}
 
-      {/* PÁGINA 3 - PUBLICIDADE (se houver) */}
+      {/* PÁGINA PUBLICIDADE (opcional) */}
       {orcamento.imagem_publicidade_url && (
-        <div
-          className="pagina-3"
-          style={{
-            width: '210mm',
-            height: '297mm',
-            overflow: 'hidden',
-            pageBreakBefore: 'always',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div data-pdf-page className="pagina-publicidade" style={pageStyle}>
           <div style={{ backgroundColor: '#1a4168', color: 'white', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <img src="/logo_3Whotelaria.jpeg" alt="3W" style={{ height: '32px' }} />

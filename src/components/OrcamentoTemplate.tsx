@@ -173,10 +173,91 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
     boxSizing: "border-box",
   };
 
+  /* ── Paginação de itens ── */
+  const ITENS_POR_PAGINA = 18;
+  const chunksItens: OrcamentoItem[][] = [];
+  if (itens.length === 0) {
+    chunksItens.push([]);
+  } else {
+    for (let i = 0; i < itens.length; i += ITENS_POR_PAGINA) {
+      chunksItens.push(itens.slice(i, i + ITENS_POR_PAGINA));
+    }
+  }
+
+  const renderMiniCabecalho = () => (
+    <div style={{ background: "#1a4168", color: "white", padding: "2.5mm 6mm", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+      <img src="/logo_3Whotelaria.jpeg" alt="3W Hotelaria" style={{ height: "8mm" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+      <div style={{ fontSize: "7pt", display: "flex", flexDirection: "column", gap: "0.5mm" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5mm" }}><Globe style={{ width: "3mm", height: "3mm" }} /><span>www.3whotelaria.com.br</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5mm" }}><Phone style={{ width: "3mm", height: "3mm" }} /><span>+55 (11) 5197-5779</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5mm" }}><Mail style={{ width: "3mm", height: "3mm" }} /><span>{emailExibicao}</span></div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "3mm" }}>
+        {logotipoFornecedor && (
+          <img src={logotipoFornecedor} alt={nomeFornecedorExibicao} style={{ height: "8mm", maxWidth: "30mm", objectFit: "contain" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        )}
+        <div style={{ background: "#c4942c", color: "white", padding: "1.5mm 4mm", borderRadius: "1mm", fontWeight: "bold", fontSize: "8pt" }}>
+          Orçamento {numero}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTabelaCabecalho = () => (
+    <thead>
+      <tr style={{ background: "#1a4168", color: "white" }}>
+        <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center", width: "8mm" }}>Item</th>
+        {tipoLayout === "castor" ? (
+          <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }} colSpan={5}>Código</th>
+        ) : (
+          <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }}>Código</th>
+        )}
+        <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "left" }}>Descrição</th>
+        {tipoLayout === "castor" && (
+          <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }}>Medidas</th>
+        )}
+        <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center", width: "12mm" }}>Qtd</th>
+        <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "right" }}>Unitário</th>
+        <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "right" }}>Total</th>
+      </tr>
+    </thead>
+  );
+
+  const renderItemRow = (item: OrcamentoItem, globalIndex: number) => {
+    const codigoDividido = dividirCodigo(item.codigo || "");
+    return (
+      <tr key={item.id} style={{ background: globalIndex % 2 === 0 ? "#f9fafb" : "white" }}>
+        <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontWeight: "bold" }}>{globalIndex + 1}</td>
+        {tipoLayout === "castor" ? (
+          <>
+            {codigoDividido.slice(0, 5).map((digito, i) => (
+              <td key={i} style={{ border: "0.3mm solid #d1d5db", padding: "1.5mm", textAlign: "center", fontFamily: "monospace", background: "#eff6ff", width: "6mm" }}>{digito}</td>
+            ))}
+            {Array(Math.max(0, 5 - codigoDividido.length)).fill(null).map((_, i) => (
+              <td key={`empty-${i}`} style={{ border: "0.3mm solid #d1d5db", padding: "1.5mm", background: "#f3f4f6", width: "6mm" }}></td>
+            ))}
+          </>
+        ) : (
+          <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontFamily: "monospace" }}>{item.codigo || "-"}</td>
+        )}
+        <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm" }}>
+          <p style={{ fontWeight: 600, margin: 0 }}>{item.descricao}</p>
+          {item.especificacoes && <p style={{ fontSize: "7pt", color: "#6b7280", margin: "0.5mm 0 0 0" }}>{item.especificacoes}</p>}
+        </td>
+        {tipoLayout === "castor" && (
+          <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontSize: "7.5pt" }}>{(item as any).medidas || "-"}</td>
+        )}
+        <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontWeight: "bold" }}>{item.quantidade}</td>
+        <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "right" }}>{formatCurrency(item.preco_unitario)}</td>
+        <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "right", fontWeight: "bold" }}>{formatCurrency(item.total)}</td>
+      </tr>
+    );
+  };
+
   return (
     <div style={{ width: "210mm", margin: "0 auto", background: "white", fontFamily: "Arial, Helvetica, sans-serif" }}>
-      {/* ═══════════ PÁGINA 1 ═══════════ */}
-      <div className="pagina-1" style={{ ...pageStyle, display: "flex", flexDirection: "column" }}>
+      {/* ═══════════ PÁGINA 1: CAPA ═══════════ */}
+      <div data-pdf-page className="pagina-1" style={{ ...pageStyle, display: "flex", flexDirection: "column" }}>
         {/* HEADER AZUL */}
         <div style={{ background: "#1a4168", color: "white", padding: "6mm 8mm 5mm 8mm" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -313,83 +394,41 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
         </div>
       </div>
 
-      {/* ═══════════ PÁGINA 2 ═══════════ */}
-      <div className="pagina-2" style={{ ...pageStyle, padding: "5mm 6mm" }}>
-        {/* TABELA DE PRODUTOS */}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt" }}>
-          <thead>
-            <tr style={{ background: "#1a4168", color: "white" }}>
-              <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center", width: "8mm" }}>Item</th>
-              {tipoLayout === "castor" ? (
-                <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }} colSpan={5}>Código</th>
-              ) : (
-                <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }}>Código</th>
-              )}
-              <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "left" }}>Descrição</th>
-              {tipoLayout === "castor" && (
-                <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center" }}>Medidas</th>
-              )}
-              <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "center", width: "12mm" }}>Qtd</th>
-              <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "right" }}>Unitário</th>
-              <th style={{ border: "0.3mm solid white", padding: "2mm", textAlign: "right" }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {itens.map((item, index) => {
-              const codigoDividido = dividirCodigo(item.codigo || "");
-              return (
-                <tr key={item.id} style={{ background: index % 2 === 0 ? "#f9fafb" : "white" }}>
-                  <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontWeight: "bold" }}>
-                    {index + 1}
-                  </td>
-                  {tipoLayout === "castor" ? (
-                    <>
-                      {codigoDividido.slice(0, 5).map((digito, i) => (
-                        <td key={i} style={{
-                          border: "0.3mm solid #d1d5db", padding: "1.5mm", textAlign: "center",
-                          fontFamily: "monospace", background: "#eff6ff", width: "6mm",
-                        }}>
-                          {digito}
-                        </td>
-                      ))}
-                      {Array(Math.max(0, 5 - codigoDividido.length))
-                        .fill(null)
-                        .map((_, i) => (
-                          <td key={`empty-${i}`} style={{
-                            border: "0.3mm solid #d1d5db", padding: "1.5mm", background: "#f3f4f6", width: "6mm",
-                          }}></td>
-                        ))}
-                    </>
-                  ) : (
-                    <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontFamily: "monospace" }}>
-                      {item.codigo || "-"}
-                    </td>
-                  )}
-                  <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm" }}>
-                    <p style={{ fontWeight: 600, margin: 0 }}>{item.descricao}</p>
-                    {item.especificacoes && (
-                      <p style={{ fontSize: "7pt", color: "#6b7280", margin: "0.5mm 0 0 0" }}>{item.especificacoes}</p>
-                    )}
-                  </td>
-                  {tipoLayout === "castor" && (
-                    <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontSize: "7.5pt" }}>
-                      {(item as any).medidas || "-"}
-                    </td>
-                  )}
-                  <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "center", fontWeight: "bold" }}>
-                    {item.quantidade}
-                  </td>
-                  <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "right" }}>
-                    {formatCurrency(item.preco_unitario)}
-                  </td>
-                  <td style={{ border: "0.3mm solid #d1d5db", padding: "2mm", textAlign: "right", fontWeight: "bold" }}>
-                    {formatCurrency(item.total)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* ═══════════ PÁGINAS DE ITENS ═══════════ */}
+      {chunksItens.map((chunk, pageIdx) => (
+        <div
+          key={`itens-${pageIdx}`}
+          data-pdf-page
+          className={`pagina-itens pagina-${pageIdx + 2}`}
+          style={{ ...pageStyle, display: "flex", flexDirection: "column" }}
+        >
+          {renderMiniCabecalho()}
+          <div style={{ flex: 1, overflow: "hidden", padding: "3mm 5mm 2mm 5mm" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt" }}>
+              {renderTabelaCabecalho()}
+              <tbody>
+                {chunk.map((item, idx) => renderItemRow(item, pageIdx * ITENS_POR_PAGINA + idx))}
+              </tbody>
+            </table>
+          </div>
+          {pageIdx < chunksItens.length - 1 && (
+            <div style={{ padding: "2mm 5mm", borderTop: "0.3mm solid #d1d5db", background: "#f9fafb", flexShrink: 0 }}>
+              <p style={{ fontSize: "7.5pt", color: "#6b7280", margin: 0, textAlign: "right", fontStyle: "italic" }}>
+                Continua na próxima página… ({pageIdx * ITENS_POR_PAGINA + chunk.length} de {itens.length} itens)
+              </p>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* ═══════════ PÁGINA COMERCIAL ═══════════ */}
+      <div
+        data-pdf-page
+        className={`pagina-comercial pagina-${chunksItens.length + 2}`}
+        style={{ ...pageStyle, display: "flex", flexDirection: "column" }}
+      >
+        {renderMiniCabecalho()}
+        <div style={{ flex: 1, overflow: "hidden", padding: "4mm 5mm 3mm 5mm" }}>
 
         {/* ATENÇÃO + VALORES */}
         <div style={{ display: "flex", gap: "4mm", marginTop: "4mm" }}>
@@ -639,18 +678,12 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
         )}
 
         {/* BOTÕES DE AÇÃO */}
-        <div className="no-print" style={{
-          marginTop: "3mm", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm",
-        }}>
+        <div className="no-print" style={{ marginTop: "3mm", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
           <a
             href={`https://wa.me/5511519757779?text=${encodeURIComponent(`Olá, gostaria de falar sobre o orçamento ${orcamento.numero}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              background: "#16a34a", color: "white", fontWeight: "bold", padding: "3mm 4mm",
-              borderRadius: "2mm", display: "flex", alignItems: "center", justifyContent: "center",
-              gap: "2mm", textDecoration: "none", fontSize: "9pt", cursor: "pointer",
-            }}
+            style={{ background: "#16a34a", color: "white", fontWeight: "bold", padding: "3mm 4mm", borderRadius: "2mm", display: "flex", alignItems: "center", justifyContent: "center", gap: "2mm", textDecoration: "none", fontSize: "9pt", cursor: "pointer" }}
           >
             <MessageCircle style={{ width: "5mm", height: "5mm" }} />
             <span>Clique aqui para falar com o Vendedor</span>
@@ -659,31 +692,21 @@ export function OrcamentoTemplate({ orcamento, itens, emailUsuario, enderecoEntr
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMostrarConfirmacao(true); }}
             disabled={aprovando || !!mensagemSucesso}
-            style={{
-              background: "#c4942c", color: "white", fontWeight: "bold", padding: "3mm 4mm",
-              borderRadius: "2mm", display: "flex", alignItems: "center", justifyContent: "center",
-              gap: "2mm", border: "none", cursor: "pointer", fontSize: "9pt",
-              opacity: aprovando || !!mensagemSucesso ? 0.5 : 1,
-            }}
+            style={{ background: "#c4942c", color: "white", fontWeight: "bold", padding: "3mm 4mm", borderRadius: "2mm", display: "flex", alignItems: "center", justifyContent: "center", gap: "2mm", border: "none", cursor: "pointer", fontSize: "9pt", opacity: aprovando || !!mensagemSucesso ? 0.5 : 1 }}
           >
             {aprovando ? (
-              <>
-                <Loader2 style={{ width: "5mm", height: "5mm" }} className="animate-spin" />
-                <span>Processando...</span>
-              </>
+              <><Loader2 style={{ width: "5mm", height: "5mm" }} className="animate-spin" /><span>Processando...</span></>
             ) : (
-              <>
-                <CheckCircle style={{ width: "5mm", height: "5mm" }} />
-                <span>Clique aqui para confirmar o pedido</span>
-              </>
+              <><CheckCircle style={{ width: "5mm", height: "5mm" }} /><span>Clique aqui para confirmar o pedido</span></>
             )}
           </button>
         </div>
-      </div>
+        </div>{/* fim padding container */}
+      </div>{/* fim pagina-comercial */}
 
-      {/* ═══════════ PÁGINA 3 (publicidade opcional) ═══════════ */}
+      {/* ═══════════ PÁGINA PUBLICIDADE (opcional) ═══════════ */}
       {orcamento.imagem_publicidade_url && (
-        <div className="pagina-3" style={{ ...pageStyle }}>
+        <div data-pdf-page className="pagina-publicidade" style={{ ...pageStyle }}>
           <div style={{ background: "#1a4168", color: "white", padding: "3mm 6mm" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <img src="/logo_3Whotelaria.jpeg" alt="3W" style={{ height: "8mm" }} />

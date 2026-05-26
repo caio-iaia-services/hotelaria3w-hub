@@ -608,8 +608,8 @@ export default function Orcamentos() {
       );
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Find all pages (.pagina-1, .pagina-2, .pagina-3)
-      const paginas = clone.querySelectorAll(".pagina-1, .pagina-2, .pagina-3");
+      // Find all pages ([data-pdf-page])
+      const paginas = clone.querySelectorAll("[data-pdf-page]");
       
       if (paginas.length === 0) {
         throw new Error("Nenhuma página encontrada no template");
@@ -698,7 +698,7 @@ export default function Orcamentos() {
       );
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const paginas = Array.from(tempDiv.querySelectorAll(".pagina-1, .pagina-2")) as HTMLElement[];
+      const paginas = Array.from(tempDiv.querySelectorAll("[data-pdf-page]")) as HTMLElement[];
       if (paginas.length === 0) throw new Error("Nenhuma página encontrada");
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
