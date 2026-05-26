@@ -67,6 +67,8 @@ type Filtros = {
   segmento: string[];
   estado: string[];
   regiao: string[];
+  status_prospeccao: string[];
+  relacao_comercial: string[];
 };
 
 const FILTROS_INICIAIS: Filtros = {
@@ -76,6 +78,8 @@ const FILTROS_INICIAIS: Filtros = {
   segmento: [],
   estado: [],
   regiao: [],
+  status_prospeccao: [],
+  relacao_comercial: [],
 };
 
 function MultiSelectFilter({
@@ -194,6 +198,8 @@ export default function Clientes() {
         query = query.in("estado", estados);
       }
     }
+    if (filtros.status_prospeccao.length > 0) query = query.in("status_prospeccao", filtros.status_prospeccao);
+    if (filtros.relacao_comercial.length > 0) query = query.in("relacao_comercial", filtros.relacao_comercial);
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -209,7 +215,7 @@ export default function Clientes() {
       setTotal(count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao]);
+  }, [page, pageSize, debouncedBusca, filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao, filtros.status_prospeccao, filtros.relacao_comercial]);
 
   const fetchMetrics = useCallback(async () => {
     const { count: ativos } = await supabase
@@ -236,6 +242,8 @@ export default function Clientes() {
       const estados = exportFiltros.regiao.flatMap((r) => ESTADOS_POR_REGIAO[r] || []);
       if (estados.length > 0 && exportFiltros.estado.length === 0) q = q.in("estado", estados);
     }
+    if (exportFiltros.status_prospeccao.length > 0) q = q.in("status_prospeccao", exportFiltros.status_prospeccao);
+    if (exportFiltros.relacao_comercial.length > 0) q = q.in("relacao_comercial", exportFiltros.relacao_comercial);
     return q;
   }
 
@@ -315,7 +323,7 @@ export default function Clientes() {
   // Reset page quando filtros mudam
   useEffect(() => {
     setPage(1);
-  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao]);
+  }, [filtros.status, filtros.tipo, filtros.segmento, filtros.estado, filtros.regiao, filtros.status_prospeccao, filtros.relacao_comercial]);
 
   const totalPages = Math.ceil(total / pageSize);
   const taxaRetencao = total > 0 ? Math.round((totalAtivos / total) * 100) : 0;
@@ -350,7 +358,9 @@ export default function Clientes() {
     filtros.tipo.length > 0 ||
     filtros.segmento.length > 0 ||
     filtros.estado.length > 0 ||
-    filtros.regiao.length > 0;
+    filtros.regiao.length > 0 ||
+    filtros.status_prospeccao.length > 0 ||
+    filtros.relacao_comercial.length > 0;
 
   const metrics = [
     { label: "Total de Clientes", value: total.toLocaleString("pt-BR"), icon: Users },
@@ -471,6 +481,31 @@ export default function Clientes() {
               : TODOS_ESTADOS
             ).map((e) => ({ value: e, label: e }))}
             onToggle={(v) => toggleFiltro("estado", v)}
+          />
+          <MultiSelectFilter
+            label="Prospecção"
+            selected={filtros.status_prospeccao}
+            options={[
+              { value: "cadastrado",    label: "Cadastrado" },
+              { value: "higienizado",   label: "Higienizado" },
+              { value: "aquecido",      label: "Aquecido" },
+              { value: "em_prospeccao", label: "Em Prospecção" },
+              { value: "ativo",         label: "Ativo" },
+              { value: "inativo",       label: "Inativo" },
+            ]}
+            onToggle={(v) => toggleFiltro("status_prospeccao", v)}
+          />
+          <MultiSelectFilter
+            label="Relação Comercial"
+            selected={filtros.relacao_comercial}
+            options={[
+              { value: "sem_historico", label: "Sem Histórico" },
+              { value: "orcamento",     label: "Orçamento" },
+              { value: "cliente",       label: "Cliente" },
+              { value: "recorrente",    label: "Recorrente" },
+              { value: "suspenso",      label: "Suspenso" },
+            ]}
+            onToggle={(v) => toggleFiltro("relacao_comercial", v)}
           />
         </div>
       </div>
