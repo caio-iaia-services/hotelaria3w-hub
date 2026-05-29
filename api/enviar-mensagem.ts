@@ -6,7 +6,7 @@
 export const config = { runtime: "edge" };
 
 const N8N_WEBHOOK =
-  "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar-mensagem-humano";
+  "https://n8n-n8n-start.3sq8ua.easypanel.host/webhook/enviar_mensagem_humano";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
