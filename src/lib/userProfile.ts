@@ -19,7 +19,7 @@ export const TODOS_MODULOS = [
   { key: 'fornecedores',     label: 'Fornecedores' },
   { key: 'marketing',        label: 'Marketing' },
   { key: 'financeiro',       label: 'Financeiro' },
-  { key: 'planejamento',     label: 'Planejamento' },
+  { key: 'planejamento',     label: 'Inteligência' },
   { key: 'admin',            label: 'Admin' },
   { key: 'admin_usuarios',   label: 'Gestão de Usuários' },
 ]
