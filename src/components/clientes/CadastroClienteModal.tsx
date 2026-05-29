@@ -30,6 +30,14 @@ function applyMaskCNPJ(v: string) {
     .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
+function applyMaskCPF(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1-$2");
+}
+
 function applyMaskCEP(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 8);
   return d.replace(/(\d{5})(\d)/, "$1-$2");
@@ -66,6 +74,7 @@ interface HistoricoData {
 }
 
 interface FormState {
+  pessoa_tipo: "PJ" | "PF";
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
@@ -104,6 +113,7 @@ interface FormState {
 }
 
 const FORM_INICIAL: FormState = {
+  pessoa_tipo: "PJ",
   cnpj: "", razao_social: "", nome_fantasia: "",
   logradouro: "", numero: "", complemento: "", bairro: "", cep: "", estado: "", cidade: "",
   email: "", telefone: "", whatsapp: "", cnpj_validado: false,
@@ -209,8 +219,12 @@ export default function CadastroClienteModal({
     if (cliente) {
       setClienteId(cliente.id);
       setIsViewing(true);
+      const tipoPessoa = (cliente as any).pessoa_tipo === "PF" ? "PF" : "PJ";
       setForm({
-        cnpj:               applyMaskCNPJ(cliente.cnpj || ""),
+        pessoa_tipo:        tipoPessoa,
+        cnpj:               tipoPessoa === "PF"
+          ? applyMaskCPF(cliente.cnpj || "")
+          : applyMaskCNPJ(cliente.cnpj || ""),
         razao_social:       cliente.razao_social || "",
         nome_fantasia:      cliente.nome_fantasia || "",
         logradouro:         cliente.logradouro || "",
@@ -259,14 +273,15 @@ export default function CadastroClienteModal({
     ultimoCNPJBuscado.current = "";
   }, [open, cliente?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-busca CNPJ ─────────────────────────────────────────────────────────
+  // ── Auto-busca CNPJ (somente PJ) ────────────────────────────────────────────
   useEffect(() => {
+    if (form.pessoa_tipo === "PF") return;
     const digits = form.cnpj.replace(/\D/g, "");
     if (digits.length === 14 && digits !== ultimoCNPJBuscado.current && !form.cnpj_validado) {
       ultimoCNPJBuscado.current = digits;
       buscarCNPJ(digits, false);
     }
-  }, [form.cnpj]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.cnpj, form.pessoa_tipo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buscarCNPJ = async (cnpj: string, marcarValidado: boolean) => {
     setValidating(true);
@@ -338,6 +353,7 @@ export default function CadastroClienteModal({
   // ── Save: Aba 1 ──────────────────────────────────────────────────────────────
   const salvarReceitaInternal = async (f: FormState, validado?: boolean) => {
     const payload: Record<string, any> = {
+      pessoa_tipo:   f.pessoa_tipo,
       cnpj:          f.cnpj.replace(/\D/g, ""),
       razao_social:  f.razao_social,
       nome_fantasia: f.nome_fantasia,
@@ -368,9 +384,17 @@ export default function CadastroClienteModal({
   };
 
   const salvarReceita = async () => {
-    if (!form.cnpj || !form.razao_social || !form.nome_fantasia) {
-      toast.error("Preencha CNPJ, Razão Social e Nome Fantasia");
-      return;
+    const docDigits = form.cnpj.replace(/\D/g, "");
+    const isPF = form.pessoa_tipo === "PF";
+    if (isPF) {
+      if (docDigits.length !== 11) { toast.error("CPF inválido — deve ter 11 dígitos"); return; }
+      if (!form.razao_social) { toast.error("Preencha o Nome Completo"); return; }
+      if (!form.nome_fantasia) { toast.error("Preencha o Nome / Apelido"); return; }
+    } else {
+      if (!form.cnpj || !form.razao_social || !form.nome_fantasia) {
+        toast.error("Preencha CNPJ, Razão Social e Nome Fantasia");
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -517,7 +541,9 @@ export default function CadastroClienteModal({
         {/* ── Header ── */}
         <div className="flex items-center gap-3 px-5 py-3.5 border-b bg-[#164B6E] shrink-0">
           <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-            <Building2 size={18} className="text-white" />
+            {form.pessoa_tipo === "PF"
+              ? <User size={18} className="text-white" />
+              : <Building2 size={18} className="text-white" />}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-heading text-white font-semibold text-[15px] leading-tight truncate">
@@ -531,9 +557,14 @@ export default function CadastroClienteModal({
                   {segPrincipal}
                 </Badge>
               )}
-              {form.cnpj_validado && (
+              {form.cnpj_validado && form.pessoa_tipo === "PJ" && (
                 <Badge className="bg-emerald-400/30 text-emerald-100 border-0 text-[10px] px-2 py-0 h-4 gap-0.5">
                   <ShieldCheck size={9} /> Validado
+                </Badge>
+              )}
+              {form.pessoa_tipo === "PF" && (
+                <Badge className="bg-amber-400/30 text-amber-100 border-0 text-[10px] px-2 py-0 h-4 gap-0.5">
+                  <User size={9} /> Pessoa Física
                 </Badge>
               )}
               {isViewing && clienteId && (
@@ -543,6 +574,33 @@ export default function CadastroClienteModal({
               )}
             </div>
           </div>
+
+          {/* Toggle PJ / PF — só disponível em novo cadastro */}
+          {!clienteId && !isViewing && (
+            <div className="flex items-center bg-white/10 rounded-lg p-0.5 shrink-0">
+              {(["PJ", "PF"] as const).map(tipo => (
+                <button
+                  key={tipo}
+                  onClick={() => {
+                    set("pessoa_tipo", tipo);
+                    set("cnpj", "");
+                    set("razao_social", "");
+                    set("nome_fantasia", "");
+                    set("cnpj_validado", false);
+                    ultimoCNPJBuscado.current = "";
+                  }}
+                  className={cn(
+                    "px-3 py-1 rounded-md text-xs font-semibold transition-colors",
+                    form.pessoa_tipo === tipo
+                      ? "bg-white text-[#164B6E]"
+                      : "text-white/70 hover:text-white"
+                  )}
+                >
+                  {tipo === "PJ" ? "Pessoa Jurídica" : "Pessoa Física"}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Botão Editar / Cancelar edição */}
           {clienteId && (
@@ -619,57 +677,99 @@ export default function CadastroClienteModal({
             <div className="p-6 space-y-5">
               <div className={cn(isViewing && "pointer-events-none opacity-60")}>
 
-                {/* CNPJ + Razão Social */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">
-                      CNPJ <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={form.cnpj}
-                        onChange={e => set("cnpj", applyMaskCNPJ(e.target.value))}
-                        placeholder="00.000.000/0000-00"
-                        className="font-mono"
-                        disabled={form.cnpj_validado}
-                        maxLength={18}
-                      />
-                      {form.cnpj_validado && (
-                        <div className="w-9 flex items-center justify-center text-emerald-600 shrink-0">
-                          <ShieldCheck size={18} />
+                {form.pessoa_tipo === "PJ" ? (
+                  <>
+                    {/* CNPJ + Razão Social (PJ) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">
+                          CNPJ <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={form.cnpj}
+                            onChange={e => set("cnpj", applyMaskCNPJ(e.target.value))}
+                            placeholder="00.000.000/0000-00"
+                            className="font-mono"
+                            disabled={form.cnpj_validado}
+                            maxLength={18}
+                          />
+                          {form.cnpj_validado && (
+                            <div className="w-9 flex items-center justify-center text-emerald-600 shrink-0">
+                              <ShieldCheck size={18} />
+                            </div>
+                          )}
                         </div>
-                      )}
+                        {validating && (
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Loader2 size={11} className="animate-spin" />
+                            Consultando Receita Federal…
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">
+                          Razão Social <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={form.razao_social}
+                          onChange={e => set("razao_social", e.target.value)}
+                          disabled={form.cnpj_validado}
+                        />
+                      </div>
                     </div>
-                    {validating && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Loader2 size={11} className="animate-spin" />
-                        Consultando Receita Federal…
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">
-                      Razão Social <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      value={form.razao_social}
-                      onChange={e => set("razao_social", e.target.value)}
-                      disabled={form.cnpj_validado}
-                    />
-                  </div>
-                </div>
-
-                {/* Nome Fantasia */}
-                <div className="space-y-1.5 mt-4">
-                  <Label className="text-xs font-medium">
-                    Nome Fantasia <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    value={form.nome_fantasia}
-                    onChange={e => set("nome_fantasia", e.target.value)}
-                    placeholder="Como o cliente é conhecido no mercado"
-                  />
-                </div>
+                    {/* Nome Fantasia (PJ) */}
+                    <div className="space-y-1.5 mt-4">
+                      <Label className="text-xs font-medium">
+                        Nome Fantasia <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.nome_fantasia}
+                        onChange={e => set("nome_fantasia", e.target.value)}
+                        placeholder="Como o cliente é conhecido no mercado"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* CPF + Nome Completo (PF) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">
+                          CPF <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={form.cnpj}
+                          onChange={e => set("cnpj", applyMaskCPF(e.target.value))}
+                          placeholder="000.000.000-00"
+                          className="font-mono"
+                          maxLength={14}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">
+                          Nome Completo <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={form.razao_social}
+                          onChange={e => set("razao_social", e.target.value)}
+                          placeholder="Nome completo da pessoa"
+                        />
+                      </div>
+                    </div>
+                    {/* Nome / Apelido (PF) */}
+                    <div className="space-y-1.5 mt-4">
+                      <Label className="text-xs font-medium">
+                        Nome / Apelido <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.nome_fantasia}
+                        onChange={e => set("nome_fantasia", e.target.value)}
+                        placeholder="Como é conhecido — usado para identificar no sistema"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Endereço */}
                 <div className="border-t pt-4 mt-4">
@@ -753,15 +853,17 @@ export default function CadastroClienteModal({
               {/* Botões — só no modo edição */}
               {!isViewing && (
                 <div className="flex items-center gap-3 pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    className="gap-1.5 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                    onClick={() => buscarCNPJ(form.cnpj.replace(/\D/g, ""), true)}
-                    disabled={saving || validating || form.cnpj_validado || form.cnpj.replace(/\D/g, "").length !== 14}
-                  >
-                    {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                    {form.cnpj_validado ? "Já Validado" : validating ? "Validando…" : "Validar CNPJ"}
-                  </Button>
+                  {form.pessoa_tipo === "PJ" && (
+                    <Button
+                      variant="outline"
+                      className="gap-1.5 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => buscarCNPJ(form.cnpj.replace(/\D/g, ""), true)}
+                      disabled={saving || validating || form.cnpj_validado || form.cnpj.replace(/\D/g, "").length !== 14}
+                    >
+                      {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                      {form.cnpj_validado ? "Já Validado" : validating ? "Validando…" : "Validar CNPJ"}
+                    </Button>
+                  )}
                   <Button
                     onClick={salvarReceita}
                     className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white ml-auto"

@@ -1,5 +1,6 @@
 export interface Cliente {
   id: string
+  pessoa_tipo?: "PJ" | "PF"
   nome_fantasia: string
   razao_social: string
   cnpj: string
