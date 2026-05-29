@@ -19,6 +19,7 @@ import {
   BarChart3,
   Zap,
   UserCog,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatsAbertos } from "@/hooks/useChatsAbertos";
@@ -102,8 +103,8 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       label: "GESTÃO",
       items: [
         { title: "Marketing", url: "/marketing", icon: Mail, modulo: "marketing" },
-        { title: "Financeiro", url: "/financeiro", icon: DollarSign, modulo: "financeiro" },
-        { title: "Planejamento", url: "/planejamento", icon: BarChart3, modulo: "planejamento" },
+        { title: "Financeiro",   url: "/financeiro",   icon: DollarSign, modulo: "financeiro" },
+        { title: "Inteligência", url: "/inteligencia", icon: Brain,      modulo: "planejamento" },
       ],
     },
     {
