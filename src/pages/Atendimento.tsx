@@ -13,10 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PainelAtendimento } from "@/components/atendimento/PainelAtendimento";
@@ -264,36 +260,6 @@ function ChatView({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
-
-  const iniciarConversa = async (templateName: string) => {
-    if (enviando) return;
-    setEnviando(true);
-    const tel = chat.contato?.telefone ?? "";
-    const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
-    try {
-      const res = await fetch("/api/enviar-mensagem", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chat.id,
-          telefone_cliente: telefoneCliente,
-          tipo_midia: "template",
-          template_name: templateName,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      console.log("[iniciarConversa] n8n response:", res.status, json);
-      if (!res.ok) {
-        toast.error(`Falha ao enviar template (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
-      } else {
-        toast.success("Template enviado! Aguarde a resposta do cliente para continuar a conversa.");
-      }
-    } catch (err) {
-      console.error("[iniciarConversa] erro:", err);
-      toast.error("Falha ao enviar template", { description: String(err) });
-    }
-    setEnviando(false);
-  };
 
   const enviar = async () => {
     if (!texto.trim()) return;
@@ -586,42 +552,6 @@ function ChatView({
       {/* Input */}
       <div className="px-4 py-3 border-t border-border/50 bg-card shrink-0 space-y-2">
 
-        {/* Dropdown de templates — sempre visível */}
-        <div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1.5 text-[#164B6E] border-[#164B6E]/40 hover:bg-[#164B6E]/5"
-                disabled={enviando}
-              >
-                <MessageCircle size={13} />
-                Iniciar conversa
-                <ChevronDown size={12} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Enviar template WhatsApp (fora da janela 24h)
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => iniciarConversa("abertura_3w")}>
-                <MessageCircle size={13} className="mr-2 shrink-0 text-[#164B6E]" />
-                <span><span className="font-medium">Abertura</span> — Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => iniciarConversa("retomar_3w")}>
-                <RefreshCw size={13} className="mr-2 shrink-0 text-[#164B6E]" />
-                <span><span className="font-medium">Retomar</span> — Olá, podemos retomar nossa conversa?</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => iniciarConversa("saudacao_3w")}>
-                <Send size={13} className="mr-2 shrink-0 text-[#164B6E]" />
-                <span><span className="font-medium">Saudação</span> — Oi!</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
         {!chat.ia_ativa ? (
           <div className="space-y-2">
             {/* Preview do arquivo selecionado */}
@@ -720,6 +650,10 @@ function ModalNovaConversa({
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [telefone, setTelefone] = useState("");
   const [nome, setNome] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Pré-preenche quando abre com dados externos
   useEffect(() => {
@@ -729,9 +663,6 @@ function ModalNovaConversa({
       setNome(nomeInicial || "");
     }
   }, [isOpen, telefoneInicial, nomeInicial]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [templateSelecionado, setTemplateSelecionado] = useState("abertura_3w");
-  const [enviando, setEnviando] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
@@ -771,26 +702,20 @@ function ModalNovaConversa({
 
   const limpar = () => {
     setBusca(""); setResultados([]); setMostrarDropdown(false);
-    setTelefone(""); setNome(""); setTemplateSelecionado("abertura_3w");
+    setTelefone(""); setNome(""); setMensagem("");
   };
 
   const handleClose = () => { limpar(); onClose(); };
 
-  const TEMPLATES_WA = {
-    abertura_3w: "Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?",
-    retomar_3w:  "Olá, podemos retomar nossa conversa?",
-    saudacao_3w: "Oi!",
-  } as const;
-
   const enviarNovaConversa = async () => {
     const telLimpo = telefone.replace(/\D/g, "");
-    if (!telLimpo || !templateSelecionado) {
-      toast.error("Preencha o telefone e selecione um template");
+    if (!telLimpo || !mensagem.trim()) {
+      toast.error("Preencha o telefone e a mensagem");
       return;
     }
     setEnviando(true);
 
-    // 1. Find or create contato
+    // 1. Busca ou cria contato
     let contatoId: string;
     const { data: contatoExistente } = await supabase
       .from("contatos_whatsapp")
@@ -813,7 +738,7 @@ function ModalNovaConversa({
       contatoId = novoContato.id;
     }
 
-    // 2. Find or create chat no canal
+    // 2. Busca ou cria chat no canal
     const canalChat = canal !== "IA" ? canal : "G1";
     const { data: chatExistente } = await supabase
       .from("chats")
@@ -845,12 +770,11 @@ function ModalNovaConversa({
       chatId = novoChat.id;
     }
 
-    // 3. Salvar mensagem (registra o texto real do template para exibição no chat)
-    const textoTemplate = TEMPLATES_WA[templateSelecionado as keyof typeof TEMPLATES_WA] ?? templateSelecionado;
+    // 3. Salva mensagem no histórico
     const { error: errMsg } = await supabase.from("mensagens").insert({
       chat_id: chatId,
       origem: "humano",
-      conteudo: textoTemplate,
+      conteudo: mensagem.trim(),
       tipo: "texto",
     });
     if (errMsg) {
@@ -860,7 +784,7 @@ function ModalNovaConversa({
     }
     await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chatId);
 
-    // 4. Enviar via WhatsApp como template (obrigatório para conversa nova)
+    // 4. Envia via Evolution API (mensagem livre, sem template)
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
       const res = await fetch("/api/enviar-mensagem", {
@@ -869,14 +793,13 @@ function ModalNovaConversa({
         body: JSON.stringify({
           chat_id: chatId,
           telefone_cliente: telWA,
-          tipo_midia: "template",
-          template_name: templateSelecionado,
+          mensagem: mensagem.trim(),
         }),
       });
       const json = await res.json().catch(() => ({}));
       console.log("[enviarNovaConversa] n8n response:", res.status, json);
       if (!res.ok) {
-        toast.warning(`Conversa criada, mas falha ao enviar template (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+        toast.warning(`Conversa criada, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
       }
     } catch (err) {
       console.error("[enviarNovaConversa] erro:", err);
@@ -991,43 +914,26 @@ function ModalNovaConversa({
             />
           </div>
 
-          {/* Template de abertura */}
+          {/* Mensagem livre */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
-              <MessageCircle size={11} /> Template de abertura <span className="text-red-500">*</span>
+              <MessageCircle size={11} /> Mensagem <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2.5 text-[11px] text-amber-700">
-              <span className="shrink-0 mt-px">⚠️</span>
-              <span>Toda conversa nova exige um template aprovado pela Meta — mensagens livres não são entregues.</span>
-            </div>
-            <div className="space-y-2">
-              {([
-                { name: "abertura_3w", label: "Abertura", text: "Olá, tudo bem?! Somos a 3W Hotelaria. Podemos falar?" },
-                { name: "retomar_3w",  label: "Retomar",  text: "Olá, podemos retomar nossa conversa?" },
-                { name: "saudacao_3w", label: "Saudação", text: "Oi!" },
-              ] as const).map(t => (
-                <button
-                  key={t.name}
-                  type="button"
-                  onClick={() => setTemplateSelecionado(t.name)}
-                  className={cn(
-                    "w-full flex items-start gap-2.5 p-2.5 rounded-lg border text-left transition-colors",
-                    templateSelecionado === t.name
-                      ? "border-[#164B6E] bg-[#164B6E]/5"
-                      : "border-border hover:border-[#164B6E]/40 hover:bg-muted/40"
-                  )}
-                >
-                  <div className={cn(
-                    "w-3.5 h-3.5 rounded-full border-2 shrink-0 mt-0.5 transition-colors",
-                    templateSelecionado === t.name ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground"
-                  )} />
-                  <div>
-                    <p className="text-xs font-medium">{t.label}</p>
-                    <p className="text-[11px] text-muted-foreground">"{t.text}"</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <textarea
+              ref={textareaRef}
+              value={mensagem}
+              onChange={e => setMensagem(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  enviarNovaConversa();
+                }
+              }}
+              placeholder="Digite a mensagem que será enviada ao cliente..."
+              rows={3}
+              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">Enter envia · Shift+Enter para quebra de linha</p>
           </div>
         </div>
 
@@ -1040,12 +946,12 @@ function ModalNovaConversa({
             size="sm"
             className="flex-1 h-9 text-sm gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
             onClick={enviarNovaConversa}
-            disabled={enviando || !telefone.trim() || !templateSelecionado}
+            disabled={enviando || !telefone.trim() || !mensagem.trim()}
           >
             {enviando
               ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               : <Send size={13} />}
-            {enviando ? "Enviando..." : "Iniciar conversa"}
+            {enviando ? "Enviando..." : "Enviar mensagem"}
           </Button>
         </div>
       </div>
@@ -1278,25 +1184,10 @@ export default function Atendimento() {
           .eq("lida", false)
           .eq("origem", "cliente");
 
-        // Se a última mensagem não é do cliente, a conversa já foi respondida → badge zero
-        const lastOrigin = msgs?.[0]?.origem;
-        const naoLidasEfetivo = lastOrigin === "cliente" ? (naoLidas ?? 0) : 0;
-
-        // Corrige silenciosamente no DB caso ainda haja mensagens antigas com lida=false
-        if (naoLidasEfetivo === 0 && (naoLidas ?? 0) > 0) {
-          supabase
-            .from("mensagens")
-            .update({ lida: true })
-            .eq("chat_id", chat.id)
-            .eq("origem", "cliente")
-            .eq("lida", false)
-            .then(() => {});
-        }
-
         return {
           ...chat,
           ultima_mensagem: msgs?.[0]?.conteudo ?? undefined,
-          nao_lidas: naoLidasEfetivo,
+          nao_lidas: naoLidas ?? 0,
         };
       })
     );
