@@ -558,6 +558,320 @@ function ModalColaborador({
   );
 }
 
+// ─── DRE ─────────────────────────────────────────────────────────────────────
+function DrePage({ lancamentos }: { lancamentos: Lancamento[] }) {
+  const anoAtual = new Date().getFullYear();
+  const [periodoTipo, setPeriodoTipo] = useState<"mes" | "trimestre" | "semestre" | "ano" | "custom">("ano");
+  const [anoSel, setAnoSel] = useState(anoAtual);
+  const [mesSel, setMesSel] = useState(new Date().getMonth() + 1); // 1-12
+  const [customDe, setCustomDe] = useState(new Date().toISOString().slice(0, 7));
+  const [customAte, setCustomAte] = useState(new Date().toISOString().slice(0, 7));
+  const [verMensal, setVerMensal] = useState(false);
+
+  // Calcula range de meses do período selecionado
+  const rangeMeses: string[] = (() => {
+    if (periodoTipo === "mes") {
+      return [`${anoSel}-${String(mesSel).padStart(2, "0")}`];
+    }
+    if (periodoTipo === "trimestre") {
+      const inicio = Math.floor((mesSel - 1) / 3) * 3 + 1;
+      return Array.from({ length: 3 }, (_, i) =>
+        `${anoSel}-${String(inicio + i).padStart(2, "0")}`
+      ).filter(m => parseInt(m.split("-")[1]) <= 12);
+    }
+    if (periodoTipo === "semestre") {
+      const inicio = mesSel <= 6 ? 1 : 7;
+      return Array.from({ length: 6 }, (_, i) =>
+        `${anoSel}-${String(inicio + i).padStart(2, "0")}`
+      );
+    }
+    if (periodoTipo === "ano") {
+      return Array.from({ length: 12 }, (_, i) =>
+        `${anoSel}-${String(i + 1).padStart(2, "0")}`
+      );
+    }
+    // custom
+    const de  = new Date(customDe  + "-01");
+    const ate = new Date(customAte + "-01");
+    const meses: string[] = [];
+    const cur = new Date(de);
+    while (cur <= ate) {
+      meses.push(cur.toISOString().slice(0, 7));
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return meses;
+  })();
+
+  // Filtra lançamentos do período e status válido (não cancelado)
+  const lancsRange = lancamentos.filter(l =>
+    rangeMeses.includes(l.data_competencia.slice(0, 7)) &&
+    l.status !== "cancelado"
+  );
+
+  // Agrupa por categoria
+  const soma = (cat: string) => lancsRange.filter(l => l.categoria === cat).reduce((a, l) => a + l.valor, 0);
+
+  const comissaoFornecedor = soma("comissao_fornecedor");
+  const receitaExtra       = soma("receita_extra");
+  const receitaBruta       = comissaoFornecedor + receitaExtra;
+
+  const comissaoGestor     = soma("comissao_gestor");
+  const comissaoColab      = soma("comissao_colaborador");
+  const despesaFixa        = soma("despesa_fixa");
+  const despesaVariavel    = soma("despesa_variavel");
+  const totalDespesas      = comissaoGestor + comissaoColab + despesaFixa + despesaVariavel;
+
+  const resultadoLiquido   = receitaBruta - totalDespesas;
+  const margem             = receitaBruta > 0 ? (resultadoLiquido / receitaBruta) * 100 : 0;
+
+  // Dados mensais (para a tabela de evolução)
+  const dadosMensais = rangeMeses.map(m => {
+    const ls = lancamentos.filter(l => l.data_competencia.slice(0, 7) === m && l.status !== "cancelado");
+    const rec = ls.filter(l => l.tipo === "entrada").reduce((a, l) => a + l.valor, 0);
+    const des = ls.filter(l => l.tipo === "saida").reduce((a, l) => a + l.valor, 0);
+    return { mes: mesAno(m + "-01"), receita: rec, despesas: des, resultado: rec - des };
+  });
+
+  const labelPeriodo = (() => {
+    const mNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    if (periodoTipo === "mes")      return `${mNomes[mesSel-1]}/${anoSel}`;
+    if (periodoTipo === "trimestre") return `${Math.ceil(mesSel/3)}º Trim/${anoSel}`;
+    if (periodoTipo === "semestre")  return `${mesSel <= 6 ? "1º" : "2º"} Sem/${anoSel}`;
+    if (periodoTipo === "ano")       return `Exercício ${anoSel}`;
+    return `${customDe} a ${customAte}`;
+  })();
+
+  // Linha do DRE
+  const DRELinha = ({
+    label, valor, destaque = false, negativo = false, indent = false, subtotal = false,
+  }: {
+    label: string; valor: number; destaque?: boolean; negativo?: boolean;
+    indent?: boolean; subtotal?: boolean;
+  }) => (
+    <div className={cn(
+      "flex items-center justify-between py-2 px-4",
+      destaque && "font-bold bg-muted/50 rounded-lg",
+      subtotal && "border-t border-border/50 mt-1 pt-3",
+      indent && "pl-8"
+    )}>
+      <span className={cn("text-sm", indent ? "text-muted-foreground" : destaque ? "font-semibold" : "")}>
+        {label}
+      </span>
+      <span className={cn(
+        "text-sm font-mono tabular-nums",
+        destaque && "text-base font-bold",
+        valor < 0 || negativo
+          ? "text-red-600"
+          : valor > 0
+            ? destaque ? "text-foreground" : "text-foreground"
+            : "text-muted-foreground"
+      )}>
+        {negativo && valor > 0 ? "−" : ""}{formatBRL(Math.abs(valor))}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header + filtros */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <h2 className="text-base font-semibold font-heading">DRE — Demonstração do Resultado</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{labelPeriodo}</p>
+        </div>
+        <div className="ml-auto flex flex-wrap items-end gap-2">
+          {/* Tipo de período */}
+          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+            {(["mes","trimestre","semestre","ano","custom"] as const).map(t => (
+              <button key={t} onClick={() => setPeriodoTipo(t)}
+                className={cn("px-2.5 py-1.5 transition-colors border-r border-border/50 last:border-0",
+                  periodoTipo === t ? "bg-[#164B6E] text-white" : "hover:bg-muted text-muted-foreground")}>
+                {t === "mes" ? "Mês" : t === "trimestre" ? "Trim." : t === "semestre" ? "Sem." : t === "ano" ? "Ano" : "Custom"}
+              </button>
+            ))}
+          </div>
+
+          {/* Controles do período */}
+          {periodoTipo !== "custom" && (
+            <>
+              <select value={anoSel} onChange={e => setAnoSel(+e.target.value)}
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-xs h-8 focus-visible:outline-none">
+                {[anoAtual-1, anoAtual, anoAtual+1].map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              {(periodoTipo === "mes" || periodoTipo === "trimestre" || periodoTipo === "semestre") && (
+                <select value={mesSel} onChange={e => setMesSel(+e.target.value)}
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-xs h-8 focus-visible:outline-none">
+                  {periodoTipo === "mes"
+                    ? ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map((m, i) =>
+                        <option key={i+1} value={i+1}>{m}</option>)
+                    : periodoTipo === "trimestre"
+                      ? [["1º Trim",1],["2º Trim",4],["3º Trim",7],["4º Trim",10]].map(([l,v]) =>
+                          <option key={v as number} value={v as number}>{l}</option>)
+                      : [["1º Sem",1],["2º Sem",7]].map(([l,v]) =>
+                          <option key={v as number} value={v as number}>{l}</option>)
+                  }
+                </select>
+              )}
+            </>
+          )}
+          {periodoTipo === "custom" && (
+            <>
+              <Input value={customDe}  onChange={e => setCustomDe(e.target.value)}  type="month" className="h-8 text-xs w-32" />
+              <span className="text-xs text-muted-foreground">até</span>
+              <Input value={customAte} onChange={e => setCustomAte(e.target.value)} type="month" className="h-8 text-xs w-32" />
+            </>
+          )}
+
+          <button onClick={() => setVerMensal(v => !v)}
+            className={cn("px-2.5 py-1.5 rounded-md border text-xs transition-colors",
+              verMensal ? "bg-[#164B6E] text-white border-[#164B6E]" : "border-border hover:bg-muted text-muted-foreground")}>
+            Ver por mês
+          </button>
+        </div>
+      </div>
+
+      {/* DRE estruturado */}
+      <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
+        {/* Cabeçalho */}
+        <div className="bg-[#164B6E] text-white px-4 py-3">
+          <p className="text-sm font-bold font-heading">DEMONSTRAÇÃO DO RESULTADO DO EXERCÍCIO</p>
+          <p className="text-[11px] opacity-80 mt-0.5">3W Hotelaria · {labelPeriodo}</p>
+        </div>
+
+        <div className="py-2">
+          {/* Bloco Receitas */}
+          <div className="px-4 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              Receitas Operacionais
+            </p>
+          </div>
+          <DRELinha label="(+) Comissões de Fornecedores" valor={comissaoFornecedor} indent />
+          <DRELinha label="(+) Receitas Extras"            valor={receitaExtra}       indent />
+          <DRELinha label="= RECEITA BRUTA" valor={receitaBruta} destaque subtotal />
+
+          {/* Bloco Despesas */}
+          <div className="px-4 pt-4 pb-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              Deduções / Despesas
+            </p>
+          </div>
+          <DRELinha label="(−) Comissões de Gestores"      valor={comissaoGestor}  indent negativo />
+          <DRELinha label="(−) Comissões de Colaboradores" valor={comissaoColab}   indent negativo />
+          <DRELinha label="(−) Despesas Fixas"             valor={despesaFixa}     indent negativo />
+          <DRELinha label="(−) Despesas Variáveis"         valor={despesaVariavel} indent negativo />
+          <DRELinha label="= TOTAL DESPESAS" valor={totalDespesas} destaque subtotal negativo />
+
+          {/* Resultado */}
+          <div className={cn(
+            "mx-4 my-3 rounded-xl px-4 py-4 border-2",
+            resultadoLiquido >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
+          )}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  = RESULTADO LÍQUIDO DO PERÍODO
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Margem: {margem.toFixed(1)}% sobre receita bruta
+                </p>
+              </div>
+              <p className={cn(
+                "text-2xl font-bold font-heading tabular-nums",
+                resultadoLiquido >= 0 ? "text-emerald-700" : "text-red-600"
+              )}>
+                {resultadoLiquido >= 0 ? "+" : ""}{formatBRL(resultadoLiquido)}
+              </p>
+            </div>
+            {/* Barra de margem */}
+            {receitaBruta > 0 && (
+              <div className="mt-3">
+                <div className="h-2 bg-white/60 rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all", resultadoLiquido >= 0 ? "bg-emerald-500" : "bg-red-500")}
+                    style={{ width: `${Math.min(Math.abs(margem), 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Análise rápida */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Receita Bruta",    valor: receitaBruta,    cor: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
+          { label: "Total Despesas",   valor: totalDespesas,   cor: "text-red-600",     bg: "bg-red-50 border-red-200" },
+          { label: "Resultado",        valor: resultadoLiquido,cor: resultadoLiquido >= 0 ? "text-emerald-700" : "text-red-600", bg: resultadoLiquido >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200" },
+          { label: "Margem",           valor: null,            cor: "text-[#164B6E]",   bg: "bg-[#164B6E]/5 border-[#164B6E]/20" },
+        ].map(item => (
+          <div key={item.label} className={cn("rounded-xl border px-4 py-3", item.bg)}>
+            <p className="text-[11px] text-muted-foreground font-medium">{item.label}</p>
+            <p className={cn("text-lg font-bold font-heading mt-1", item.cor)}>
+              {item.valor !== null ? formatBRL(item.valor) : `${margem.toFixed(1)}%`}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Evolução mensal */}
+      {verMensal && rangeMeses.length > 1 && (
+        <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/30">
+            <p className="text-sm font-semibold">Evolução Mensal</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40">
+                <tr>
+                  {["Mês","Receita","Despesas","Resultado","Margem"].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-right first:text-left text-xs font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {dadosMensais.map(d => (
+                  <tr key={d.mes} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-2.5 text-xs font-medium">{d.mes}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono text-emerald-600">{formatBRL(d.receita)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono text-red-500">−{formatBRL(d.despesas)}</td>
+                    <td className={cn("px-4 py-2.5 text-right text-xs font-mono font-semibold",
+                      d.resultado >= 0 ? "text-emerald-700" : "text-red-600")}>
+                      {d.resultado >= 0 ? "+" : ""}{formatBRL(d.resultado)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-xs text-muted-foreground">
+                      {d.receita > 0 ? `${((d.resultado / d.receita) * 100).toFixed(1)}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+                {/* Totais */}
+                <tr className="bg-muted/40 font-bold">
+                  <td className="px-4 py-2.5 text-xs">TOTAL</td>
+                  <td className="px-4 py-2.5 text-right text-xs font-mono text-emerald-600">{formatBRL(receitaBruta)}</td>
+                  <td className="px-4 py-2.5 text-right text-xs font-mono text-red-500">−{formatBRL(totalDespesas)}</td>
+                  <td className={cn("px-4 py-2.5 text-right text-xs font-mono font-bold",
+                    resultadoLiquido >= 0 ? "text-emerald-700" : "text-red-600")}>
+                    {resultadoLiquido >= 0 ? "+" : ""}{formatBRL(resultadoLiquido)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-xs font-semibold">{margem.toFixed(1)}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {lancsRange.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <BarChart3 size={40} className="mb-3 opacity-25" />
+          <p className="text-sm font-medium">Sem lançamentos no período</p>
+          <p className="text-xs mt-1">Crie lançamentos ou ajuste o período selecionado</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Financeiro() {
   const [tab, setTab] = useState("dashboard");
@@ -723,6 +1037,7 @@ export default function Financeiro() {
               { key: "dashboard",    label: "Dashboard",     icon: BarChart3 },
               { key: "lancamentos",  label: "Lançamentos",   icon: List },
               { key: "comissoes",    label: "Comissões",     icon: Users },
+              { key: "dre",          label: "DRE",           icon: BarChart3 },
               { key: "config",       label: "Configurações", icon: Settings },
             ].map(t => (
               <TabsTrigger key={t.key} value={t.key}
@@ -1170,6 +1485,11 @@ export default function Financeiro() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* ── DRE ───────────────────────────────────────────────────────── */}
+        <TabsContent value="dre" className="flex-1 overflow-auto p-6">
+          <DrePage lancamentos={lancamentos} />
         </TabsContent>
       </Tabs>
 
