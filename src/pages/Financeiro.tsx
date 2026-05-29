@@ -1,0 +1,1195 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  DollarSign, TrendingUp, TrendingDown, Clock, Plus, Edit2, Trash2,
+  CheckCircle, X, ChevronDown, Search, Settings, Users, Building2,
+  BarChart3, List, RefreshCw, Filter, AlertCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Colaborador {
+  id: string;
+  nome: string;
+  cargo: string | null;
+  tipo: "gestor" | "colaborador";
+  gestao: string | null;
+  percentual_vendas_proprias: number;
+  percentual_todas_vendas: number;
+  valor_fixo: number;
+  ativo: boolean;
+}
+
+interface Lancamento {
+  id: string;
+  tipo: "entrada" | "saida";
+  categoria: string;
+  orcamento_id: string | null;
+  card_id: string | null;
+  fornecedor_id: string | null;
+  colaborador_id: string | null;
+  valor_base: number | null;
+  percentual: number | null;
+  valor: number;
+  status: "pendente" | "confirmado" | "pago" | "cancelado";
+  data_competencia: string;
+  data_vencimento: string | null;
+  data_pagamento: string | null;
+  descricao: string | null;
+  observacoes: string | null;
+  origem: "manual" | "automatico";
+  created_at: string;
+  // joins
+  colaborador?: { nome: string } | null;
+  fornecedor?: { nome_fantasia: string } | null;
+  orcamento?: { numero: string } | null;
+}
+
+interface Fornecedor {
+  id: string;
+  nome_fantasia: string;
+  comissao_vendas: number | null;
+  gestao: string | null;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const CATEGORIAS: Record<string, { label: string; tipo: "entrada" | "saida"; cor: string }> = {
+  comissao_fornecedor: { label: "Comissão Fornecedor", tipo: "entrada", cor: "text-emerald-600" },
+  receita_extra:       { label: "Receita Extra",       tipo: "entrada", cor: "text-emerald-500" },
+  comissao_gestor:     { label: "Comissão Gestor",     tipo: "saida",   cor: "text-orange-600" },
+  comissao_colaborador:{ label: "Comissão Colaborador",tipo: "saida",   cor: "text-orange-500" },
+  despesa_fixa:        { label: "Despesa Fixa",        tipo: "saida",   cor: "text-red-600" },
+  despesa_variavel:    { label: "Despesa Variável",    tipo: "saida",   cor: "text-red-500" },
+};
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pendente:    { label: "Pendente",    color: "text-amber-700",   bg: "bg-amber-50 border-amber-200" },
+  confirmado:  { label: "Confirmado",  color: "text-blue-700",    bg: "bg-blue-50 border-blue-200" },
+  pago:        { label: "Pago",        color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
+  cancelado:   { label: "Cancelado",   color: "text-slate-500",   bg: "bg-slate-50 border-slate-200" },
+};
+
+function formatBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function mesAno(dateStr: string) {
+  const [ano, mes] = dateStr.split("-");
+  const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  return `${meses[parseInt(mes) - 1]}/${ano.slice(2)}`;
+}
+
+function hoje() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function mesAtual() {
+  return new Date().toISOString().slice(0, 7) + "-01";
+}
+
+const CORES_PIZZA = ["#164B6E","#2e7d9a","#4a9aba","#68b8d4","#91cfe0","#b8e4ee"];
+
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+function KpiCard({ label, valor, icon: Icon, cor, sub }: {
+  label: string; valor: number; icon: React.ElementType;
+  cor: string; sub?: string;
+}) {
+  return (
+    <div className="bg-card border border-border/50 rounded-xl p-4 flex items-start gap-3">
+      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", cor)}>
+        <Icon size={18} className="text-white" />
+      </div>
+      <div>
+        <p className="text-[11px] text-muted-foreground font-medium">{label}</p>
+        <p className="text-xl font-bold font-heading mt-0.5">{formatBRL(valor)}</p>
+        {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal de lançamento ──────────────────────────────────────────────────────
+function ModalLancamento({
+  lancamento, colaboradores, fornecedores, onClose, onSaved,
+}: {
+  lancamento: Partial<Lancamento> | null;
+  colaboradores: Colaborador[];
+  fornecedores: Fornecedor[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = !!lancamento?.id;
+  const [form, setForm] = useState({
+    tipo:             (lancamento?.tipo ?? "entrada") as "entrada" | "saida",
+    categoria:        lancamento?.categoria ?? "comissao_fornecedor",
+    valor_base:       lancamento?.valor_base?.toString() ?? "",
+    percentual:       lancamento?.percentual?.toString() ?? "",
+    valor:            lancamento?.valor?.toString() ?? "",
+    status:           lancamento?.status ?? "pendente",
+    data_competencia: lancamento?.data_competencia ?? mesAtual(),
+    data_vencimento:  lancamento?.data_vencimento ?? "",
+    data_pagamento:   lancamento?.data_pagamento ?? "",
+    descricao:        lancamento?.descricao ?? "",
+    observacoes:      lancamento?.observacoes ?? "",
+    colaborador_id:   lancamento?.colaborador_id ?? "",
+    fornecedor_id:    lancamento?.fornecedor_id ?? "",
+  });
+  const [salvando, setSalvando] = useState(false);
+
+  // Recalcula valor automaticamente quando base e percentual mudam
+  useEffect(() => {
+    const base = parseFloat(form.valor_base);
+    const pct  = parseFloat(form.percentual);
+    if (!isNaN(base) && !isNaN(pct)) {
+      setForm(f => ({ ...f, valor: ((base * pct) / 100).toFixed(2) }));
+    }
+  }, [form.valor_base, form.percentual]);
+
+  // Sincroniza categoria com tipo
+  useEffect(() => {
+    const catInfo = CATEGORIAS[form.categoria];
+    if (catInfo && catInfo.tipo !== form.tipo) {
+      const primeira = Object.entries(CATEGORIAS).find(([, v]) => v.tipo === form.tipo);
+      if (primeira) setForm(f => ({ ...f, categoria: primeira[0] }));
+    }
+  }, [form.tipo]);
+
+  const salvar = async () => {
+    if (!form.valor || parseFloat(form.valor) <= 0) {
+      toast.error("Informe um valor válido");
+      return;
+    }
+    setSalvando(true);
+    const payload = {
+      tipo:             form.tipo,
+      categoria:        form.categoria,
+      valor_base:       form.valor_base ? parseFloat(form.valor_base) : null,
+      percentual:       form.percentual ? parseFloat(form.percentual) : null,
+      valor:            parseFloat(form.valor),
+      status:           form.status,
+      data_competencia: form.data_competencia.slice(0, 7) + "-01",
+      data_vencimento:  form.data_vencimento || null,
+      data_pagamento:   form.data_pagamento  || null,
+      descricao:        form.descricao       || null,
+      observacoes:      form.observacoes     || null,
+      colaborador_id:   form.colaborador_id  || null,
+      fornecedor_id:    form.fornecedor_id   || null,
+      origem:           "manual",
+    };
+
+    const { error } = isEdit
+      ? await supabase.from("lancamentos_financeiros").update(payload).eq("id", lancamento!.id!)
+      : await supabase.from("lancamentos_financeiros").insert(payload);
+
+    if (error) {
+      toast.error("Erro ao salvar lançamento");
+    } else {
+      toast.success(isEdit ? "Lançamento atualizado" : "Lançamento criado");
+      onSaved();
+      onClose();
+    }
+    setSalvando(false);
+  };
+
+  const catsFiltradas = Object.entries(CATEGORIAS).filter(([, v]) => v.tipo === form.tipo);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-lg mx-4 z-10 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+              <DollarSign size={15} className="text-white" />
+            </div>
+            <h2 className="font-semibold text-sm">{isEdit ? "Editar Lançamento" : "Novo Lançamento"}</h2>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 overflow-y-auto space-y-4">
+          {/* Tipo */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tipo</label>
+            <div className="flex gap-2">
+              {(["entrada", "saida"] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setForm(f => ({ ...f, tipo: t }))}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg border text-xs font-medium transition-colors",
+                    form.tipo === t
+                      ? t === "entrada" ? "bg-emerald-500 text-white border-emerald-500" : "bg-red-500 text-white border-red-500"
+                      : "border-border hover:bg-muted"
+                  )}
+                >
+                  {t === "entrada" ? "↑ Entrada" : "↓ Saída"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Categoria */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Categoria</label>
+            <select
+              value={form.categoria}
+              onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {catsFiltradas.map(([key, info]) => (
+                <option key={key} value={key}>{info.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Valor base + % + valor calculado */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Valor Base (R$)</label>
+              <Input
+                value={form.valor_base}
+                onChange={e => setForm(f => ({ ...f, valor_base: e.target.value }))}
+                placeholder="0,00"
+                className="text-sm h-9"
+                type="number"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">% Comissão</label>
+              <Input
+                value={form.percentual}
+                onChange={e => setForm(f => ({ ...f, percentual: e.target.value }))}
+                placeholder="0,00"
+                className="text-sm h-9"
+                type="number"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Valor (R$) <span className="text-red-500">*</span></label>
+              <Input
+                value={form.valor}
+                onChange={e => setForm(f => ({ ...f, valor: e.target.value }))}
+                placeholder="0,00"
+                className="text-sm h-9 font-semibold"
+                type="number"
+                step="0.01"
+              />
+            </div>
+          </div>
+
+          {/* Colaborador / Fornecedor */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Colaborador</label>
+              <select
+                value={form.colaborador_id}
+                onChange={e => setForm(f => ({ ...f, colaborador_id: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">— Nenhum —</option>
+                {colaboradores.filter(c => c.ativo).map(c => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Fornecedor</label>
+              <select
+                value={form.fornecedor_id}
+                onChange={e => setForm(f => ({ ...f, fornecedor_id: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">— Nenhum —</option>
+                {fornecedores.map(f => (
+                  <option key={f.id} value={f.id}>{f.nome_fantasia}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Descrição</label>
+            <Input
+              value={form.descricao}
+              onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+              placeholder="Descreva o lançamento..."
+              className="text-sm h-9"
+            />
+          </div>
+
+          {/* Datas */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Competência <span className="text-red-500">*</span></label>
+              <Input
+                value={form.data_competencia.slice(0, 7)}
+                onChange={e => setForm(f => ({ ...f, data_competencia: e.target.value + "-01" }))}
+                type="month"
+                className="text-sm h-9"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Vencimento</label>
+              <Input
+                value={form.data_vencimento}
+                onChange={e => setForm(f => ({ ...f, data_vencimento: e.target.value }))}
+                type="date"
+                className="text-sm h-9"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pagamento</label>
+              <Input
+                value={form.data_pagamento}
+                onChange={e => setForm(f => ({ ...f, data_pagamento: e.target.value }))}
+                type="date"
+                className="text-sm h-9"
+              />
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</label>
+            <div className="flex gap-2 flex-wrap">
+              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => setForm(f => ({ ...f, status: key as any }))}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+                    form.status === key ? cn(cfg.bg, cfg.color, "border-current") : "border-border hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observações</label>
+            <textarea
+              value={form.observacoes}
+              onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))}
+              placeholder="Notas adicionais..."
+              rows={2}
+              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 px-5 py-4 border-t border-border/50 bg-muted/30 shrink-0">
+          <Button variant="outline" size="sm" className="flex-1 h-9" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" className="flex-1 h-9 bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={salvar} disabled={salvando}>
+            {salvando ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal colaborador ────────────────────────────────────────────────────────
+function ModalColaborador({
+  colaborador, onClose, onSaved,
+}: {
+  colaborador: Partial<Colaborador> | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = !!colaborador?.id;
+  const [form, setForm] = useState({
+    nome:                         colaborador?.nome ?? "",
+    cargo:                        colaborador?.cargo ?? "",
+    tipo:                         (colaborador?.tipo ?? "colaborador") as "gestor" | "colaborador",
+    gestao:                       colaborador?.gestao ?? "",
+    percentual_vendas_proprias:   colaborador?.percentual_vendas_proprias?.toString() ?? "0",
+    percentual_todas_vendas:      colaborador?.percentual_todas_vendas?.toString() ?? "0",
+    valor_fixo:                   colaborador?.valor_fixo?.toString() ?? "0",
+    ativo:                        colaborador?.ativo ?? true,
+  });
+  const [salvando, setSalvando] = useState(false);
+
+  const salvar = async () => {
+    if (!form.nome.trim()) { toast.error("Informe o nome"); return; }
+    setSalvando(true);
+    const payload = {
+      nome: form.nome.trim(),
+      cargo: form.cargo || null,
+      tipo: form.tipo,
+      gestao: form.gestao || null,
+      percentual_vendas_proprias: parseFloat(form.percentual_vendas_proprias) || 0,
+      percentual_todas_vendas:    parseFloat(form.percentual_todas_vendas) || 0,
+      valor_fixo:                 parseFloat(form.valor_fixo) || 0,
+      ativo: form.ativo,
+    };
+    const { error } = isEdit
+      ? await supabase.from("colaboradores").update(payload).eq("id", colaborador!.id!)
+      : await supabase.from("colaboradores").insert(payload);
+    if (error) { toast.error("Erro ao salvar"); }
+    else { toast.success(isEdit ? "Colaborador atualizado" : "Colaborador cadastrado"); onSaved(); onClose(); }
+    setSalvando(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-md mx-4 z-10 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+              <Users size={15} className="text-white" />
+            </div>
+            <h2 className="font-semibold text-sm">{isEdit ? "Editar Colaborador" : "Novo Colaborador"}</h2>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nome <span className="text-red-500">*</span></label>
+              <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" className="text-sm h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cargo</label>
+              <Input value={form.cargo} onChange={e => setForm(f => ({ ...f, cargo: e.target.value }))} placeholder="Ex: Gestor, Diretor" className="text-sm h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tipo</label>
+              <select
+                value={form.tipo}
+                onChange={e => setForm(f => ({ ...f, tipo: e.target.value as any, gestao: "" }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-9"
+              >
+                <option value="gestor">Gestor</option>
+                <option value="colaborador">Colaborador</option>
+              </select>
+            </div>
+            {form.tipo === "gestor" && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Gestão</label>
+                <select
+                  value={form.gestao}
+                  onChange={e => setForm(f => ({ ...f, gestao: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-9"
+                >
+                  <option value="">— Selecione —</option>
+                  <option value="G1">G1 — Gestão 1</option>
+                  <option value="G4">G4 — Gestão 4</option>
+                  <option value="ADM">ADM — Administrativo</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-muted/40 rounded-lg p-3 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground">Regras de Comissão</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">% Vendas próprias</label>
+                <Input
+                  value={form.percentual_vendas_proprias}
+                  onChange={e => setForm(f => ({ ...f, percentual_vendas_proprias: e.target.value }))}
+                  type="number" step="0.01" className="text-sm h-8"
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Sobre suas vendas</p>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">% Todas vendas</label>
+                <Input
+                  value={form.percentual_todas_vendas}
+                  onChange={e => setForm(f => ({ ...f, percentual_todas_vendas: e.target.value }))}
+                  type="number" step="0.01" className="text-sm h-8"
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Sobre tudo (ex: diretor)</p>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Fixo mensal R$</label>
+                <Input
+                  value={form.valor_fixo}
+                  onChange={e => setForm(f => ({ ...f, valor_fixo: e.target.value }))}
+                  type="number" step="0.01" className="text-sm h-8"
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Base fixa (se houver)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="ativo"
+              checked={form.ativo}
+              onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))}
+              className="w-4 h-4"
+            />
+            <label htmlFor="ativo" className="text-sm font-medium">Ativo</label>
+          </div>
+        </div>
+
+        <div className="flex gap-2 px-5 py-4 border-t border-border/50 bg-muted/30">
+          <Button variant="outline" size="sm" className="flex-1 h-9" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" className="flex-1 h-9 bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={salvar} disabled={salvando}>
+            {salvando ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+export default function Financeiro() {
+  const [tab, setTab] = useState("dashboard");
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filtros lançamentos
+  const [filtroTipo, setFiltroTipo] = useState<"" | "entrada" | "saida">("");
+  const [filtroStatus, setFiltroStatus] = useState("");
+  const [filtroMes, setFiltroMes] = useState("");
+  const [buscaLanc, setBuscaLanc] = useState("");
+
+  // Modais
+  const [modalLancamento, setModalLancamento] = useState<Partial<Lancamento> | null | false>(false);
+  const [modalColaborador, setModalColaborador] = useState<Partial<Colaborador> | null | false>(false);
+  const [editFornecedorId, setEditFornecedorId] = useState<string | null>(null);
+  const [editComissao, setEditComissao] = useState("");
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    const [lancRes, colabRes, fornRes] = await Promise.all([
+      supabase
+        .from("lancamentos_financeiros")
+        .select("*, colaborador:colaboradores(nome), fornecedor:fornecedores(nome_fantasia), orcamento:orcamentos(numero)")
+        .order("data_competencia", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase.from("colaboradores").select("*").order("nome"),
+      supabase.from("fornecedores").select("id, nome_fantasia, comissao_vendas, gestao").eq("status", "ativo").order("nome_fantasia"),
+    ]);
+    setLancamentos((lancRes.data as Lancamento[]) ?? []);
+    setColaboradores((colabRes.data as Colaborador[]) ?? []);
+    setFornecedores((fornRes.data as Fornecedor[]) ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  // ── KPIs ──────────────────────────────────────────────────────────────────
+  const mesRef = new Date().toISOString().slice(0, 7);
+  const lancMes = lancamentos.filter(l => l.data_competencia.slice(0, 7) === mesRef);
+
+  const receitaMes    = lancMes.filter(l => l.tipo === "entrada" && l.status === "pago").reduce((a, l) => a + l.valor, 0);
+  const receitaPrev   = lancMes.filter(l => l.tipo === "entrada" && l.status !== "cancelado").reduce((a, l) => a + l.valor, 0);
+  const despesasMes   = lancMes.filter(l => l.tipo === "saida"   && l.status === "pago").reduce((a, l) => a + l.valor, 0);
+  const aReceber      = lancamentos.filter(l => l.tipo === "entrada" && ["pendente","confirmado"].includes(l.status)).reduce((a, l) => a + l.valor, 0);
+  const aPagar        = lancamentos.filter(l => l.tipo === "saida"   && ["pendente","confirmado"].includes(l.status)).reduce((a, l) => a + l.valor, 0);
+
+  // ── Dados gráfico barras (12 meses) ───────────────────────────────────────
+  const dadosBarras = (() => {
+    const meses: Record<string, { mes: string; receita: number; despesas: number }> = {};
+    const agora = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7);
+      meses[key] = { mes: mesAno(key + "-01"), receita: 0, despesas: 0 };
+    }
+    lancamentos.forEach(l => {
+      const key = l.data_competencia.slice(0, 7);
+      if (!meses[key]) return;
+      if (l.status === "cancelado") return;
+      if (l.tipo === "entrada") meses[key].receita  += l.valor;
+      else                      meses[key].despesas += l.valor;
+    });
+    return Object.values(meses);
+  })();
+
+  // ── Dados pizza (receita por fornecedor) ──────────────────────────────────
+  const dadosPizza = (() => {
+    const por: Record<string, { name: string; value: number }> = {};
+    lancamentos
+      .filter(l => l.tipo === "entrada" && l.status !== "cancelado" && l.fornecedor)
+      .forEach(l => {
+        const nome = l.fornecedor!.nome_fantasia;
+        if (!por[nome]) por[nome] = { name: nome, value: 0 };
+        por[nome].value += l.valor;
+      });
+    return Object.values(por).sort((a, b) => b.value - a.value).slice(0, 6);
+  })();
+
+  // ── Lançamentos filtrados ─────────────────────────────────────────────────
+  const lancFiltrados = lancamentos.filter(l => {
+    if (filtroTipo   && l.tipo   !== filtroTipo)   return false;
+    if (filtroStatus && l.status !== filtroStatus) return false;
+    if (filtroMes    && l.data_competencia.slice(0, 7) !== filtroMes) return false;
+    if (buscaLanc) {
+      const q = buscaLanc.toLowerCase();
+      return (
+        l.descricao?.toLowerCase().includes(q) ||
+        l.colaborador?.nome.toLowerCase().includes(q) ||
+        l.fornecedor?.nome_fantasia.toLowerCase().includes(q) ||
+        l.orcamento?.numero.toLowerCase().includes(q) ||
+        false
+      );
+    }
+    return true;
+  });
+
+  // ── Comissões por colaborador (todos os meses) ────────────────────────────
+  const comissoesPorColaborador = colaboradores.map(c => {
+    const lancs = lancamentos.filter(l => l.colaborador_id === c.id && l.status !== "cancelado");
+    const pago  = lancs.filter(l => l.status === "pago").reduce((a, l) => a + l.valor, 0);
+    const pendente = lancs.filter(l => l.status !== "pago").reduce((a, l) => a + l.valor, 0);
+    return { ...c, total_pago: pago, total_pendente: pendente, total: pago + pendente };
+  });
+
+  // ── Marcar como pago ──────────────────────────────────────────────────────
+  const marcarPago = async (id: string) => {
+    const { error } = await supabase
+      .from("lancamentos_financeiros")
+      .update({ status: "pago", data_pagamento: hoje() })
+      .eq("id", id);
+    if (error) toast.error("Erro ao atualizar");
+    else { toast.success("Marcado como pago"); carregar(); }
+  };
+
+  const excluir = async (id: string) => {
+    const { error } = await supabase.from("lancamentos_financeiros").update({ status: "cancelado" }).eq("id", id);
+    if (error) toast.error("Erro ao cancelar");
+    else { toast.success("Lançamento cancelado"); carregar(); }
+  };
+
+  // ── Salvar comissão do fornecedor ─────────────────────────────────────────
+  const salvarComissaoFornecedor = async (id: string) => {
+    const val = parseFloat(editComissao);
+    if (isNaN(val) || val < 0 || val > 100) { toast.error("Informe uma % válida (0-100)"); return; }
+    const { error } = await supabase.from("fornecedores").update({ comissao_vendas: val }).eq("id", id);
+    if (error) toast.error("Erro ao salvar");
+    else { toast.success("Taxa salva"); setEditFornecedorId(null); carregar(); }
+  };
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-64px)]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+            <DollarSign size={15} className="text-white" />
+          </div>
+          <div>
+            <h1 className="font-heading text-base font-semibold">Financeiro</h1>
+            <p className="text-[11px] text-muted-foreground">Controle de comissões e lançamentos</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={carregar} disabled={loading}>
+            <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
+            Atualizar
+          </Button>
+          <Button size="sm" className="h-7 text-xs gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
+            onClick={() => setModalLancamento({})}>
+            <Plus size={11} /> Novo Lançamento
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col">
+        <div className="px-6 pt-3 border-b border-border/50 bg-card shrink-0">
+          <TabsList className="h-8 gap-1 bg-transparent p-0">
+            {[
+              { key: "dashboard",    label: "Dashboard",     icon: BarChart3 },
+              { key: "lancamentos",  label: "Lançamentos",   icon: List },
+              { key: "comissoes",    label: "Comissões",     icon: Users },
+              { key: "config",       label: "Configurações", icon: Settings },
+            ].map(t => (
+              <TabsTrigger key={t.key} value={t.key}
+                className="h-8 px-3 text-xs gap-1.5 data-[state=active]:border-b-2 data-[state=active]:border-[#164B6E] data-[state=active]:text-[#164B6E] rounded-none">
+                <t.icon size={12} />{t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+
+        {/* ── DASHBOARD ─────────────────────────────────────────────────── */}
+        <TabsContent value="dashboard" className="flex-1 p-6 space-y-6 overflow-auto">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Receita do Mês (pago)"    valor={receitaMes}  icon={TrendingUp}   cor="bg-emerald-600" sub={`Previsto: ${formatBRL(receitaPrev)}`} />
+            <KpiCard label="Despesas do Mês (pago)"   valor={despesasMes} icon={TrendingDown}  cor="bg-red-500"    />
+            <KpiCard label="Margem Líquida"           valor={receitaMes - despesasMes} icon={DollarSign} cor="bg-[#164B6E]" sub="Receita − Despesas pagas" />
+            <KpiCard label="A Receber (total)"        valor={aReceber}    icon={Clock}         cor="bg-amber-500"  sub={`A pagar: ${formatBRL(aPagar)}`} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Gráfico barras */}
+            <div className="lg:col-span-2 bg-card border border-border/50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-4">Receita vs Despesas — 12 meses</h3>
+              {dadosBarras.some(d => d.receita > 0 || d.despesas > 0) ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={dadosBarras} barCategoryGap="25%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => formatBRL(v)} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="receita"  name="Receita"  fill="#059669" radius={[4,4,0,0]} />
+                    <Bar dataKey="despesas" name="Despesas" fill="#dc2626" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-60 flex flex-col items-center justify-center text-muted-foreground">
+                  <BarChart3 size={36} className="mb-2 opacity-30" />
+                  <p className="text-sm">Nenhum lançamento ainda</p>
+                  <p className="text-xs mt-1">Os dados aparecerão conforme lançamentos forem criados</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pizza fornecedores */}
+            <div className="bg-card border border-border/50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-4">Receita por Fornecedor</h3>
+              {dadosPizza.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie data={dadosPizza} cx="50%" cy="50%" innerRadius={55} outerRadius={90}
+                      dataKey="value" nameKey="name" paddingAngle={3}
+                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}>
+                      {dadosPizza.map((_, i) => <Cell key={i} fill={CORES_PIZZA[i % CORES_PIZZA.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => formatBRL(v)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-60 flex flex-col items-center justify-center text-muted-foreground">
+                  <Building2 size={36} className="mb-2 opacity-30" />
+                  <p className="text-xs text-center">Dados por fornecedor<br/>aparecerão aqui</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Comissões a pagar por colaborador */}
+          <div className="bg-card border border-border/50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold mb-3">Comissões por Colaborador</h3>
+            {comissoesPorColaborador.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum colaborador cadastrado</p>
+            ) : (
+              <div className="space-y-2">
+                {comissoesPorColaborador.map(c => (
+                  <div key={c.id} className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0">
+                    <div className="w-8 h-8 rounded-full bg-[#164B6E]/10 flex items-center justify-center shrink-0">
+                      <Users size={13} className="text-[#164B6E]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{c.nome}</p>
+                      <p className="text-[11px] text-muted-foreground">{c.cargo ?? c.tipo} {c.gestao ? `· ${c.gestao}` : ""}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-emerald-600">{formatBRL(c.total_pago)}</p>
+                      <p className="text-[11px] text-amber-600">+ {formatBRL(c.total_pendente)} pendente</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pipeline de receita por estágio */}
+          <div className="bg-card border border-border/50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold mb-1">Pipeline de Comissões</h3>
+            <p className="text-[11px] text-muted-foreground mb-4">Comissões esperadas com base nos lançamentos por status</p>
+            <div className="flex gap-3 flex-wrap">
+              {["pendente","confirmado","pago","cancelado"].map(s => {
+                const cfg = STATUS_CONFIG[s];
+                const total = lancamentos.filter(l => l.tipo === "entrada" && l.status === s).reduce((a, l) => a + l.valor, 0);
+                return (
+                  <div key={s} className={cn("flex-1 min-w-[120px] rounded-lg border px-3 py-2.5", cfg.bg)}>
+                    <p className={cn("text-[11px] font-medium", cfg.color)}>{cfg.label}</p>
+                    <p className="text-lg font-bold mt-0.5">{formatBRL(total)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── LANÇAMENTOS ───────────────────────────────────────────────── */}
+        <TabsContent value="lancamentos" className="flex-1 flex flex-col overflow-hidden">
+          {/* Filtros */}
+          <div className="px-6 py-3 border-b border-border/50 flex flex-wrap gap-3 items-center bg-card shrink-0">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={buscaLanc} onChange={e => setBuscaLanc(e.target.value)} placeholder="Buscar..." className="pl-8 h-8 text-xs" />
+            </div>
+            <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as any)}
+              className="rounded-md border border-input bg-background px-2 py-1 text-xs h-8 focus-visible:outline-none">
+              <option value="">Todos os tipos</option>
+              <option value="entrada">Entradas</option>
+              <option value="saida">Saídas</option>
+            </select>
+            <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
+              className="rounded-md border border-input bg-background px-2 py-1 text-xs h-8 focus-visible:outline-none">
+              <option value="">Todos os status</option>
+              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <Input value={filtroMes} onChange={e => setFiltroMes(e.target.value)} type="month"
+              className="h-8 text-xs w-36" />
+            {(filtroTipo || filtroStatus || filtroMes || buscaLanc) && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs px-2"
+                onClick={() => { setFiltroTipo(""); setFiltroStatus(""); setFiltroMes(""); setBuscaLanc(""); }}>
+                <X size={11} className="mr-1" /> Limpar
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">{lancFiltrados.length} registros</span>
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card border-b border-border/50">
+                <tr>
+                  {["Tipo/Categoria","Descrição","Competência","Valor","Status","Origem","Ações"].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lancFiltrados.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">Nenhum lançamento encontrado</td></tr>
+                ) : lancFiltrados.map(l => {
+                  const catInfo = CATEGORIAS[l.categoria];
+                  const stsCfg  = STATUS_CONFIG[l.status];
+                  return (
+                    <tr key={l.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
+                            l.tipo === "entrada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")}>
+                            {l.tipo === "entrada" ? "↑" : "↓"}
+                          </span>
+                          <span className={cn("text-xs", catInfo?.cor)}>{catInfo?.label ?? l.categoria}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 max-w-[220px]">
+                        <p className="text-xs truncate">{l.descricao ?? "—"}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {l.colaborador?.nome ?? l.fornecedor?.nome_fantasia ?? ""}
+                          {l.orcamento?.numero ? ` · Orc. #${l.orcamento.numero}` : ""}
+                        </p>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted-foreground">
+                        {mesAno(l.data_competencia)}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={cn("font-semibold text-sm", l.tipo === "entrada" ? "text-emerald-600" : "text-red-600")}>
+                          {l.tipo === "saida" ? "−" : "+"}{formatBRL(l.valor)}
+                        </span>
+                        {l.percentual ? <p className="text-[10px] text-muted-foreground">{l.percentual}% de {formatBRL(l.valor_base ?? 0)}</p> : null}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={cn("text-[11px] font-medium px-2 py-1 rounded border", stsCfg?.bg, stsCfg?.color)}>
+                          {stsCfg?.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded",
+                          l.origem === "automatico" ? "bg-blue-50 text-blue-600" : "bg-muted text-muted-foreground")}>
+                          {l.origem === "automatico" ? "Auto" : "Manual"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1">
+                          {l.status !== "pago" && l.status !== "cancelado" && (
+                            <button onClick={() => marcarPago(l.id)} title="Marcar como pago"
+                              className="w-6 h-6 rounded flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-colors">
+                              <CheckCircle size={13} />
+                            </button>
+                          )}
+                          <button onClick={() => setModalLancamento(l)} title="Editar"
+                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                            <Edit2 size={12} />
+                          </button>
+                          {l.status !== "cancelado" && (
+                            <button onClick={() => excluir(l.id)} title="Cancelar"
+                              className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* ── COMISSÕES ─────────────────────────────────────────────────── */}
+        <TabsContent value="comissoes" className="flex-1 overflow-auto p-6 space-y-6">
+          <h3 className="text-sm font-semibold">Comissões por Colaborador — Histórico</h3>
+
+          {colaboradores.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+              <Users size={36} className="mb-3 opacity-30" />
+              <p className="text-sm">Nenhum colaborador cadastrado</p>
+              <Button size="sm" variant="outline" className="mt-3 text-xs" onClick={() => { setTab("config"); setModalColaborador({}); }}>
+                <Plus size={11} className="mr-1" /> Cadastrar colaborador
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {colaboradores.map(c => {
+                const colabLancs = lancamentos.filter(l => l.colaborador_id === c.id && l.status !== "cancelado");
+                // agrupa por mês
+                const porMes: Record<string, { receita: number; pago: number; pendente: number }> = {};
+                colabLancs.forEach(l => {
+                  const m = l.data_competencia.slice(0, 7);
+                  if (!porMes[m]) porMes[m] = { receita: 0, pago: 0, pendente: 0 };
+                  porMes[m].receita += l.valor;
+                  if (l.status === "pago")   porMes[m].pago     += l.valor;
+                  else                       porMes[m].pendente += l.valor;
+                });
+                const mesesOrdenados = Object.entries(porMes).sort((a, b) => b[0].localeCompare(a[0]));
+                const totalGeral = colabLancs.reduce((a, l) => a + l.valor, 0);
+
+                return (
+                  <div key={c.id} className="bg-card border border-border/50 rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-muted/20">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#164B6E]/10 flex items-center justify-center shrink-0">
+                          <Users size={13} className="text-[#164B6E]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{c.nome}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {c.cargo ?? c.tipo}
+                            {c.gestao ? ` · ${c.gestao}` : ""}
+                            {c.percentual_vendas_proprias > 0 ? ` · ${c.percentual_vendas_proprias}% vendas próprias` : ""}
+                            {c.percentual_todas_vendas > 0 ? ` · ${c.percentual_todas_vendas}% todas vendas` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold">{formatBRL(totalGeral)}</p>
+                        <p className="text-[11px] text-muted-foreground">total acumulado</p>
+                      </div>
+                    </div>
+
+                    {mesesOrdenados.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">Nenhum lançamento vinculado</p>
+                    ) : (
+                      <div className="divide-y divide-border/20">
+                        {mesesOrdenados.map(([m, dados]) => (
+                          <div key={m} className="flex items-center justify-between px-4 py-2.5">
+                            <p className="text-xs font-medium">{mesAno(m + "-01")}</p>
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs text-emerald-600 font-semibold">{formatBRL(dados.pago)} pago</span>
+                              {dados.pendente > 0 && <span className="text-xs text-amber-600">{formatBRL(dados.pendente)} pendente</span>}
+                              <span className="text-xs font-bold">{formatBRL(dados.receita)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── CONFIGURAÇÕES ─────────────────────────────────────────────── */}
+        <TabsContent value="config" className="flex-1 overflow-auto p-6 space-y-8">
+
+          {/* Colaboradores */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold">Colaboradores</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Gestores e colaboradores que recebem comissão</p>
+              </div>
+              <Button size="sm" className="h-7 text-xs gap-1 bg-[#164B6E] hover:bg-[#164B6E]/90"
+                onClick={() => setModalColaborador({})}>
+                <Plus size={11} /> Novo Colaborador
+              </Button>
+            </div>
+
+            {colaboradores.length === 0 ? (
+              <div className="border border-dashed border-border rounded-xl p-8 text-center text-muted-foreground">
+                <Users size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum colaborador cadastrado</p>
+                <p className="text-xs mt-1">Cadastre gestores e colaboradores para calcular comissões automaticamente</p>
+              </div>
+            ) : (
+              <div className="border border-border/50 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 border-b border-border/50">
+                    <tr>
+                      {["Nome","Tipo","Gestão","% Próprias","% Todas","Fixo","Status","Ações"].map(h => (
+                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {colaboradores.map(c => (
+                      <tr key={c.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <p className="font-medium text-xs">{c.nome}</p>
+                          {c.cargo && <p className="text-[11px] text-muted-foreground">{c.cargo}</p>}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant="outline" className="text-[10px]">{c.tipo}</Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.gestao ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-xs font-mono">{c.percentual_vendas_proprias}%</td>
+                        <td className="px-4 py-2.5 text-xs font-mono">{c.percentual_todas_vendas}%</td>
+                        <td className="px-4 py-2.5 text-xs font-mono">{formatBRL(c.valor_fixo)}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium",
+                            c.ativo ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                            {c.ativo ? "Ativo" : "Inativo"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <button onClick={() => setModalColaborador(c)}
+                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                            <Edit2 size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Taxas por fornecedor */}
+          <div>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold">Taxas de Comissão por Fornecedor</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Percentual que a 3W recebe sobre os orçamentos consolidados de cada fornecedor.
+                Essas taxas são usadas para calcular automaticamente as entradas ao consolidar uma venda.
+              </p>
+            </div>
+
+            <div className="border border-border/50 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 border-b border-border/50">
+                  <tr>
+                    {["Fornecedor","Gestão","Comissão (%)","Ação"].map(h => (
+                      <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {fornecedores.map(f => (
+                    <tr key={f.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-2.5 text-xs font-medium">{f.nome_fantasia}</td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground">{f.gestao ?? "—"}</td>
+                      <td className="px-4 py-2.5">
+                        {editFornecedorId === f.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editComissao}
+                              onChange={e => setEditComissao(e.target.value)}
+                              type="number" step="0.01" min="0" max="100"
+                              className="h-7 w-24 text-xs font-mono"
+                              onKeyDown={e => { if (e.key === "Enter") salvarComissaoFornecedor(f.id); if (e.key === "Escape") setEditFornecedorId(null); }}
+                              autoFocus
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                            <button onClick={() => salvarComissaoFornecedor(f.id)}
+                              className="w-6 h-6 rounded flex items-center justify-center bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
+                              <CheckCircle size={12} />
+                            </button>
+                            <button onClick={() => setEditFornecedorId(null)}
+                              className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {f.comissao_vendas != null ? (
+                              <span className="font-mono text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                                {f.comissao_vendas}%
+                              </span>
+                            ) : (
+                              <span className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle size={11} /> Não definida
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button
+                          onClick={() => { setEditFornecedorId(f.id); setEditComissao(f.comissao_vendas?.toString() ?? ""); }}
+                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                          <Edit2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {fornecedores.some(f => f.comissao_vendas == null) && (
+              <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-700">
+                <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                <span>
+                  Fornecedores sem taxa definida não gerarão lançamentos automáticos ao consolidar. Configure a % antes de consolidar vendas.
+                </span>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modais */}
+      {modalLancamento !== false && (
+        <ModalLancamento
+          lancamento={modalLancamento}
+          colaboradores={colaboradores}
+          fornecedores={fornecedores}
+          onClose={() => setModalLancamento(false)}
+          onSaved={carregar}
+        />
+      )}
+      {modalColaborador !== false && (
+        <ModalColaborador
+          colaborador={modalColaborador}
+          onClose={() => setModalColaborador(false)}
+          onSaved={carregar}
+        />
+      )}
+    </div>
+  );
+}

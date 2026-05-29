@@ -22,6 +22,7 @@ import AdminUsuarios from "./pages/AdminUsuarios";
 import Atendimento from "./pages/Atendimento";
 import Marketing from "./pages/Marketing";
 import AdminMarketing from "./pages/AdminMarketing";
+import Financeiro from "./pages/Financeiro";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
@@ -59,9 +60,10 @@ const App = () => (
               <Route path="/atendimento" element={<Protected><Atendimento /></Protected>} />
               <Route path="/marketing" element={<Protected><Marketing /></Protected>} />
               <Route path="/admin/marketing" element={<Protected><AdminMarketing /></Protected>} />
+              <Route path="/financeiro" element={<Protected><Financeiro /></Protected>} />
               {[
                 "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
-                "/clientes/hospitalar", "/buscar", "/financeiro", "/admin",
+                "/clientes/hospitalar", "/buscar", "/admin",
               ].map((path) => (
                 <Route key={path} path={path} element={<Protected><PlaceholderPage /></Protected>} />
               ))}
