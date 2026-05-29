@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Brain, TrendingUp, BarChart3, Target, Zap, Send, RefreshCw,
-  Plus, Edit2, X, CheckCircle, Sparkles, ChevronRight,
+  Plus, Edit2, X, Sparkles, Mail,
   Building2, Users, DollarSign, FileText, ArrowUpRight, ArrowDownRight,
-  Loader2, Lightbulb, AlertTriangle, Trophy,
+  Loader2, Lightbulb, Trophy, MapPin, ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -335,6 +335,7 @@ export default function Inteligencia() {
   const [metas, setMetas]         = useState<Meta[]>([]);
   const [chats, setChats]         = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
+  const [clientes, setClientes]   = useState<any[]>([]);
 
   // Modais
   const [modalMeta, setModalMeta] = useState<Partial<Meta> | null | false>(false);
@@ -356,13 +357,14 @@ export default function Inteligencia() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [cardsRes, orcRes, lancRes, metasRes, chatsRes, fornRes] = await Promise.all([
+    const [cardsRes, orcRes, lancRes, metasRes, chatsRes, fornRes, clientesRes] = await Promise.all([
       supabase.from("crm_cards").select("id,estagio,gestao,operacao,created_at").neq("estagio","perdido"),
       supabase.from("orcamentos").select("id,total,status,gestao,fornecedor_nome,fornecedor_id,created_at").order("created_at", { ascending: false }).limit(500),
       supabase.from("lancamentos_financeiros").select("tipo,categoria,valor,status,data_competencia").neq("status","cancelado"),
       supabase.from("metas_empresa").select("*").eq("ativo", true).order("data_inicio", { ascending: false }),
       supabase.from("chats").select("id,canal,ia_ativa,status"),
       supabase.from("fornecedores").select("id,nome_fantasia,gestao,comissao_vendas").eq("status","ativo").order("nome_fantasia"),
+      supabase.from("clientes").select("id,nome_fantasia,cidade,estado,segmento,status,relacao_comercial,status_prospeccao,total_pedidos_consolidados,qtd_comprada,data_primeira_compra,data_ultima_compra,created_at").limit(1000),
     ]);
     setCards(cardsRes.data ?? []);
     setOrcamentos(orcRes.data ?? []);
@@ -370,6 +372,7 @@ export default function Inteligencia() {
     setMetas((metasRes.data as Meta[]) ?? []);
     setChats(chatsRes.data ?? []);
     setFornecedores(fornRes.data ?? []);
+    setClientes(clientesRes.data ?? []);
     setLoading(false);
   }, []);
 
@@ -538,8 +541,8 @@ Estruture a análise em:
     return Object.values(meses);
   })();
 
-  // Performance por gestão
-  const gestaoPerf = ["G1","G4","ADM"].map(g => {
+  // Performance por gestão (apenas gestores comerciais)
+  const gestaoPerf = ["G1","G4"].map(g => {
     const orcG = orcamentos.filter(o => o.gestao === g);
     const cardsG = cards.filter(c => c.gestao === g);
     const consolidadosG = cardsG.filter(c => ["consolidacao","realizado"].includes(c.estagio)).length;
@@ -652,7 +655,7 @@ Estruture a análise em:
   };
 
   return (
-    <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="flex overflow-hidden" style={{ height: "calc(100vh - 64px)" }}>
 
       {/* ── CONTEÚDO PRINCIPAL ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
@@ -680,7 +683,9 @@ Estruture a análise em:
                 { key:"visao-geral", label:"Visão Geral",    icon: BarChart3 },
                 { key:"previsao",    label:"Previsão",       icon: TrendingUp },
                 { key:"performance", label:"Performance",    icon: Zap },
-                { key:"campanhas",   label:"Campanhas",      icon: Building2 },
+                { key:"fornecedores",label:"Fornecedores",   icon: Building2 },
+                { key:"clientes",    label:"Clientes",       icon: Users },
+                { key:"marketing",   label:"Marketing",      icon: Mail },
                 { key:"metas",       label:"Metas",          icon: Target },
                 { key:"analise-ia",  label:"Análise IA",     icon: Sparkles },
               ].map(t => (
@@ -821,7 +826,7 @@ Estruture a análise em:
                 <div key={g.gestao} className="bg-card border border-border/50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: GESTAO_COR[g.gestao] }} />
-                    <p className="font-semibold">{g.gestao === "G1" ? "Gestão 1 (Fabiano)" : g.gestao === "G4" ? "Gestão 4 (Alex)" : "ADM (Celso)"}</p>
+                    <p className="font-semibold">{g.gestao === "G1" ? "Gestão 1 — Fabiano" : "Gestão 4 — Alex"}</p>
                   </div>
                   <div className="space-y-2.5">
                     {[
@@ -860,8 +865,8 @@ Estruture a análise em:
             </div>
           </TabsContent>
 
-          {/* ── CAMPANHAS / FORNECEDORES ─────────────────────────────────── */}
-          <TabsContent value="campanhas" className="flex-1 overflow-auto p-5 space-y-5">
+          {/* ── FORNECEDORES ─────────────────────────────────────────────── */}
+          <TabsContent value="fornecedores" className="flex-1 overflow-auto p-5 space-y-5">
             <div>
               <h3 className="text-sm font-semibold">Performance por Fornecedor / Marca</h3>
               <p className="text-[11px] text-muted-foreground mt-0.5">Ranking por volume de orçamentos gerados</p>
@@ -911,6 +916,191 @@ Estruture a análise em:
                   <Bar dataKey="volume" name="Volume" fill="#164B6E" radius={[0,4,4,0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </TabsContent>
+
+          {/* ── CLIENTES ────────────────────────────────────────────────── */}
+          <TabsContent value="clientes" className="flex-1 overflow-auto p-5 space-y-5">
+            <div>
+              <h3 className="text-sm font-semibold">Análise de Clientes</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Visão completa da base de clientes — perfil, distribuição e histórico</p>
+            </div>
+
+            {/* KPIs clientes */}
+            {(() => {
+              const ativos   = clientes.filter(c => c.status === "ativo").length;
+              const inativos = clientes.filter(c => c.status !== "ativo").length;
+              const compradores = clientes.filter(c => (c.qtd_comprada ?? 0) > 0).length;
+              const volTotal = clientes.reduce((a: number, c: any) => a + (c.total_pedidos_consolidados ?? 0), 0);
+              return (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <KpiMini label="Total Clientes"   valor={fmtNum(clientes.length)} icon={Users}      cor="bg-blue-500" />
+                  <KpiMini label="Clientes Ativos"  valor={fmtNum(ativos)}          icon={Trophy}     cor="bg-emerald-600" />
+                  <KpiMini label="Já Compraram"     valor={fmtNum(compradores)}     icon={ShoppingBag} cor="bg-[#164B6E]" />
+                  <KpiMini label="Volume Consolidado" valor={fmtBRL(volTotal)}       icon={DollarSign} cor="bg-amber-500" />
+                </div>
+              );
+            })()}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Por segmento */}
+              {(() => {
+                const porSeg: Record<string, number> = {};
+                clientes.forEach((c: any) => {
+                  const segs = Array.isArray(c.segmento) ? c.segmento : c.segmento ? [c.segmento] : ["Não informado"];
+                  segs.forEach((s: string) => { porSeg[s] = (porSeg[s] ?? 0) + 1; });
+                });
+                const data = Object.entries(porSeg).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+                return (
+                  <div className="bg-card border border-border/50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold mb-3">Distribuição por Segmento</h3>
+                    {data.length > 0 ? (
+                      <div className="space-y-2">
+                        {data.map(d => {
+                          const pct = clientes.length > 0 ? (d.value / clientes.length) * 100 : 0;
+                          return (
+                            <div key={d.name} className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground w-28 truncate shrink-0">{d.name}</span>
+                              <div className="flex-1 h-5 bg-muted rounded overflow-hidden">
+                                <div className="h-full bg-[#164B6E] rounded transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-bold w-8 text-right shrink-0">{d.value}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados de segmento</p>}
+                  </div>
+                );
+              })()}
+
+              {/* Por estado */}
+              {(() => {
+                const porEstado: Record<string, number> = {};
+                clientes.forEach((c: any) => {
+                  const est = c.estado ?? "N/I";
+                  porEstado[est] = (porEstado[est] ?? 0) + 1;
+                });
+                const data = Object.entries(porEstado).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+                return (
+                  <div className="bg-card border border-border/50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                      <MapPin size={13} className="text-muted-foreground" /> Distribuição por Estado
+                    </h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={data} layout="vertical" barCategoryGap="20%">
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={30} />
+                        <Tooltip />
+                        <Bar dataKey="value" name="Clientes" fill="#164B6E" radius={[0,4,4,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Por prospecção */}
+            {(() => {
+              const porProsp: Record<string, number> = {};
+              clientes.forEach((c: any) => {
+                const p = c.status_prospeccao ?? "Não informado";
+                porProsp[p] = (porProsp[p] ?? 0) + 1;
+              });
+              const data = Object.entries(porProsp).sort((a, b) => b[1] - a[1]);
+              const PROSP_COR: Record<string, string> = {
+                "Ativo": "#10b981", "Em prospecção": "#3b82f6", "Frio": "#94a3b8",
+                "Inativo": "#f97316", "Não informado": "#e2e8f0",
+              };
+              return (
+                <div className="bg-card border border-border/50 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold mb-3">Status de Prospecção</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {data.map(([label, count]) => (
+                      <div key={label} className="flex items-center gap-2 border border-border/50 rounded-lg px-3 py-2 bg-muted/30">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PROSP_COR[label] ?? "#94a3b8" }} />
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                        <span className="text-sm font-bold ml-1">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Top clientes por volume */}
+            {(() => {
+              const top = [...clientes]
+                .filter((c: any) => (c.total_pedidos_consolidados ?? 0) > 0)
+                .sort((a: any, b: any) => (b.total_pedidos_consolidados ?? 0) - (a.total_pedidos_consolidados ?? 0))
+                .slice(0, 10);
+              if (top.length === 0) return null;
+              return (
+                <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border/30">
+                    <h3 className="text-sm font-semibold">Top Clientes — Volume Consolidado</h3>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        {["#","Cliente","Cidade/Estado","Segmento","Compras","Volume"].map(h => (
+                          <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {top.map((c: any, i: number) => (
+                        <tr key={c.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-2 text-xs font-bold text-muted-foreground">#{i+1}</td>
+                          <td className="px-4 py-2 text-xs font-medium max-w-[180px] truncate">{c.nome_fantasia}</td>
+                          <td className="px-4 py-2 text-xs text-muted-foreground">{[c.cidade, c.estado].filter(Boolean).join("/") || "—"}</td>
+                          <td className="px-4 py-2 text-xs text-muted-foreground truncate max-w-[100px]">
+                            {Array.isArray(c.segmento) ? c.segmento[0] : c.segmento ?? "—"}
+                          </td>
+                          <td className="px-4 py-2 text-xs">{c.qtd_comprada ?? 0}</td>
+                          <td className="px-4 py-2 text-xs font-semibold text-emerald-600">{fmtBRL(c.total_pedidos_consolidados ?? 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* ── MARKETING ────────────────────────────────────────────────── */}
+          <TabsContent value="marketing" className="flex-1 overflow-auto p-5">
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
+              <div className="w-16 h-16 rounded-2xl bg-violet-50 border border-violet-200 flex items-center justify-center mb-4">
+                <Mail size={28} className="text-violet-500" />
+              </div>
+              <h3 className="text-base font-semibold">Análise de Campanhas de Marketing</h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                Esta seção exibirá análises das campanhas de email marketing, taxas de abertura,
+                cliques e conversões geradas por campanha.
+              </p>
+              <div className="mt-6 flex flex-col gap-2 text-left max-w-xs w-full">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                  Taxa de abertura por campanha
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                  Cliques e conversões em oportunidades
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                  Comparativo entre campanhas
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                  ROI por segmento e período
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-6 italic">
+                Disponível após integração com os dados de campanhas do módulo Marketing
+              </p>
             </div>
           </TabsContent>
 
@@ -1012,7 +1202,7 @@ Estruture a análise em:
       </div>
 
       {/* ── CHAT LATERAL FIXO ──────────────────────────────────────────── */}
-      <div className="w-80 shrink-0 border-l border-border/50 flex flex-col bg-card">
+      <div className="w-80 shrink-0 border-l border-border/50 flex flex-col bg-card overflow-hidden" style={{ height: "calc(100vh - 64px)" }}>
         {/* Chat header */}
         <div className="px-4 py-3 border-b border-border/50 shrink-0">
           <div className="flex items-center gap-2">
