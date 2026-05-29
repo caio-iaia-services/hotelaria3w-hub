@@ -1324,7 +1324,7 @@ export default function Atendimento() {
     chats.filter(c => c.canal === canal).reduce((acc, c) => acc + (c.nao_lidas ?? 0), 0);
 
   return (
-    <div className="flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="flex flex-col -m-4 lg:-m-8" style={{ height: "calc(100vh - 64px)" }}>
       {/* Topo */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border/50 bg-card shrink-0">
         <div className="flex items-center gap-3">

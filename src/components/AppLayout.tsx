@@ -53,11 +53,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const pageTitle = pageTitles[location.pathname] || "3W Hotelaria";
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen overflow-hidden w-full bg-background">
       <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 h-16 bg-[#c4942c] border-b border-[#c4942c] flex items-center justify-between px-4 lg:px-8 shadow-sm">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="sticky top-0 z-30 h-16 shrink-0 bg-[#c4942c] border-b border-[#c4942c] flex items-center justify-between px-4 lg:px-8 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -98,7 +98,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 min-h-0 overflow-auto p-4 lg:p-8">{children}</main>
       </div>
     </div>
   );

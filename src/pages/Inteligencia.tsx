@@ -655,7 +655,7 @@ Estruture a análise em:
   };
 
   return (
-    <div className="flex overflow-hidden" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="flex overflow-hidden -m-4 lg:-m-8" style={{ height: "calc(100vh - 64px)" }}>
 
       {/* ── CONTEÚDO PRINCIPAL ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
