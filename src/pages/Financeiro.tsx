@@ -1206,6 +1206,7 @@ export default function Financeiro() {
   const [filtroTipo, setFiltroTipo] = useState<"" | "entrada" | "saida">("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroMes, setFiltroMes] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
   const [buscaLanc, setBuscaLanc] = useState("");
 
   // Modais
@@ -1284,6 +1285,12 @@ export default function Financeiro() {
     if (filtroTipo   && l.tipo   !== filtroTipo)   return false;
     if (filtroStatus && l.status !== filtroStatus) return false;
     if (filtroMes    && l.data_competencia.slice(0, 7) !== filtroMes) return false;
+    if (filtroCategoria) {
+      // filtra por categoria personalizada (categoria_id) ou categoria do sistema (categoria)
+      const matchCustom  = l.categoria_id === filtroCategoria;
+      const matchSistema = l.categoria    === filtroCategoria;
+      if (!matchCustom && !matchSistema) return false;
+    }
     if (buscaLanc) {
       const q = buscaLanc.toLowerCase();
       return (
@@ -1498,11 +1505,29 @@ export default function Financeiro() {
               <option value="">Todos os status</option>
               {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
+            <select value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}
+              className="rounded-md border border-input bg-background px-2 py-1 text-xs h-8 focus-visible:outline-none max-w-[160px]">
+              <option value="">Todas as categorias</option>
+              {categorias.filter(c => c.ativo).length > 0 && (
+                <>
+                  <optgroup label="Personalizadas">
+                    {categorias.filter(c => c.ativo).map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </optgroup>
+                </>
+              )}
+              <optgroup label="Sistema">
+                {Object.entries(CATEGORIAS).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </optgroup>
+            </select>
             <Input value={filtroMes} onChange={e => setFiltroMes(e.target.value)} type="month"
               className="h-8 text-xs w-36" />
-            {(filtroTipo || filtroStatus || filtroMes || buscaLanc) && (
+            {(filtroTipo || filtroStatus || filtroMes || filtroCategoria || buscaLanc) && (
               <Button variant="ghost" size="sm" className="h-8 text-xs px-2"
-                onClick={() => { setFiltroTipo(""); setFiltroStatus(""); setFiltroMes(""); setBuscaLanc(""); }}>
+                onClick={() => { setFiltroTipo(""); setFiltroStatus(""); setFiltroMes(""); setFiltroCategoria(""); setBuscaLanc(""); }}>
                 <X size={11} className="mr-1" /> Limpar
               </Button>
             )}
