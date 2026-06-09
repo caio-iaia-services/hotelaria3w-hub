@@ -57,7 +57,9 @@ interface Mensagem {
   chat_id: string;
   origem: "cliente" | "ia" | "humano";
   conteudo: string;
-  tipo: string;
+  tipo: string; // texto | imagem | documento | audio | video | sticker
+  media_url?: string | null; // URL da mídia (pode vir separada do conteúdo/legenda)
+  duracao_segundos?: number | null;
   lida: boolean;
   criado_em: string;
 }
@@ -96,6 +98,98 @@ function formatDataHora(iso: string) {
 function BolhaMsg({ msg }: { msg: Mensagem }) {
   const isCliente = msg.origem === "cliente";
   const isIA = msg.origem === "ia";
+
+  // URL da mídia: prefere media_url (campo separado), depois conteudo
+  const mediaUrl = msg.media_url || msg.conteudo;
+
+  const isMedia = ["imagem", "documento", "audio", "video", "sticker"].includes(msg.tipo);
+
+  const renderConteudo = () => {
+    switch (msg.tipo) {
+      case "imagem":
+      case "sticker":
+        return (
+          <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
+            <img
+              src={mediaUrl}
+              alt={msg.tipo === "sticker" ? "sticker" : "imagem"}
+              className="max-w-[240px] max-h-[320px] object-cover rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+              onError={e => {
+                // Fallback: mostra ícone + link se a imagem não carregar
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </a>
+        );
+
+      case "audio":
+        return (
+          <div className="flex flex-col gap-1.5 px-3 py-2 min-w-[200px]">
+            <audio
+              controls
+              src={mediaUrl}
+              className="w-full max-w-[260px] h-8"
+              style={{ accentColor: isCliente ? "#164B6E" : "#fff" }}
+            />
+            {msg.duracao_segundos && (
+              <span className={cn("text-[10px]", isCliente ? "text-muted-foreground" : "text-white/70")}>
+                {Math.floor(msg.duracao_segundos / 60)}:{String(msg.duracao_segundos % 60).padStart(2, "0")}
+              </span>
+            )}
+            {/* Legenda/transcrição, se houver */}
+            {msg.conteudo && msg.media_url && (
+              <p className="text-xs italic opacity-80">{msg.conteudo}</p>
+            )}
+          </div>
+        );
+
+      case "video":
+        return (
+          <div className="p-0">
+            <video
+              controls
+              src={mediaUrl}
+              className="max-w-[280px] max-h-[200px] rounded-2xl object-cover"
+            />
+            {msg.conteudo && msg.media_url && (
+              <p className={cn("text-xs px-3 pb-2 mt-1", isCliente ? "" : "text-white/90")}>
+                {msg.conteudo}
+              </p>
+            )}
+          </div>
+        );
+
+      case "documento":
+        return (
+          <a
+            href={mediaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity px-3 py-2"
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+              isCliente ? "bg-slate-100" : "bg-white/20"
+            )}>
+              <FileText size={15} className={isCliente ? "text-slate-600" : "text-white"} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-medium underline underline-offset-2 truncate max-w-[160px] block">
+                {decodeURIComponent(mediaUrl.split("/").pop()?.split("?")[0] ?? "documento")}
+              </span>
+              {msg.conteudo && msg.media_url && (
+                <span className="text-[10px] opacity-70 truncate block">{msg.conteudo}</span>
+              )}
+            </div>
+          </a>
+        );
+
+      default:
+        // texto ou tipo desconhecido
+        return <span className="whitespace-pre-wrap break-words">{msg.conteudo}</span>;
+    }
+  };
+
   return (
     <div className={cn("flex gap-2 mb-3", isCliente ? "flex-row" : "flex-row-reverse")}>
       <div
@@ -114,7 +208,8 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
         <div
           className={cn(
             "rounded-2xl text-sm leading-relaxed overflow-hidden",
-            msg.tipo === "imagem" ? "p-0" : "px-3 py-2",
+            // Mídias sem padding externo (gerenciam internamente)
+            isMedia && msg.tipo !== "texto" ? "" : "px-3 py-2",
             isCliente
               ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
               : isIA
@@ -122,34 +217,7 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
                 : "bg-blue-600 text-white rounded-tr-sm"
           )}
         >
-          {msg.tipo === "imagem" ? (
-            <a href={msg.conteudo} target="_blank" rel="noopener noreferrer">
-              <img
-                src={msg.conteudo}
-                alt="imagem"
-                className="max-w-[240px] max-h-[320px] object-cover rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
-              />
-            </a>
-          ) : msg.tipo === "documento" ? (
-            <a
-              href={msg.conteudo}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                isCliente ? "bg-slate-100" : "bg-white/20"
-              )}>
-                <FileText size={15} className={isCliente ? "text-slate-600" : "text-white"} />
-              </div>
-              <span className="text-xs font-medium underline underline-offset-2 truncate max-w-[160px]">
-                {decodeURIComponent(msg.conteudo.split("/").pop() ?? "documento")}
-              </span>
-            </a>
-          ) : (
-            msg.conteudo
-          )}
+          {renderConteudo()}
         </div>
         <span className="text-[10px] text-muted-foreground mt-1 px-1">
           {formatHora(msg.criado_em)}
@@ -206,7 +274,7 @@ function ChatView({
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
       .from("mensagens")
-      .select("*")
+      .select("id, chat_id, origem, conteudo, tipo, media_url, duracao_segundos, lida, criado_em")
       .eq("chat_id", chat.id)
       .order("criado_em", { ascending: true })
       .limit(200);
@@ -381,8 +449,9 @@ function ChatView({
       const { error: errMsg } = await supabase.from("mensagens").insert({
         chat_id: chat.id,
         origem: "humano",
-        conteudo: publicUrl,
+        conteudo: texto.trim() || arquivo.name, // legenda separada da URL
         tipo,
+        media_url: publicUrl,                   // URL pública do arquivo
       });
       if (errMsg) throw errMsg;
 
