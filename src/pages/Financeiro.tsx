@@ -48,6 +48,9 @@ interface Lancamento {
   observacoes: string | null;
   origem: "manual" | "automatico";
   created_at: string;
+  recorrente?: boolean;
+  frequencia?: string | null;
+  categoria_id?: string | null;
   // joins
   colaborador?: { nome: string } | null;
   fornecedor?: { nome_fantasia: string } | null;
@@ -59,6 +62,16 @@ interface Fornecedor {
   nome_fantasia: string;
   comissao_vendas: number | null;
   gestao: string | null;
+}
+
+interface CategoriaFinanceira {
+  id: string;
+  nome: string;
+  tipo: "entrada" | "saida";
+  cor: string;
+  descricao: string | null;
+  ativo: boolean;
+  created_at: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,6 +110,17 @@ function mesAtual() {
 }
 
 const CORES_PIZZA = ["#164B6E","#2e7d9a","#4a9aba","#68b8d4","#91cfe0","#b8e4ee"];
+
+const FREQUENCIAS: Record<string, string> = {
+  diaria: "Diária", semanal: "Semanal", quinzenal: "Quinzenal",
+  mensal: "Mensal", bimestral: "Bimestral", trimestral: "Trimestral",
+  semestral: "Semestral", anual: "Anual",
+};
+
+const CORES_CATEGORIA = [
+  "#164B6E","#059669","#dc2626","#d97706","#7c3aed","#db2777",
+  "#0891b2","#65a30d","#ea580c","#4f46e5","#0d9488","#be185d",
+];
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiCard({ label, valor, icon: Icon, cor, sub }: {
@@ -142,6 +166,8 @@ function ModalLancamento({
     observacoes:      lancamento?.observacoes ?? "",
     colaborador_id:   lancamento?.colaborador_id ?? "",
     fornecedor_id:    lancamento?.fornecedor_id ?? "",
+    recorrente:       lancamento?.recorrente ?? false,
+    frequencia:       lancamento?.frequencia ?? "mensal",
   });
   const [salvando, setSalvando] = useState(false);
 
@@ -183,6 +209,8 @@ function ModalLancamento({
       observacoes:      form.observacoes     || null,
       colaborador_id:   form.colaborador_id  || null,
       fornecedor_id:    form.fornecedor_id   || null,
+      recorrente:       form.recorrente,
+      frequencia:       form.recorrente ? form.frequencia : null,
       origem:           "manual",
     };
 
@@ -382,6 +410,43 @@ function ModalLancamento({
             </div>
           </div>
 
+          {/* Recorrência */}
+          <div className="rounded-lg border border-border/50 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold">Lançamento Recorrente</p>
+                <p className="text-[11px] text-muted-foreground">Repete automaticamente na frequência definida</p>
+              </div>
+              <button
+                onClick={() => setForm(f => ({ ...f, recorrente: !f.recorrente }))}
+                className={cn(
+                  "relative w-10 h-5.5 rounded-full transition-colors shrink-0",
+                  form.recorrente ? "bg-[#164B6E]" : "bg-muted"
+                )}
+                style={{ height: 22, width: 40 }}
+              >
+                <span className={cn(
+                  "absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform",
+                  form.recorrente ? "translate-x-[18px]" : "translate-x-0"
+                )} style={{ width: 18, height: 18 }} />
+              </button>
+            </div>
+            {form.recorrente && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Frequência</label>
+                <select
+                  value={form.frequencia}
+                  onChange={e => setForm(f => ({ ...f, frequencia: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {Object.entries(FREQUENCIAS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           {/* Observações */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observações</label>
@@ -548,6 +613,262 @@ function ModalColaborador({
         </div>
 
         <div className="flex gap-2 px-5 py-4 border-t border-border/50 bg-muted/30">
+          <Button variant="outline" size="sm" className="flex-1 h-9" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" className="flex-1 h-9 bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={salvar} disabled={salvando}>
+            {salvando ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal de categoria ───────────────────────────────────────────────────────
+function ModalCategoria({
+  categoria, onClose, onSaved,
+}: {
+  categoria: Partial<CategoriaFinanceira> | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = !!categoria?.id;
+  const [form, setForm] = useState({
+    nome:           categoria?.nome ?? "",
+    tipo:           (categoria?.tipo ?? "entrada") as "entrada" | "saida",
+    cor:            categoria?.cor ?? "#164B6E",
+    descricao:      categoria?.descricao ?? "",
+    ativo:          categoria?.ativo ?? true,
+    // recorrência
+    tem_recorrencia: false,
+    valor:          "",
+    frequencia:     "mensal",
+    dia_vencimento: "1",
+    data_inicio:    new Date().toISOString().slice(0, 7) + "-01",
+  });
+  const [salvando, setSalvando] = useState(false);
+
+  const salvar = async () => {
+    if (!form.nome.trim()) { toast.error("Informe o nome da categoria"); return; }
+    setSalvando(true);
+
+    const payload = {
+      nome:      form.nome.trim(),
+      tipo:      form.tipo,
+      cor:       form.cor,
+      descricao: form.descricao || null,
+      ativo:     form.ativo,
+    };
+
+    let catId: string | null = categoria?.id ?? null;
+
+    const { data: catData, error: catError } = isEdit
+      ? await (supabase.from("categorias_financeiras").update(payload).eq("id", categoria!.id!).select("id").single())
+      : await (supabase.from("categorias_financeiras").insert(payload).select("id").single());
+
+    if (catError || !catData) {
+      toast.error("Erro ao salvar categoria");
+      setSalvando(false);
+      return;
+    }
+    catId = catData.id;
+
+    // Se tem recorrência e é criação nova → gera lançamento recorrente
+    if (!isEdit && form.tem_recorrencia) {
+      const valor = parseFloat(form.valor);
+      if (!isNaN(valor) && valor > 0) {
+        await supabase.from("lancamentos_financeiros").insert({
+          tipo:             form.tipo,
+          categoria:        form.tipo === "entrada" ? "receita_extra" : "despesa_variavel",
+          categoria_id:     catId,
+          valor,
+          status:           "pendente",
+          data_competencia: form.data_inicio,
+          recorrente:       true,
+          frequencia:       form.frequencia,
+          descricao:        `Recorrente: ${form.nome.trim()}`,
+          observacoes:      form.descricao || null,
+          origem:           "manual",
+        });
+      }
+    }
+
+    toast.success(isEdit ? "Categoria atualizada" : "Categoria criada");
+    onSaved();
+    onClose();
+    setSalvando(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-md mx-4 z-10 overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: form.cor }}>
+              <Filter size={15} className="text-white" />
+            </div>
+            <h2 className="font-semibold text-sm">{isEdit ? "Editar Categoria" : "Nova Categoria"}</h2>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 overflow-y-auto space-y-4">
+          {/* Tipo */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tipo</label>
+            <div className="flex gap-2">
+              {(["entrada", "saida"] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setForm(f => ({ ...f, tipo: t }))}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg border text-xs font-medium transition-colors",
+                    form.tipo === t
+                      ? t === "entrada" ? "bg-emerald-500 text-white border-emerald-500" : "bg-red-500 text-white border-red-500"
+                      : "border-border hover:bg-muted"
+                  )}
+                >
+                  {t === "entrada" ? "↑ Receita" : "↓ Despesa"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Nome */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nome <span className="text-red-500">*</span></label>
+            <Input
+              value={form.nome}
+              onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+              placeholder="Ex: Aluguel, Comissão parceiro, Serviço..."
+              className="text-sm h-9"
+            />
+          </div>
+
+          {/* Cor */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cor</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {CORES_CATEGORIA.map(cor => (
+                <button
+                  key={cor}
+                  onClick={() => setForm(f => ({ ...f, cor }))}
+                  className={cn(
+                    "w-7 h-7 rounded-full border-2 transition-all",
+                    form.cor === cor ? "border-foreground scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: cor }}
+                />
+              ))}
+              <input
+                type="color"
+                value={form.cor}
+                onChange={e => setForm(f => ({ ...f, cor: e.target.value }))}
+                className="w-7 h-7 rounded-full cursor-pointer border border-border"
+                title="Cor personalizada"
+              />
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Descrição</label>
+            <Input
+              value={form.descricao}
+              onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+              placeholder="Descrição opcional..."
+              className="text-sm h-9"
+            />
+          </div>
+
+          {/* Recorrência (só na criação) */}
+          {!isEdit && (
+            <div className="rounded-lg border border-border/50 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold">Criar lançamento recorrente</p>
+                  <p className="text-[11px] text-muted-foreground">Já insere esta categoria nos lançamentos recorrentes</p>
+                </div>
+                <button
+                  onClick={() => setForm(f => ({ ...f, tem_recorrencia: !f.tem_recorrencia }))}
+                  style={{ height: 22, width: 40 }}
+                  className={cn("relative rounded-full transition-colors shrink-0", form.tem_recorrencia ? "bg-[#164B6E]" : "bg-muted")}
+                >
+                  <span
+                    className={cn("absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform", form.tem_recorrencia ? "translate-x-[18px]" : "translate-x-0")}
+                    style={{ width: 18, height: 18 }}
+                  />
+                </button>
+              </div>
+
+              {form.tem_recorrencia && (
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Valor (R$)</label>
+                      <Input
+                        value={form.valor}
+                        onChange={e => setForm(f => ({ ...f, valor: e.target.value }))}
+                        type="number" step="0.01" placeholder="0,00"
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Dia vencimento</label>
+                      <Input
+                        value={form.dia_vencimento}
+                        onChange={e => setForm(f => ({ ...f, dia_vencimento: e.target.value }))}
+                        type="number" min="1" max="31" placeholder="1"
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Frequência</label>
+                      <select
+                        value={form.frequencia}
+                        onChange={e => setForm(f => ({ ...f, frequencia: e.target.value }))}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-9"
+                      >
+                        {Object.entries(FREQUENCIAS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Início (mês)</label>
+                      <Input
+                        value={form.data_inicio.slice(0, 7)}
+                        onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value + "-01" }))}
+                        type="month"
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Ativo (só na edição) */}
+          {isEdit && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox" id="cat_ativo"
+                checked={form.ativo}
+                onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))}
+                className="w-4 h-4"
+              />
+              <label htmlFor="cat_ativo" className="text-sm font-medium">Categoria ativa</label>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 px-5 py-4 border-t border-border/50 bg-muted/30 shrink-0">
           <Button variant="outline" size="sm" className="flex-1 h-9" onClick={onClose}>Cancelar</Button>
           <Button size="sm" className="flex-1 h-9 bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={salvar} disabled={salvando}>
             {salvando ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar"}
@@ -878,6 +1199,7 @@ export default function Financeiro() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filtros lançamentos
@@ -889,12 +1211,13 @@ export default function Financeiro() {
   // Modais
   const [modalLancamento, setModalLancamento] = useState<Partial<Lancamento> | null | false>(false);
   const [modalColaborador, setModalColaborador] = useState<Partial<Colaborador> | null | false>(false);
+  const [modalCategoria, setModalCategoria] = useState<Partial<CategoriaFinanceira> | null | false>(false);
   const [editFornecedorId, setEditFornecedorId] = useState<string | null>(null);
   const [editComissao, setEditComissao] = useState("");
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [lancRes, colabRes, fornRes] = await Promise.all([
+    const [lancRes, colabRes, fornRes, catRes] = await Promise.all([
       supabase
         .from("lancamentos_financeiros")
         .select("*, colaborador:colaboradores(nome), fornecedor:fornecedores(nome_fantasia), orcamento:orcamentos(numero)")
@@ -903,10 +1226,12 @@ export default function Financeiro() {
         .limit(500),
       supabase.from("colaboradores").select("*").order("nome"),
       supabase.from("fornecedores").select("id, nome_fantasia, comissao_vendas, gestao").eq("status", "ativo").order("nome_fantasia"),
+      supabase.from("categorias_financeiras").select("*").order("nome"),
     ]);
     setLancamentos((lancRes.data as Lancamento[]) ?? []);
     setColaboradores((colabRes.data as Colaborador[]) ?? []);
     setFornecedores((fornRes.data as Fornecedor[]) ?? []);
+    setCategorias((catRes.data as CategoriaFinanceira[]) ?? []);
     setLoading(false);
   }, []);
 
@@ -1036,6 +1361,7 @@ export default function Financeiro() {
             {[
               { key: "dashboard",    label: "Dashboard",     icon: BarChart3 },
               { key: "lancamentos",  label: "Lançamentos",   icon: List },
+              { key: "categorias",   label: "Categorias",    icon: Filter },
               { key: "comissoes",    label: "Comissões",     icon: Users },
               { key: "dre",          label: "DRE",           icon: BarChart3 },
               { key: "config",       label: "Configurações", icon: Settings },
@@ -1261,6 +1587,166 @@ export default function Financeiro() {
                 })}
               </tbody>
             </table>
+          </div>
+        </TabsContent>
+
+        {/* ── CATEGORIAS ────────────────────────────────────────────────── */}
+        <TabsContent value="categorias" className="flex-1 overflow-auto p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Categorias Financeiras</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Organize receitas e despesas por categoria personalizada</p>
+            </div>
+            <Button size="sm" className="h-7 text-xs gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
+              onClick={() => setModalCategoria({})}>
+              <Plus size={11} /> Nova Categoria
+            </Button>
+          </div>
+
+          {/* Receitas */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px flex-1 bg-emerald-200" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 px-2">Receitas</span>
+              <div className="h-px flex-1 bg-emerald-200" />
+            </div>
+            {categorias.filter(c => c.tipo === "entrada").length === 0 ? (
+              <div className="border border-dashed border-border rounded-xl p-6 text-center text-muted-foreground">
+                <p className="text-sm">Nenhuma categoria de receita cadastrada</p>
+                <Button size="sm" variant="outline" className="mt-2 text-xs h-7"
+                  onClick={() => setModalCategoria({ tipo: "entrada" })}>
+                  <Plus size={11} className="mr-1" /> Criar primeira categoria
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {categorias.filter(c => c.tipo === "entrada").map(cat => {
+                  const lancsVinculados = lancamentos.filter(l => l.categoria_id === cat.id && l.status !== "cancelado");
+                  const totalCat = lancsVinculados.reduce((a, l) => a + l.valor, 0);
+                  const recorrentesAtivos = lancsVinculados.filter(l => l.recorrente).length;
+                  return (
+                    <div key={cat.id} className={cn(
+                      "bg-card border border-border/50 rounded-xl p-4 transition-all hover:shadow-sm",
+                      !cat.ativo && "opacity-50"
+                    )}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: cat.cor + "22" }}>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.cor }} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">{cat.nome}</p>
+                            {cat.descricao && <p className="text-[11px] text-muted-foreground">{cat.descricao}</p>}
+                          </div>
+                        </div>
+                        <button onClick={() => setModalCategoria(cat)}
+                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0">
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-emerald-600">{formatBRL(totalCat)}</p>
+                          <p className="text-[10px] text-muted-foreground">acumulado ({lancsVinculados.length} lanç.)</p>
+                        </div>
+                        {recorrentesAtivos > 0 && (
+                          <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                            ↻ {recorrentesAtivos} recorrente{recorrentesAtivos > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {!cat.ativo && (
+                          <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Inativa</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Despesas */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px flex-1 bg-red-200" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 px-2">Despesas</span>
+              <div className="h-px flex-1 bg-red-200" />
+            </div>
+            {categorias.filter(c => c.tipo === "saida").length === 0 ? (
+              <div className="border border-dashed border-border rounded-xl p-6 text-center text-muted-foreground">
+                <p className="text-sm">Nenhuma categoria de despesa cadastrada</p>
+                <Button size="sm" variant="outline" className="mt-2 text-xs h-7"
+                  onClick={() => setModalCategoria({ tipo: "saida" })}>
+                  <Plus size={11} className="mr-1" /> Criar primeira categoria
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {categorias.filter(c => c.tipo === "saida").map(cat => {
+                  const lancsVinculados = lancamentos.filter(l => l.categoria_id === cat.id && l.status !== "cancelado");
+                  const totalCat = lancsVinculados.reduce((a, l) => a + l.valor, 0);
+                  const recorrentesAtivos = lancsVinculados.filter(l => l.recorrente).length;
+                  return (
+                    <div key={cat.id} className={cn(
+                      "bg-card border border-border/50 rounded-xl p-4 transition-all hover:shadow-sm",
+                      !cat.ativo && "opacity-50"
+                    )}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: cat.cor + "22" }}>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.cor }} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">{cat.nome}</p>
+                            {cat.descricao && <p className="text-[11px] text-muted-foreground">{cat.descricao}</p>}
+                          </div>
+                        </div>
+                        <button onClick={() => setModalCategoria(cat)}
+                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0">
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-red-600">{formatBRL(totalCat)}</p>
+                          <p className="text-[10px] text-muted-foreground">acumulado ({lancsVinculados.length} lanç.)</p>
+                        </div>
+                        {recorrentesAtivos > 0 && (
+                          <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                            ↻ {recorrentesAtivos} recorrente{recorrentesAtivos > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {!cat.ativo && (
+                          <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Inativa</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Categorias padrão do sistema */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-medium text-muted-foreground px-2">Categorias padrão do sistema</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.entries(CATEGORIAS).map(([key, info]) => (
+                <div key={key} className="bg-muted/30 border border-border/30 rounded-xl p-3 flex items-center gap-3">
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", info.tipo === "entrada" ? "bg-emerald-500" : "bg-red-500")} />
+                  <div>
+                    <p className="text-xs font-medium">{info.label}</p>
+                    <p className={cn("text-[10px]", info.cor)}>{info.tipo === "entrada" ? "Receita" : "Despesa"} · sistema</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </TabsContent>
 
@@ -1507,6 +1993,13 @@ export default function Financeiro() {
         <ModalColaborador
           colaborador={modalColaborador}
           onClose={() => setModalColaborador(false)}
+          onSaved={carregar}
+        />
+      )}
+      {modalCategoria !== false && (
+        <ModalCategoria
+          categoria={modalCategoria}
+          onClose={() => setModalCategoria(false)}
           onSaved={carregar}
         />
       )}
