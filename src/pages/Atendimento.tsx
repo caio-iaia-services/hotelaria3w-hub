@@ -449,9 +449,9 @@ function ChatView({
       const { error: errMsg } = await supabase.from("mensagens").insert({
         chat_id: chat.id,
         origem: "humano",
-        conteudo: texto.trim() || arquivo.name, // legenda separada da URL
+        conteudo: publicUrl,   // URL em conteudo (fallback p/ cache antigo do PostgREST)
         tipo,
-        media_url: publicUrl,                   // URL pública do arquivo
+        media_url: publicUrl, // URL no campo dedicado (quando schema cache estiver atual)
       });
       if (errMsg) throw errMsg;
 
