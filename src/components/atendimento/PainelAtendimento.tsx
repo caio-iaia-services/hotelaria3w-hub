@@ -77,18 +77,32 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
 
     if (chat.cliente_id) {
       carregarCliente(chat.cliente_id);
-    } else if (chat.contato?.telefone) {
-      // Tenta vincular automaticamente pelo telefone do contato
-      autoVincularPorTelefone(chat.id, chat.contato.telefone);
     } else {
-      setCliente(null);
+      tentarAutoVincular(chat.id, chat.contato?.telefone ?? null);
     }
   }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const autoVincularPorTelefone = async (chatId: string, telefone: string) => {
+  /** Orquestra as tentativas de auto-vinculação em cascata:
+   *  1. Pelo telefone do contato WhatsApp
+   *  2. Por CNPJ/CPF encontrado nas mensagens do cliente
+   */
+  const tentarAutoVincular = async (chatId: string, telefone: string | null) => {
+    setCliente(null);
+
+    // 1ª tentativa: telefone
+    if (telefone) {
+      const found = await autoVincularPorTelefone(chatId, telefone);
+      if (found) return;
+    }
+
+    // 2ª tentativa: CNPJ ou CPF mencionado nas mensagens
+    await autoVincularPorDocumentoNaMensagem(chatId);
+  };
+
+  const autoVincularPorTelefone = async (chatId: string, telefone: string): Promise<boolean> => {
     const tel = telefone.replace(/\D/g, "");
     const sufixo = tel.slice(-9);
-    if (!sufixo) { setCliente(null); return; }
+    if (!sufixo) return false;
 
     const { data } = await supabase
       .from("clientes")
@@ -97,12 +111,54 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
       .maybeSingle();
 
     if (data) {
-      // Atualiza o chat com o cliente encontrado (silenciosamente)
       await supabase.from("chats").update({ cliente_id: data.id }).eq("id", chatId);
       setCliente(data as unknown as Cliente);
-    } else {
-      setCliente(null);
+      return true;
     }
+    return false;
+  };
+
+  /** Varre as últimas mensagens do cliente em busca de CNPJ (14 dígitos) ou
+   *  CPF (11 dígitos) e tenta encontrar o cadastro correspondente. */
+  const autoVincularPorDocumentoNaMensagem = async (chatId: string): Promise<boolean> => {
+    const { data: msgs } = await supabase
+      .from("mensagens")
+      .select("conteudo")
+      .eq("chat_id", chatId)
+      .eq("origem", "cliente")
+      .order("criado_em", { ascending: false })
+      .limit(40);
+
+    if (!msgs?.length) return false;
+
+    // Regex: captura sequências que formam CNPJ ou CPF (com ou sem formatação)
+    const docRegex = /\b(\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\\/]?\d{4}[-\s]?\d{2}|\d{3}[\.\s]?\d{3}[\.\s]?\d{3}[-\s]?\d{2})\b/g;
+
+    const documentos = new Set<string>();
+    for (const msg of msgs) {
+      const conteudo = msg.conteudo ?? "";
+      for (const m of conteudo.matchAll(docRegex)) {
+        const doc = m[0].replace(/\D/g, "");
+        if (doc.length === 14 || doc.length === 11) documentos.add(doc);
+      }
+    }
+
+    for (const doc of documentos) {
+      const campo = doc.length === 14 ? "cnpj" : "cpf";
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento, status, tipo")
+        .ilike(campo, `%${doc}%`)
+        .maybeSingle();
+
+      if (data) {
+        await supabase.from("chats").update({ cliente_id: data.id }).eq("id", chatId);
+        setCliente(data as unknown as Cliente);
+        return true;
+      }
+    }
+
+    return false;
   };
 
   const carregarCliente = async (id: string) => {
