@@ -26,6 +26,7 @@ const pageTitles: Record<string, string> = {
   "/buscar": "Buscar Empresas",
   "/marketing": "Marketing",
   "/financeiro": "Financeiro",
+  "/rh": "RH",
   "/admin": "Administração",
   "/planejamento": "Planejamento",
   "/acoes-comerciais": "Ações Comerciais",

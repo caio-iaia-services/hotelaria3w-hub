@@ -102,9 +102,10 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
     {
       label: "GESTÃO",
       items: [
-        { title: "Marketing", url: "/marketing", icon: Mail, modulo: "marketing" },
-        { title: "Financeiro",   url: "/financeiro",   icon: DollarSign, modulo: "financeiro" },
-        { title: "Inteligência", url: "/inteligencia", icon: Brain,      modulo: "planejamento" },
+        { title: "Marketing",    url: "/marketing",    icon: Mail,      modulo: "marketing" },
+        { title: "Financeiro",   url: "/financeiro",   icon: DollarSign,modulo: "financeiro" },
+        { title: "RH",           url: "/rh",           icon: UserCog,   modulo: "rh" },
+        { title: "Inteligência", url: "/inteligencia", icon: Brain,     modulo: "planejamento" },
       ],
     },
     {

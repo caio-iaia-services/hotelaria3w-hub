@@ -23,6 +23,7 @@ import Atendimento from "./pages/Atendimento";
 import Marketing from "./pages/Marketing";
 import AdminMarketing from "./pages/AdminMarketing";
 import Financeiro from "./pages/Financeiro";
+import RH from "./pages/RH";
 import Inteligencia from "./pages/Inteligencia";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/marketing" element={<Protected><Marketing /></Protected>} />
               <Route path="/admin/marketing" element={<Protected><AdminMarketing /></Protected>} />
               <Route path="/financeiro" element={<Protected><Financeiro /></Protected>} />
+              <Route path="/rh" element={<Protected><RH /></Protected>} />
               <Route path="/inteligencia" element={<Protected><Inteligencia /></Protected>} />
               {[
                 "/crm", "/clientes/hotelaria", "/clientes/gastronomia",

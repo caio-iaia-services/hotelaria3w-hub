@@ -1211,7 +1211,6 @@ export default function Financeiro() {
 
   // Modais
   const [modalLancamento, setModalLancamento] = useState<Partial<Lancamento> | null | false>(false);
-  const [modalColaborador, setModalColaborador] = useState<Partial<Colaborador> | null | false>(false);
   const [modalCategoria, setModalCategoria] = useState<Partial<CategoriaFinanceira> | null | false>(false);
   const [editFornecedorId, setEditFornecedorId] = useState<string | null>(null);
   const [editComissao, setEditComissao] = useState("");
@@ -1369,7 +1368,6 @@ export default function Financeiro() {
               { key: "dashboard",    label: "Dashboard",     icon: BarChart3 },
               { key: "lancamentos",  label: "Lançamentos",   icon: List },
               { key: "categorias",   label: "Categorias",    icon: Filter },
-              { key: "comissoes",    label: "Comissões",     icon: Users },
               { key: "dre",          label: "DRE",           icon: BarChart3 },
               { key: "config",       label: "Configurações", icon: Settings },
             ].map(t => (
@@ -1775,145 +1773,8 @@ export default function Financeiro() {
           </div>
         </TabsContent>
 
-        {/* ── COMISSÕES ─────────────────────────────────────────────────── */}
-        <TabsContent value="comissoes" className="flex-1 overflow-auto p-6 space-y-6">
-          <h3 className="text-sm font-semibold">Comissões por Colaborador — Histórico</h3>
-
-          {colaboradores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <Users size={36} className="mb-3 opacity-30" />
-              <p className="text-sm">Nenhum colaborador cadastrado</p>
-              <Button size="sm" variant="outline" className="mt-3 text-xs" onClick={() => { setTab("config"); setModalColaborador({}); }}>
-                <Plus size={11} className="mr-1" /> Cadastrar colaborador
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {colaboradores.map(c => {
-                const colabLancs = lancamentos.filter(l => l.colaborador_id === c.id && l.status !== "cancelado");
-                // agrupa por mês
-                const porMes: Record<string, { receita: number; pago: number; pendente: number }> = {};
-                colabLancs.forEach(l => {
-                  const m = l.data_competencia.slice(0, 7);
-                  if (!porMes[m]) porMes[m] = { receita: 0, pago: 0, pendente: 0 };
-                  porMes[m].receita += l.valor;
-                  if (l.status === "pago")   porMes[m].pago     += l.valor;
-                  else                       porMes[m].pendente += l.valor;
-                });
-                const mesesOrdenados = Object.entries(porMes).sort((a, b) => b[0].localeCompare(a[0]));
-                const totalGeral = colabLancs.reduce((a, l) => a + l.valor, 0);
-
-                return (
-                  <div key={c.id} className="bg-card border border-border/50 rounded-xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-muted/20">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#164B6E]/10 flex items-center justify-center shrink-0">
-                          <Users size={13} className="text-[#164B6E]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold">{c.nome}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {c.cargo ?? c.tipo}
-                            {c.gestao ? ` · ${c.gestao}` : ""}
-                            {c.percentual_vendas_proprias > 0 ? ` · ${c.percentual_vendas_proprias}% vendas próprias` : ""}
-                            {c.percentual_todas_vendas > 0 ? ` · ${c.percentual_todas_vendas}% todas vendas` : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold">{formatBRL(totalGeral)}</p>
-                        <p className="text-[11px] text-muted-foreground">total acumulado</p>
-                      </div>
-                    </div>
-
-                    {mesesOrdenados.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-4">Nenhum lançamento vinculado</p>
-                    ) : (
-                      <div className="divide-y divide-border/20">
-                        {mesesOrdenados.map(([m, dados]) => (
-                          <div key={m} className="flex items-center justify-between px-4 py-2.5">
-                            <p className="text-xs font-medium">{mesAno(m + "-01")}</p>
-                            <div className="flex items-center gap-4">
-                              <span className="text-xs text-emerald-600 font-semibold">{formatBRL(dados.pago)} pago</span>
-                              {dados.pendente > 0 && <span className="text-xs text-amber-600">{formatBRL(dados.pendente)} pendente</span>}
-                              <span className="text-xs font-bold">{formatBRL(dados.receita)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
         {/* ── CONFIGURAÇÕES ─────────────────────────────────────────────── */}
         <TabsContent value="config" className="flex-1 overflow-auto p-6 space-y-8">
-
-          {/* Colaboradores */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-semibold">Colaboradores</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Gestores e colaboradores que recebem comissão</p>
-              </div>
-              <Button size="sm" className="h-7 text-xs gap-1 bg-[#164B6E] hover:bg-[#164B6E]/90"
-                onClick={() => setModalColaborador({})}>
-                <Plus size={11} /> Novo Colaborador
-              </Button>
-            </div>
-
-            {colaboradores.length === 0 ? (
-              <div className="border border-dashed border-border rounded-xl p-8 text-center text-muted-foreground">
-                <Users size={32} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Nenhum colaborador cadastrado</p>
-                <p className="text-xs mt-1">Cadastre gestores e colaboradores para calcular comissões automaticamente</p>
-              </div>
-            ) : (
-              <div className="border border-border/50 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 border-b border-border/50">
-                    <tr>
-                      {["Nome","Tipo","Gestão","% Próprias","% Todas","Fixo","Status","Ações"].map(h => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/30">
-                    {colaboradores.map(c => (
-                      <tr key={c.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-2.5">
-                          <p className="font-medium text-xs">{c.nome}</p>
-                          {c.cargo && <p className="text-[11px] text-muted-foreground">{c.cargo}</p>}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <Badge variant="outline" className="text-[10px]">{c.tipo}</Badge>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.gestao ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-xs font-mono">{c.percentual_vendas_proprias}%</td>
-                        <td className="px-4 py-2.5 text-xs font-mono">{c.percentual_todas_vendas}%</td>
-                        <td className="px-4 py-2.5 text-xs font-mono">{formatBRL(c.valor_fixo)}</td>
-                        <td className="px-4 py-2.5">
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium",
-                            c.ativo ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
-                            {c.ativo ? "Ativo" : "Inativo"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <button onClick={() => setModalColaborador(c)}
-                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                            <Edit2 size={12} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
 
           {/* Taxas por fornecedor */}
           <div>
@@ -2011,13 +1872,6 @@ export default function Financeiro() {
           colaboradores={colaboradores}
           fornecedores={fornecedores}
           onClose={() => setModalLancamento(false)}
-          onSaved={carregar}
-        />
-      )}
-      {modalColaborador !== false && (
-        <ModalColaborador
-          colaborador={modalColaborador}
-          onClose={() => setModalColaborador(false)}
           onSaved={carregar}
         />
       )}
