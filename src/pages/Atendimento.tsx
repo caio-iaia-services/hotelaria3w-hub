@@ -800,13 +800,16 @@ function ModalNovaConversa({
     }
     setEnviando(true);
 
-    // 1. Busca ou cria contato
+    // 1. Busca ou cria contato — compara pelos últimos 8 dígitos para não
+    // duplicar contato quando o formato difere (com/sem DDI 55 ou nono dígito,
+    // que o WhatsApp às vezes omite no JID)
     let contatoId: string;
-    const { data: contatoExistente } = await supabase
+    const { data: contatosSimilares } = await supabase
       .from("contatos_whatsapp")
-      .select("id")
-      .eq("telefone", telLimpo)
-      .maybeSingle();
+      .select("id, telefone")
+      .like("telefone", `%${telLimpo.slice(-8)}`)
+      .limit(1);
+    const contatoExistente = contatosSimilares?.[0] ?? null;
     if (contatoExistente) {
       contatoId = contatoExistente.id;
     } else {
