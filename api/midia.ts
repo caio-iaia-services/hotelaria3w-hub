@@ -8,6 +8,8 @@
  * endpoint descriptografa sob demanda.
  *
  * Uso: GET /api/midia?u=<url .enc>&k=<mediaKey base64>&t=<tipoMensagem>&m=<mimetype>
+ * Com &fmt=b64 devolve JSON { base64, mimetype } — usado pelo n8n
+ * (nó Converter Imagem/Áudio espera a propriedade base64).
  */
 
 export const config = { runtime: "edge" };
@@ -86,6 +88,26 @@ export default async function handler(req: Request): Promise<Response> {
 
     const aesKey = await crypto.subtle.importKey("raw", cipherKey, "AES-CBC", false, ["decrypt"]);
     const plain = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, aesKey, cipherText);
+
+    // fmt=b64: devolve JSON com base64 (consumido pelo n8n / Converter Imagem)
+    if (url.searchParams.get("fmt") === "b64") {
+      const bytes = new Uint8Array(plain);
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      return new Response(
+        JSON.stringify({ base64: btoa(bin), mimetype }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        }
+      );
+    }
 
     return new Response(plain, {
       status: 200,
