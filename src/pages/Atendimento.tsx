@@ -592,9 +592,8 @@ function ChatView({
             </Button>
           )}
 
-          {/* Botão de transferência — visível apenas nos canais G1, G4 e ADM */}
-          {chat.canal !== "IA" && (
-            <div ref={dropdownTransfRef} className="relative">
+          {/* Botão de transferência — disponível em todos os canais */}
+          <div ref={dropdownTransfRef} className="relative">
               <Button
                 size="sm"
                 variant="outline"
@@ -628,7 +627,6 @@ function ChatView({
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
 
@@ -1401,7 +1399,8 @@ export default function Atendimento() {
 
   const transferirConversa = async (chat: Chat, novoCanal: string) => {
     const updates: { canal: string; ia_ativa?: boolean } = { canal: novoCanal };
-    if (novoCanal === "IA") updates.ia_ativa = true;
+    // Voltando para a Recepção → IA reassume; indo para canal humano → IA pausa
+    updates.ia_ativa = novoCanal === "IA";
     const { error } = await supabase.from("chats").update(updates).eq("id", chat.id);
     if (error) { toast.error("Erro ao transferir conversa"); return; }
     const destino = LABEL_CANAL[novoCanal] ?? novoCanal;
