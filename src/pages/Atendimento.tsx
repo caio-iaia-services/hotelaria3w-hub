@@ -95,12 +95,26 @@ function formatDataHora(iso: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+// Resolve a URL exibível da mídia:
+// - URL pública (Supabase Storage, enviada pelo hub) → usa direto
+// - URL criptografada do WhatsApp (mmg.whatsapp.net/...enc) → inútil no browser
+// - ID da mensagem WhatsApp (recebida do cliente) → busca via /api/midia
+function resolverMediaUrl(msg: Mensagem): string {
+  const raw = msg.media_url || msg.conteudo || "";
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) {
+    // URL criptografada do WhatsApp não abre no browser — sem como recuperar sem o ID
+    return raw;
+  }
+  // Não é URL → é o ID da mensagem no WhatsApp; o endpoint busca e descriptografa
+  return `/api/midia?id=${encodeURIComponent(raw)}`;
+}
+
 function BolhaMsg({ msg }: { msg: Mensagem }) {
   const isCliente = msg.origem === "cliente";
   const isIA = msg.origem === "ia";
 
-  // URL da mídia: prefere media_url (campo separado), depois conteudo
-  const mediaUrl = msg.media_url || msg.conteudo;
+  const mediaUrl = resolverMediaUrl(msg);
 
   const isMedia = ["imagem", "documento", "audio", "video", "sticker"].includes(msg.tipo);
 
@@ -175,7 +189,9 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
             </div>
             <div className="min-w-0">
               <span className="text-xs font-medium underline underline-offset-2 truncate max-w-[160px] block">
-                {decodeURIComponent(mediaUrl.split("/").pop()?.split("?")[0] ?? "documento")}
+                {msg.media_url && !/^https?:\/\//i.test(msg.media_url)
+                  ? (msg.conteudo || "documento")
+                  : decodeURIComponent(mediaUrl.split("/").pop()?.split("?")[0] ?? "documento")}
               </span>
               {msg.conteudo && msg.media_url && (
                 <span className="text-[10px] opacity-70 truncate block">{msg.conteudo}</span>
