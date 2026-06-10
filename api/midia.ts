@@ -24,8 +24,15 @@ const HKDF_INFO: Record<string, string> = {
   documentWithCaptionMessage: "WhatsApp Document Keys",
 };
 
-function b64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+// Aceita mediaKey como base64 OU lista de bytes "17,42,..." (Evolution
+// serializa o Buffer como objeto; o n8n converte para lista de bytes)
+function keyToBytes(k: string): Uint8Array {
+  if (/^[\d,\s]+$/.test(k)) {
+    return new Uint8Array(k.split(",").map(n => parseInt(n.trim(), 10)));
+  }
+  let b64 = k.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "");
+  while (b64.length % 4 !== 0) b64 += "=";
+  const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
@@ -65,7 +72,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     // 2. Deriva as chaves: HKDF-SHA256(mediaKey, salt=vazio, info=por tipo) → 112 bytes
     //    iv = bytes 0..16, cipherKey = bytes 16..48 (o restante é macKey/refKey)
-    const mediaKey = b64ToBytes(mediaKeyB64);
+    const mediaKey = keyToBytes(mediaKeyB64);
     const info = HKDF_INFO[tipo] ?? "WhatsApp Document Keys";
     const hkdfKey = await crypto.subtle.importKey("raw", mediaKey, "HKDF", false, ["deriveBits"]);
     const derived = new Uint8Array(
