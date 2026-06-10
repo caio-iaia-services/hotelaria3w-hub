@@ -86,6 +86,15 @@ function getStatusLabel(status: string) {
   return labels[status] || status;
 }
 
+const STATUS_OPCOES = [
+  { value: "rascunho",  label: "Rascunho",  dot: "bg-slate-400" },
+  { value: "enviado",   label: "Enviado",   dot: "bg-blue-500" },
+  { value: "aprovado",  label: "Aprovado",  dot: "bg-emerald-500" },
+  { value: "rejeitado", label: "Rejeitado", dot: "bg-red-500" },
+  { value: "expirado",  label: "Expirado",  dot: "bg-amber-500" },
+  { value: "cancelado", label: "Cancelado", dot: "bg-zinc-500" },
+];
+
 function parseNum(value: any): number {
   if (value === null || value === undefined) return 0;
   if (typeof value === "number") return isNaN(value) ? 0 : value;
@@ -233,6 +242,25 @@ export default function Orcamentos() {
       cancelado: counts[6].count || 0,
     });
   }, []);
+
+  const atualizarStatus = async (orcamento: Orcamento, novoStatus: string) => {
+    if (orcamento.status === novoStatus) return;
+    const statusAnterior = orcamento.status;
+    // Atualização otimista
+    setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: novoStatus } : o));
+    const updates: Record<string, unknown> = { status: novoStatus };
+    if (novoStatus === "enviado" && !orcamento.enviado_em) {
+      updates.enviado_em = new Date().toISOString();
+    }
+    const { error } = await supabase.from("orcamentos").update(updates).eq("id", orcamento.id);
+    if (error) {
+      setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: statusAnterior } : o));
+      toast.error("Erro ao atualizar status", { description: error.message });
+      return;
+    }
+    toast.success(`Orçamento ${orcamento.numero} → ${getStatusLabel(novoStatus)}`);
+    buscarContadores();
+  };
 
   const buscarOrcamentos = useCallback(async () => {
     setLoading(true);
@@ -1401,7 +1429,31 @@ export default function Orcamentos() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(orcamento.status)}>{getStatusLabel(orcamento.status)}</Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="focus:outline-none" title="Alterar status">
+                          <Badge
+                            variant={getStatusVariant(orcamento.status)}
+                            className="cursor-pointer hover:opacity-80 transition-opacity gap-1 pr-1.5"
+                          >
+                            {getStatusLabel(orcamento.status)}
+                            <ChevronDown className="w-3 h-3" />
+                          </Badge>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-40">
+                        {STATUS_OPCOES.map(opt => (
+                          <DropdownMenuItem
+                            key={opt.value}
+                            onClick={() => atualizarStatus(orcamento, opt.value)}
+                            className={orcamento.status === opt.value ? "bg-muted font-medium" : ""}
+                          >
+                            <span className={`w-2 h-2 rounded-full mr-2 shrink-0 ${opt.dot}`} />
+                            {opt.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
