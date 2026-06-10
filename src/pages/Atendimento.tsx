@@ -97,17 +97,24 @@ function formatDataHora(iso: string) {
 
 // Resolve a URL exibível da mídia:
 // - URL pública (Supabase Storage, enviada pelo hub) → usa direto
-// - URL criptografada do WhatsApp (mmg.whatsapp.net/...enc) → inútil no browser
-// - ID da mensagem WhatsApp (recebida do cliente) → busca via /api/midia
+// - JSON {u,k,m,t} salvo pelo n8n (mídia recebida) → /api/midia descriptografa
+//   (URLs do WhatsApp são criptografadas; a Evolution não as recupera depois)
 function resolverMediaUrl(msg: Mensagem): string {
   const raw = msg.media_url || msg.conteudo || "";
   if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) {
-    // URL criptografada do WhatsApp não abre no browser — sem como recuperar sem o ID
-    return raw;
+  if (raw.startsWith("{")) {
+    try {
+      const info = JSON.parse(raw) as { u?: string; k?: string; m?: string; t?: string };
+      if (info.u && info.k) {
+        const params = new URLSearchParams({ u: info.u, k: info.k });
+        if (info.m) params.set("m", info.m);
+        if (info.t) params.set("t", info.t);
+        return `/api/midia?${params.toString()}`;
+      }
+    } catch { /* cai no fallback abaixo */ }
   }
-  // Não é URL → é o ID da mensagem no WhatsApp; o endpoint busca e descriptografa
-  return `/api/midia?id=${encodeURIComponent(raw)}`;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return "";
 }
 
 function BolhaMsg({ msg }: { msg: Mensagem }) {
@@ -119,6 +126,14 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
   const isMedia = ["imagem", "documento", "audio", "video", "sticker"].includes(msg.tipo);
 
   const renderConteudo = () => {
+    // Mídia sem URL recuperável (ex.: mensagens antigas sem mediaKey salvo)
+    if (isMedia && !mediaUrl) {
+      return (
+        <span className="text-xs italic opacity-70 px-3 py-2 block">
+          [{msg.tipo} indisponível]{msg.conteudo && msg.conteudo !== "[Mídia]" ? ` ${msg.conteudo}` : ""}
+        </span>
+      );
+    }
     switch (msg.tipo) {
       case "imagem":
       case "sticker":

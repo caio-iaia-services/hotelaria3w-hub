@@ -1,75 +1,96 @@
 /**
- * Busca mídia recebida do WhatsApp diretamente da Evolution API.
- * As URLs de mídia do WhatsApp (mmg.whatsapp.net/...enc) são criptografadas
- * e inúteis no browser — a Evolution descriptografa via getBase64FromMediaMessage.
+ * Descriptografa e serve mídia recebida do WhatsApp.
  *
- * Uso: GET /api/midia?id=<messageKeyId>
+ * As URLs de mídia do WhatsApp (mmg.whatsapp.net/...enc) são criptografadas
+ * (AES-256-CBC com chave derivada via HKDF do mediaKey). A Evolution API não
+ * consegue recuperá-las depois (armazena message=null para mensagens LID),
+ * então o n8n salva url+mediaKey+mimetype no momento do webhook e este
+ * endpoint descriptografa sob demanda.
+ *
+ * Uso: GET /api/midia?u=<url .enc>&k=<mediaKey base64>&t=<tipoMensagem>&m=<mimetype>
  */
 
 export const config = { runtime: "edge" };
 
-const EVOLUTION_BASE = "https://n8n-evolution-api.3sq8ua.easypanel.host";
-const EVOLUTION_INSTANCE = "3W-Atendimento";
-const EVOLUTION_APIKEY = "429683C4C977415CAAFCCE10F7D57E11";
+// Info strings do HKDF conforme protocolo WhatsApp (por tipo de mídia)
+const HKDF_INFO: Record<string, string> = {
+  imageMessage: "WhatsApp Image Keys",
+  stickerMessage: "WhatsApp Image Keys",
+  videoMessage: "WhatsApp Video Keys",
+  audioMessage: "WhatsApp Audio Keys",
+  documentMessage: "WhatsApp Document Keys",
+  documentWithCaptionMessage: "WhatsApp Document Keys",
+};
+
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const messageId = url.searchParams.get("id");
+  const encUrl = url.searchParams.get("u");
+  const mediaKeyB64 = url.searchParams.get("k");
+  const tipo = url.searchParams.get("t") ?? "imageMessage";
+  const mimetype = url.searchParams.get("m") || "application/octet-stream";
 
-  if (!messageId) {
-    return new Response(JSON.stringify({ error: "Parâmetro 'id' obrigatório" }), {
+  if (!encUrl || !mediaKeyB64) {
+    return new Response(
+      JSON.stringify({ error: "Parâmetros 'u' (url) e 'k' (mediaKey) obrigatórios" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  if (!/^https:\/\/[^/]*\.whatsapp\.net\//i.test(encUrl)) {
+    return new Response(JSON.stringify({ error: "URL não permitida" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
 
   try {
-    const evoRes = await fetch(
-      `${EVOLUTION_BASE}/chat/getBase64FromMediaMessage/${EVOLUTION_INSTANCE}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: EVOLUTION_APIKEY,
-        },
-        body: JSON.stringify({
-          message: { key: { id: messageId } },
-          convertToMp4: false,
-        }),
-      }
-    );
-
-    if (!evoRes.ok) {
-      const text = await evoRes.text();
-      console.error(`[midia] Evolution ${evoRes.status}: ${text}`);
+    // 1. Baixa o arquivo criptografado
+    const encRes = await fetch(encUrl);
+    if (!encRes.ok) {
       return new Response(
-        JSON.stringify({ error: "Mídia não encontrada", detail: text }),
+        JSON.stringify({ error: `Falha ao baixar mídia (${encRes.status}) — pode ter expirado no WhatsApp` }),
         { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
+    const encData = new Uint8Array(await encRes.arrayBuffer());
 
-    const data = await evoRes.json();
-    const base64: string = data.base64 ?? "";
-    const mimetype: string = data.mimetype || "application/octet-stream";
-    const fileName: string = data.fileName || "arquivo";
+    // 2. Deriva as chaves: HKDF-SHA256(mediaKey, salt=vazio, info=por tipo) → 112 bytes
+    //    iv = bytes 0..16, cipherKey = bytes 16..48 (o restante é macKey/refKey)
+    const mediaKey = b64ToBytes(mediaKeyB64);
+    const info = HKDF_INFO[tipo] ?? "WhatsApp Document Keys";
+    const hkdfKey = await crypto.subtle.importKey("raw", mediaKey, "HKDF", false, ["deriveBits"]);
+    const derived = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        {
+          name: "HKDF",
+          hash: "SHA-256",
+          salt: new Uint8Array(32), // protocolo usa salt de zeros
+          info: new TextEncoder().encode(info),
+        },
+        hkdfKey,
+        112 * 8
+      )
+    );
+    const iv = derived.slice(0, 16);
+    const cipherKey = derived.slice(16, 48);
 
-    if (!base64) {
-      return new Response(JSON.stringify({ error: "Mídia vazia" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // 3. Os últimos 10 bytes do arquivo são o MAC — remove antes de descriptografar
+    const cipherText = encData.slice(0, encData.length - 10);
 
-    // base64 → bytes
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const aesKey = await crypto.subtle.importKey("raw", cipherKey, "AES-CBC", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, aesKey, cipherText);
 
-    return new Response(bytes, {
+    return new Response(plain, {
       status: 200,
       headers: {
         "Content-Type": mimetype,
-        "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
         // Mídia do WhatsApp é imutável — cache agressivo
         "Cache-Control": "public, max-age=31536000, immutable",
       },
