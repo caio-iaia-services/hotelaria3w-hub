@@ -86,6 +86,9 @@ function getStatusLabel(status: string) {
   return labels[status] || status;
 }
 
+// Marcador substituído pela URL pública do orçamento no momento do envio
+const LINK_PLACEHOLDER = "{{LINK_ORCAMENTO}}";
+
 const STATUS_OPCOES = [
   { value: "rascunho",  label: "Rascunho",  dot: "bg-slate-400" },
   { value: "enviado",   label: "Enviado",   dot: "bg-blue-500" },
@@ -793,7 +796,7 @@ export default function Orcamentos() {
   }
 
   function gerarMensagemPadrao(orcamento: Orcamento) {
-    return `Prezado(a) ${orcamento.cliente_razao_social || orcamento.cliente_nome},\n\nSegue o orçamento ${orcamento.numero}.\n\nDETALHES DO ORÇAMENTO:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nFornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || "-"}\nValor Total: ${formatCurrency(orcamento.total)}\nPrazo de Entrega: ${orcamento.prazo_entrega || "-"}\nValidade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : "-"}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nEstamos à disposição para quaisquer esclarecimentos e negociações.\n\nAtenciosamente,\n\nEquipe Comercial\n3W Hotelaria - Hospitalidade com Excelência\nwww.3whotelaria.com.br\n(11) 5197-5779`;
+    return `Prezado(a) ${orcamento.cliente_razao_social || orcamento.cliente_nome},\n\nSegue o orçamento ${orcamento.numero}.\n\nDETALHES DO ORÇAMENTO:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nFornecedor: ${orcamento.fornecedor_nome || orcamento.operacao || "-"}\nValor Total: ${formatCurrency(orcamento.total)}\nPrazo de Entrega: ${orcamento.prazo_entrega || "-"}\nValidade: ${orcamento.data_validade ? formatDate(orcamento.data_validade) : "-"}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nOrçamento em anexo. Clique no link para visualizar:\n${LINK_PLACEHOLDER}\n\nEstamos à disposição para quaisquer esclarecimentos e negociações.\n\nAtenciosamente,\n\nEquipe Comercial\n3W Hotelaria - Hospitalidade com Excelência\nwww.3whotelaria.com.br\n(11) 5197-5779`;
   }
 
   function restaurarMensagemPadrao() {
@@ -836,6 +839,32 @@ export default function Orcamentos() {
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
       if (!pdfBase64) throw new Error("Falha ao gerar o PDF — tente fechar e reabrir o orçamento antes de enviar.");
 
+      // Hospeda o HTML do orçamento e gera o link público de visualização
+      let mensagemFinal = emailMensagem;
+      try {
+        const html = await capturarHtmlOrcamento();
+        if (html) {
+          const path = `${orcamentoEnviar.id}.html`;
+          const { error: upErr } = await supabase.storage
+            .from("orcamentos-html")
+            .upload(path, new Blob([html], { type: "text/html" }), {
+              upsert: true,
+              contentType: "text/html",
+            });
+          if (upErr) throw upErr;
+          const { data: urlData } = supabase.storage.from("orcamentos-html").getPublicUrl(path);
+          const link = urlData.publicUrl;
+          mensagemFinal = emailMensagem.includes(LINK_PLACEHOLDER)
+            ? emailMensagem.replaceAll(LINK_PLACEHOLDER, link)
+            : `${emailMensagem}\n\nVisualizar orçamento: ${link}`;
+        }
+      } catch (linkErr) {
+        console.error("[orcamento] falha ao gerar link de visualização:", linkErr);
+        // Sem link: remove o placeholder para não vazar o marcador no e-mail
+        mensagemFinal = emailMensagem.replaceAll(LINK_PLACEHOLDER, "").replace(/\n{3,}/g, "\n\n");
+        toast.warning("Link de visualização indisponível — e-mail seguirá só com o PDF anexo.");
+      }
+
       toast.info("Enviando e-mail...");
       const response = await fetch("/api/enviar-email-orcamento", {
         method: "POST",
@@ -845,7 +874,7 @@ export default function Orcamentos() {
           numero,
           destinatarios: emailDestinatarios,
           assunto: emailAssunto,
-          mensagem: emailMensagem,
+          mensagem: mensagemFinal,
           pdf_base64: pdfBase64,
           filename: `Orcamento_${numero}.pdf`,
           from_email: fromEmail,
@@ -1668,7 +1697,8 @@ export default function Orcamentos() {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                O PDF do orçamento será anexado automaticamente ao e-mail.
+                O PDF é anexado automaticamente. O marcador <code className="font-mono">{LINK_PLACEHOLDER}</code> será
+                substituído pelo link de visualização do orçamento no envio.
               </p>
             </div>
           </div>
