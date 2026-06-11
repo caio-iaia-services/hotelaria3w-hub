@@ -419,6 +419,21 @@ function ChatView({
   };
 
   // ── Drag-and-drop ────────────────────────────────────────────────────────────
+  // Impede o navegador de abrir o arquivo quando solto FORA da zona de drop
+  // (sem isso, soltar no header/painel/lista faz o browser navegar para o arquivo,
+  // dando a falsa impressão de que o drag-and-drop não funciona)
+  useEffect(() => {
+    const prevenir = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", prevenir);
+    window.addEventListener("drop", prevenir);
+    return () => {
+      window.removeEventListener("dragover", prevenir);
+      window.removeEventListener("drop", prevenir);
+    };
+  }, []);
+
   const processarArquivo = (f: File) => {
     setArquivo(f);
     if (f.type.startsWith("image/")) {
@@ -428,19 +443,26 @@ function ChatView({
     }
   };
 
+  // Só ativa a zona de drop para arquivos vindos de fora (não texto/seleção)
+  const ehArrastoDeArquivo = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer?.types ?? []).includes("Files");
+
   const onDragEnter = (e: React.DragEvent) => {
+    if (!ehArrastoDeArquivo(e)) return;
     e.preventDefault();
     dragCounterRef.current += 1;
     if (dragCounterRef.current === 1) setIsDragging(true);
   };
 
   const onDragLeave = (e: React.DragEvent) => {
+    if (!ehArrastoDeArquivo(e)) return;
     e.preventDefault();
     dragCounterRef.current -= 1;
     if (dragCounterRef.current === 0) setIsDragging(false);
   };
 
   const onDragOver = (e: React.DragEvent) => {
+    if (!ehArrastoDeArquivo(e)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
   };
@@ -449,9 +471,12 @@ function ChatView({
     e.preventDefault();
     dragCounterRef.current = 0;
     setIsDragging(false);
-    if (chat.ia_ativa) return; // IA ativa — não aceita arquivos
     const f = e.dataTransfer.files[0];
     if (!f) return;
+    if (chat.ia_ativa) {
+      toast.warning("Pause a IA para enviar arquivos neste atendimento");
+      return;
+    }
     processarArquivo(f);
   };
 
@@ -537,13 +562,27 @@ function ChatView({
       {/* Overlay de drag-and-drop */}
       {isDragging && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
-          <div className="absolute inset-2 rounded-2xl border-2 border-dashed border-[#164B6E] bg-[#164B6E]/8 transition-all" />
-          <div className="relative flex flex-col items-center gap-2 text-[#164B6E]">
+          <div className={cn(
+            "absolute inset-2 rounded-2xl border-2 border-dashed transition-all",
+            chat.ia_ativa ? "border-amber-500 bg-amber-500/8" : "border-[#164B6E] bg-[#164B6E]/8"
+          )} />
+          <div className={cn("relative flex flex-col items-center gap-2", chat.ia_ativa ? "text-amber-600" : "text-[#164B6E]")}>
             <div className="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center">
-              <Image size={26} className="text-[#164B6E]" />
+              {chat.ia_ativa
+                ? <Pause size={26} className="text-amber-600" />
+                : <Image size={26} className="text-[#164B6E]" />}
             </div>
-            <p className="text-sm font-bold">Solte para enviar</p>
-            <p className="text-xs text-[#164B6E]/70">Imagens, PDF, documentos</p>
+            {chat.ia_ativa ? (
+              <>
+                <p className="text-sm font-bold">Pause a IA para enviar</p>
+                <p className="text-xs text-amber-600/70">Assuma o atendimento antes de anexar arquivos</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold">Solte para enviar</p>
+                <p className="text-xs text-[#164B6E]/70">Imagens, PDF, documentos</p>
+              </>
+            )}
           </div>
         </div>
       )}
