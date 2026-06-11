@@ -844,7 +844,8 @@ export default function Orcamentos() {
       try {
         const html = await capturarHtmlOrcamento();
         if (html) {
-          const path = `${orcamentoEnviar.id}.html`;
+          const slug = String(numero).replace(/[^a-zA-Z0-9_-]/g, "");
+          const path = `${slug}.html`;
           const { error: upErr } = await supabase.storage
             .from("orcamentos-html")
             .upload(path, new Blob([html], { type: "text/html" }), {
@@ -852,8 +853,8 @@ export default function Orcamentos() {
               contentType: "text/html",
             });
           if (upErr) throw upErr;
-          const { data: urlData } = supabase.storage.from("orcamentos-html").getPublicUrl(path);
-          const link = urlData.publicUrl;
+          // Link curto via rewrite do Vercel: /orcamento/<numero>
+          const link = `${window.location.origin}/orcamento/${slug}`;
           mensagemFinal = emailMensagem.includes(LINK_PLACEHOLDER)
             ? emailMensagem.replaceAll(LINK_PLACEHOLDER, link)
             : `${emailMensagem}\n\nVisualizar orçamento: ${link}`;
