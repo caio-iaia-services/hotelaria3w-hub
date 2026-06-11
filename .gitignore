@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Migração Multi360 — segredos e progresso local
+scripts/migrar-multi360/.env
+scripts/migrar-multi360/.progress.json
