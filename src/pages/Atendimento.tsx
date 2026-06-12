@@ -47,6 +47,7 @@ interface Chat {
   notas_gestor?: string | null;
   prioridade?: string | null;
   proxima_acao?: string | null;
+  tags?: string[] | null;
   contato?: Contato;
   ultima_mensagem?: string;
   nao_lidas?: number;
@@ -476,6 +477,32 @@ function ChatView({
   useEffect(() => { carregarRapidas(); }, [carregarRapidas]);
   const [modalRapidas, setModalRapidas] = useState(false);
 
+  // ── Tags da conversa ─────────────────────────────────────────────────────────
+  const [tagsDisponiveis, setTagsDisponiveis] = useState<TagAtendimento[]>([]);
+  const [tagsChat, setTagsChat] = useState<string[]>(chat.tags ?? []);
+  const [mostrarTags, setMostrarTags] = useState(false);
+  const tagsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setTagsChat(chat.tags ?? []); }, [chat.id, chat.tags]);
+  useEffect(() => {
+    supabase.from("tags_atendimento").select("id, nome, cor").order("nome")
+      .then(({ data }) => setTagsDisponiveis((data as TagAtendimento[]) ?? []));
+  }, []);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (tagsRef.current && !tagsRef.current.contains(e.target as Node)) setMostrarTags(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggleTag = async (tagId: string) => {
+    const novas = tagsChat.includes(tagId) ? tagsChat.filter(t => t !== tagId) : [...tagsChat, tagId];
+    setTagsChat(novas);
+    const { error } = await supabase.from("chats").update({ tags: novas }).eq("id", chat.id);
+    if (error) { toast.error("Erro ao atualizar tags"); setTagsChat(tagsChat); }
+  };
+
   const rapidasFiltradas = rapidas.filter(r => {
     const q = buscaRapida.trim().toLowerCase();
     if (!q) return true;
@@ -787,9 +814,60 @@ function ChatView({
           <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
             <Phone size={15} className="text-slate-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold leading-tight">{nomeContato}</p>
-            <p className="text-[11px] text-muted-foreground">{chat.contato?.telefone}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <span className="text-[11px] text-muted-foreground">{chat.contato?.telefone}</span>
+              {/* Tags da conversa */}
+              {tagsChat.map(tid => {
+                const tag = tagsDisponiveis.find(t => t.id === tid);
+                if (!tag) return null;
+                return (
+                  <span
+                    key={tid}
+                    className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white"
+                    style={{ backgroundColor: tag.cor }}
+                  >
+                    {tag.nome}
+                    <button onClick={() => toggleTag(tid)} className="hover:opacity-70" title="Remover">
+                      <X size={9} />
+                    </button>
+                  </span>
+                );
+              })}
+              {/* Botão adicionar tag */}
+              <div ref={tagsRef} className="relative">
+                <button
+                  onClick={() => setMostrarTags(v => !v)}
+                  className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-[#164B6E] hover:text-[#164B6E] transition-colors"
+                  title="Adicionar tag"
+                >
+                  <TagIcon size={9} /> Tag
+                </button>
+                {mostrarTags && (
+                  <div className="absolute left-0 top-full mt-1 w-44 bg-popover border border-border rounded-lg shadow-xl z-40 overflow-hidden">
+                    <div className="max-h-56 overflow-y-auto py-1">
+                      {tagsDisponiveis.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground text-center py-3 px-2">Nenhuma tag cadastrada</p>
+                      ) : tagsDisponiveis.map(tag => {
+                        const ativa = tagsChat.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => toggleTag(tag.id)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-muted transition-colors"
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.cor }} />
+                            <span className="flex-1 text-left truncate">{tag.nome}</span>
+                            {ativa && <Check size={12} className="text-[#164B6E] shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1534,7 +1612,7 @@ export default function Atendimento() {
       .from("chats")
       .select(`
         id, contato_id, canal, status, ia_ativa, ultima_mensagem_em,
-        cliente_id, interesse_cliente, notas_gestor, prioridade, proxima_acao,
+        cliente_id, interesse_cliente, notas_gestor, prioridade, proxima_acao, tags,
         contato:contatos_whatsapp(id, telefone, nome, tipo, canal_atribuido)
       `)
       .in("canal", canaisVisiveis.map(c => c.key))
