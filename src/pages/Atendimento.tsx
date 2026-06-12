@@ -7,7 +7,7 @@ import {
   User, Users, Phone, Search, ChevronRight, ChevronLeft,
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
-  Paperclip, FileText, Image,
+  Paperclip, FileText, Image, Zap, Tag as TagIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,20 @@ interface ClienteBusca {
   razao_social: string;
   cnpj: string;
   telefone: string | null;
+}
+
+interface MensagemRapida {
+  id: string;
+  atalho: string;
+  titulo: string;
+  conteudo: string;
+  canal: string | null;
+}
+
+interface TagAtendimento {
+  id: string;
+  nome: string;
+  cor: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -268,6 +282,146 @@ const LABEL_CANAL: Record<string, string> = {
   ADM: "Celso (Adm)",
 };
 
+// ─── ModalMensagensRapidas (CRUD) ──────────────────────────────────────────────
+function ModalMensagensRapidas({ isOpen, onClose, onSaved }: { isOpen: boolean; onClose: () => void; onSaved: () => void }) {
+  const [lista, setLista] = useState<MensagemRapida[]>([]);
+  const [editando, setEditando] = useState<Partial<MensagemRapida> | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const { data } = await supabase
+      .from("mensagens_rapidas")
+      .select("id, atalho, titulo, conteudo, canal")
+      .order("titulo");
+    setLista((data as MensagemRapida[]) ?? []);
+  }, []);
+  useEffect(() => { if (isOpen) carregar(); }, [isOpen, carregar]);
+
+  const salvar = async () => {
+    if (!editando?.titulo?.trim() || !editando?.conteudo?.trim()) {
+      toast.error("Preencha título e conteúdo");
+      return;
+    }
+    setSalvando(true);
+    const payload = {
+      atalho: editando.atalho?.trim() || "",
+      titulo: editando.titulo.trim(),
+      conteudo: editando.conteudo.trim(),
+      canal: editando.canal || null,
+      ativo: true,
+    };
+    const { error } = editando.id
+      ? await supabase.from("mensagens_rapidas").update(payload).eq("id", editando.id)
+      : await supabase.from("mensagens_rapidas").insert(payload);
+    setSalvando(false);
+    if (error) { toast.error("Erro ao salvar", { description: error.message }); return; }
+    toast.success("Mensagem rápida salva");
+    setEditando(null);
+    carregar();
+    onSaved();
+  };
+
+  const excluir = async (id: string) => {
+    const { error } = await supabase.from("mensagens_rapidas").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    carregar();
+    onSaved();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-lg mx-4 z-10 overflow-hidden flex flex-col" style={{ maxHeight: "85vh" }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#164B6E] flex items-center justify-center">
+              <Zap size={15} className="text-white" />
+            </div>
+            <h2 className="font-semibold text-sm">Mensagens Rápidas</h2>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 overflow-y-auto space-y-4">
+          {/* Formulário */}
+          <div className="space-y-2 bg-muted/40 rounded-lg p-3 border border-border/50">
+            <div className="flex gap-2">
+              <Input
+                value={editando?.titulo ?? ""}
+                onChange={e => setEditando(p => ({ ...p, titulo: e.target.value }))}
+                placeholder="Título (ex: Saudação)"
+                className="h-8 text-sm flex-1"
+              />
+              <Input
+                value={editando?.atalho ?? ""}
+                onChange={e => setEditando(p => ({ ...p, atalho: e.target.value }))}
+                placeholder="/atalho"
+                className="h-8 text-sm w-28 font-mono"
+              />
+            </div>
+            <textarea
+              value={editando?.conteudo ?? ""}
+              onChange={e => setEditando(p => ({ ...p, conteudo: e.target.value }))}
+              placeholder="Conteúdo da mensagem..."
+              rows={3}
+              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <div className="flex items-center gap-2">
+              <select
+                value={editando?.canal ?? ""}
+                onChange={e => setEditando(p => ({ ...p, canal: e.target.value || null }))}
+                className="h-8 text-xs rounded-md border border-input bg-background px-2 flex-1"
+              >
+                <option value="">Global (todos os canais)</option>
+                <option value="G1">Fabiano (G1)</option>
+                <option value="G4">Alex (G4)</option>
+                <option value="ADM">Celso (Adm)</option>
+                <option value="FORNECEDORES">Fornecedores</option>
+              </select>
+              {editando?.id && (
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setEditando(null)}>Cancelar</Button>
+              )}
+              <Button size="sm" className="h-8 text-xs bg-[#164B6E] hover:bg-[#164B6E]/90" onClick={salvar} disabled={salvando}>
+                {editando?.id ? "Salvar" : "Adicionar"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Lista */}
+          <div className="space-y-1.5">
+            {lista.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhuma mensagem rápida cadastrada.</p>
+            ) : lista.map(r => (
+              <div key={r.id} className="flex items-start gap-2 p-2.5 rounded-lg border border-border/50 hover:bg-muted/40 group">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">{r.titulo}</span>
+                    {r.atalho && <span className="text-[10px] font-mono text-[#164B6E] bg-[#164B6E]/10 px-1 rounded">{r.atalho}</span>}
+                    <span className="text-[9px] text-muted-foreground">{r.canal ? LABEL_CANAL[r.canal] ?? r.canal : "global"}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{r.conteudo}</p>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => setEditando(r)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted text-muted-foreground" title="Editar">
+                    <FileText size={12} />
+                  </button>
+                  <button onClick={() => excluir(r.id)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-red-50 hover:text-red-500 text-muted-foreground" title="Excluir">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ChatView ─────────────────────────────────────────────────────────────────
 function ChatView({
   chat, onToggleIA, onTransferir, onMarcarLidas, onVoltar,
@@ -286,9 +440,13 @@ function ChatView({
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [rapidas, setRapidas] = useState<MensagemRapida[]>([]);
+  const [mostrarRapidas, setMostrarRapidas] = useState(false);
+  const [buscaRapida, setBuscaRapida] = useState("");
   const dragCounterRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const dropdownTransfRef = useRef<HTMLDivElement>(null);
+  const rapidasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fecha o dropdown de transferência ao clicar fora
@@ -297,10 +455,38 @@ function ChatView({
       if (dropdownTransfRef.current && !dropdownTransfRef.current.contains(e.target as Node)) {
         setTransferDropdownAberto(false);
       }
+      if (rapidasRef.current && !rapidasRef.current.contains(e.target as Node)) {
+        setMostrarRapidas(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Carrega mensagens rápidas do canal (e as globais)
+  const carregarRapidas = useCallback(async () => {
+    const { data } = await supabase
+      .from("mensagens_rapidas")
+      .select("id, atalho, titulo, conteudo, canal")
+      .eq("ativo", true)
+      .or(`canal.is.null,canal.eq.${chat.canal}`)
+      .order("titulo");
+    setRapidas((data as MensagemRapida[]) ?? []);
+  }, [chat.canal]);
+  useEffect(() => { carregarRapidas(); }, [carregarRapidas]);
+  const [modalRapidas, setModalRapidas] = useState(false);
+
+  const rapidasFiltradas = rapidas.filter(r => {
+    const q = buscaRapida.trim().toLowerCase();
+    if (!q) return true;
+    return r.titulo.toLowerCase().includes(q) || r.atalho.toLowerCase().includes(q) || r.conteudo.toLowerCase().includes(q);
+  });
+
+  const inserirRapida = (r: MensagemRapida) => {
+    setTexto(t => (t ? t + (t.endsWith(" ") ? "" : " ") : "") + r.conteudo);
+    setMostrarRapidas(false);
+    setBuscaRapida("");
+  };
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -715,6 +901,57 @@ function ChatView({
 
             {/* Linha de input + botões */}
             <div className="flex gap-2 items-center">
+              {/* Mensagens rápidas */}
+              <div ref={rapidasRef} className="relative shrink-0">
+                <button
+                  onClick={() => setMostrarRapidas(v => !v)}
+                  className={cn("transition-colors", mostrarRapidas ? "text-[#164B6E]" : "text-muted-foreground hover:text-[#164B6E]")}
+                  title="Mensagens rápidas"
+                  disabled={enviando}
+                >
+                  <Zap size={18} />
+                </button>
+                {mostrarRapidas && (
+                  <div className="absolute bottom-full mb-2 left-0 w-80 bg-popover border border-border rounded-lg shadow-xl z-40 overflow-hidden">
+                    <div className="p-2 border-b border-border/50">
+                      <Input
+                        autoFocus
+                        value={buscaRapida}
+                        onChange={e => setBuscaRapida(e.target.value)}
+                        placeholder="Buscar resposta pronta..."
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {rapidasFiltradas.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-6 px-3">
+                          {rapidas.length === 0 ? "Nenhuma mensagem rápida cadastrada." : "Nada encontrado."}
+                        </p>
+                      ) : rapidasFiltradas.map(r => (
+                        <button
+                          key={r.id}
+                          onClick={() => inserirRapida(r)}
+                          className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b border-border/20 last:border-0"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold">{r.titulo}</span>
+                            {r.atalho && <span className="text-[10px] font-mono text-[#164B6E] bg-[#164B6E]/10 px-1 rounded">{r.atalho}</span>}
+                            {!r.canal && <span className="text-[9px] text-muted-foreground ml-auto">global</span>}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{r.conteudo}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => { setMostrarRapidas(false); setModalRapidas(true); }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium text-[#164B6E] hover:bg-muted border-t border-border/50 transition-colors"
+                    >
+                      <Plus size={12} /> Gerenciar mensagens rápidas
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Botão de anexo */}
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -766,6 +1003,8 @@ function ChatView({
           </div>
         )}
       </div>
+
+      <ModalMensagensRapidas isOpen={modalRapidas} onClose={() => setModalRapidas(false)} onSaved={carregarRapidas} />
     </div>
   );
 }
