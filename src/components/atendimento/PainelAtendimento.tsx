@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import {
   Building2, MapPin, Phone, Mail, Tag, Search, Save, Target, UserSearch,
+  Hash, MessageSquare, Layers, FileText, ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { type Cliente } from "@/lib/types";
@@ -17,12 +18,28 @@ import { type Cliente } from "@/lib/types";
 interface ChatParaPainel {
   id: string;
   canal: string;
+  contato_id?: string | null;
+  multi360_id?: number | null;
   cliente_id?: string | null;
   interesse_cliente?: string | null;
   notas_gestor?: string | null;
   prioridade?: string | null;
   proxima_acao?: string | null;
   contato?: { telefone: string; nome: string | null } | null;
+}
+
+interface MidiaCompartilhada {
+  id: string;
+  tipo: string;
+  url: string;
+  nome: string;
+}
+
+interface FichaTecnica {
+  totalMensagens: number;
+  totalAtendimentos: number;
+  imagens: MidiaCompartilhada[];
+  arquivos: MidiaCompartilhada[];
 }
 
 interface PainelAtendimentoProps {
@@ -53,6 +70,7 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
   const [prioridade, setPrioridade] = useState("media");
   const [proximaAcao, setProximaAcao] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [ficha, setFicha] = useState<FichaTecnica | null>(null);
 
   // Recarrega tudo quando muda o chat
   useEffect(() => {
@@ -160,6 +178,64 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
 
     return false;
   };
+
+  // ── Ficha técnica: estatísticas e mídias compartilhadas da conversa ──────────
+  const resolverUrlMidia = (m: { media_url?: string | null; conteudo?: string | null }): string => {
+    const raw = m.media_url || m.conteudo || "";
+    if (raw.startsWith("{")) {
+      try {
+        const j = JSON.parse(raw) as { u?: string; k?: string; m?: string; t?: string };
+        if (j.u && j.k) {
+          const p = new URLSearchParams({ u: j.u, k: j.k });
+          if (j.m) p.set("m", j.m);
+          if (j.t) p.set("t", j.t);
+          return `/api/midia?${p.toString()}`;
+        }
+      } catch { /* ignore */ }
+    }
+    return /^https?:\/\//i.test(raw) ? raw : "";
+  };
+
+  useEffect(() => {
+    if (!chat) { setFicha(null); return; }
+    let cancelado = false;
+    (async () => {
+      // Mensagens da conversa (para total + mídias compartilhadas)
+      const { data: msgs } = await supabase
+        .from("mensagens")
+        .select("id, tipo, conteudo, media_url, criado_em")
+        .eq("chat_id", chat.id)
+        .order("criado_em", { ascending: false })
+        .limit(500);
+
+      const imagens: MidiaCompartilhada[] = [];
+      const arquivos: MidiaCompartilhada[] = [];
+      for (const m of (msgs ?? []) as any[]) {
+        const url = resolverUrlMidia(m);
+        if (!url) continue;
+        if (["imagem", "video", "sticker"].includes(m.tipo)) {
+          imagens.push({ id: m.id, tipo: m.tipo, url, nome: m.conteudo || m.tipo });
+        } else if (["documento", "audio"].includes(m.tipo)) {
+          arquivos.push({ id: m.id, tipo: m.tipo, url, nome: decodeURIComponent(url.split("/").pop()?.split("?")[0] || m.conteudo || "arquivo") });
+        }
+      }
+
+      // Total de atendimentos do mesmo contato
+      let totalAtendimentos = 1;
+      if (chat.contato_id) {
+        const { count } = await supabase
+          .from("chats")
+          .select("id", { count: "exact", head: true })
+          .eq("contato_id", chat.contato_id);
+        totalAtendimentos = count ?? 1;
+      }
+
+      if (!cancelado) {
+        setFicha({ totalMensagens: msgs?.length ?? 0, totalAtendimentos, imagens, arquivos });
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const carregarCliente = async (id: string) => {
     const { data } = await supabase
@@ -334,6 +410,80 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
 
       {/* ── Corpo: Anotações ──────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+
+        {/* ── Ficha do Atendimento (protocolo, métricas e mídias) ── */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Ficha do Atendimento
+            </Label>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+              <Hash size={9} />
+              {chat.multi360_id ?? chat.id.slice(0, 8)}
+            </span>
+          </div>
+
+          {/* Métricas */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <MessageSquare size={11} />
+                <span className="text-[9px] uppercase tracking-wide font-semibold">Mensagens</span>
+              </div>
+              <p className="text-base font-bold mt-0.5">{ficha?.totalMensagens ?? "—"}</p>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Layers size={11} />
+                <span className="text-[9px] uppercase tracking-wide font-semibold">Atendimentos</span>
+              </div>
+              <p className="text-base font-bold mt-0.5">{ficha?.totalAtendimentos ?? "—"}</p>
+            </div>
+          </div>
+
+          {/* Imagens compartilhadas */}
+          {ficha && ficha.imagens.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">
+                <ImageIcon size={10} /> Imagens ({ficha.imagens.length})
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {ficha.imagens.slice(0, 8).map(img => (
+                  <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-md overflow-hidden bg-muted hover:opacity-80 transition-opacity">
+                    <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                  </a>
+                ))}
+              </div>
+              {ficha.imagens.length > 8 && (
+                <p className="text-[10px] text-muted-foreground">+{ficha.imagens.length - 8} imagens na conversa</p>
+              )}
+            </div>
+          )}
+
+          {/* Arquivos compartilhados */}
+          {ficha && ficha.arquivos.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">
+                <FileText size={10} /> Arquivos ({ficha.arquivos.length})
+              </div>
+              <div className="space-y-1">
+                {ficha.arquivos.slice(0, 6).map(arq => (
+                  <a key={arq.id} href={arq.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/50 hover:bg-muted/50 transition-colors">
+                    <div className="w-6 h-6 rounded bg-[#164B6E]/10 flex items-center justify-center shrink-0">
+                      <FileText size={11} className="text-[#164B6E]" />
+                    </div>
+                    <span className="text-[11px] truncate flex-1">{arq.nome}</span>
+                  </a>
+                ))}
+              </div>
+              {ficha.arquivos.length > 6 && (
+                <p className="text-[10px] text-muted-foreground">+{ficha.arquivos.length - 6} arquivos na conversa</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border/40" />
 
         {/* Interesse */}
         <div className="space-y-1.5">

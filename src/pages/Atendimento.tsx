@@ -41,6 +41,7 @@ interface Chat {
   status: string;
   ia_ativa: boolean;
   ultima_mensagem_em: string | null;
+  multi360_id?: number | null;
   // Painel de atendimento
   cliente_id?: string | null;
   interesse_cliente?: string | null;
@@ -1611,7 +1612,7 @@ export default function Atendimento() {
     const { data, error } = await supabase
       .from("chats")
       .select(`
-        id, contato_id, canal, status, ia_ativa, ultima_mensagem_em,
+        id, contato_id, canal, status, ia_ativa, ultima_mensagem_em, multi360_id,
         cliente_id, interesse_cliente, notas_gestor, prioridade, proxima_acao, tags,
         contato:contatos_whatsapp(id, telefone, nome, tipo, canal_atribuido)
       `)
