@@ -7,7 +7,7 @@ import {
   User, Users, Phone, Search, ChevronRight, ChevronLeft,
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
-  Paperclip, FileText, Image, Zap, Tag as TagIcon,
+  Paperclip, FileText, Image, Zap, Tag as TagIcon, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PainelAtendimento } from "@/components/atendimento/PainelAtendimento";
+import { DashboardAtendimento } from "@/components/atendimento/DashboardAtendimento";
 import { NovaOportunidadeModal } from "@/components/oportunidades/NovaOportunidadeModal";
 import { type Cliente } from "@/lib/types";
 
@@ -1578,6 +1579,7 @@ export default function Atendimento() {
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [modalOportunidade, setModalOportunidade] = useState(false);
   const [clienteParaOportunidade, setClienteParaOportunidade] = useState<Cliente | null>(null);
+  const [modalDashboard, setModalDashboard] = useState(false);
 
   // Zera o badge de não lidas localmente quando um chat é aberto
   const marcarLidas = useCallback((chatId: string) => {
@@ -1800,6 +1802,10 @@ export default function Atendimento() {
             {online ? <Wifi size={12} /> : <WifiOff size={12} />}
             {online ? "Online" : "Sem conexão"}
           </div>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => setModalDashboard(true)}>
+            <BarChart3 size={11} />
+            Dashboard
+          </Button>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={carregarChats} disabled={loading}>
             <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             Atualizar
@@ -1924,6 +1930,8 @@ export default function Atendimento() {
         clientePreSelecionado={clienteParaOportunidade}
         onSave={() => setModalOportunidade(false)}
       />
+
+      <DashboardAtendimento isOpen={modalDashboard} onClose={() => setModalDashboard(false)} />
     </div>
   );
 }
