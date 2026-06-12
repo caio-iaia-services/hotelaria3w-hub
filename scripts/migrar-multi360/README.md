@@ -31,6 +31,9 @@ ativos do Multi360 para o módulo de Atendimento do hub 3W.
 ## Flags
 - `--limit N` — processa só N atendimentos (teste).
 - `--dry` — extrai do Multi360 mas **não grava** no Supabase (conta volumes).
+- `--sem-midia` — **muito mais rápido**: migra só o texto. Imagens/áudios/vídeos
+  não são baixados; a mensagem fica como `[imagem]`/`[video]`/`[audio]` ou o nome
+  do arquivo. Use se o cliente não precisar abrir as mídias antigas.
 
 ## Mapeamento de canais (ajustável em `migrar.mjs`)
 - Fabiano / Comercial 1 → **G1**

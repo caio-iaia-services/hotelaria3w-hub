@@ -30,7 +30,9 @@ const BUCKET = "chat-midia";
 const args = process.argv.slice(2);
 const LIMIT = args.includes("--limit") ? Number(args[args.indexOf("--limit") + 1]) : Infinity;
 const DRY = args.includes("--dry");
-const CONCORRENCIA = 4; // atendimentos processados em paralelo
+const SEM_MIDIA = args.includes("--sem-midia"); // migra só texto (mídia vira "[tipo] nome")
+const CONCORRENCIA = 4;       // atendimentos processados em paralelo
+const MIDIA_TIMEOUT_MS = 20000; // aborta download de mídia preso após 20s
 
 if (!TOKEN || !SUPABASE_URL || !SERVICE_KEY) {
   console.error("✖ Faltam variáveis no .env: MULTI360_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY");
@@ -116,7 +118,9 @@ async function coletarMensagens(atendimentoId) {
 async function migrarMidia(msg, atendimentoId) {
   if (!msg.fileUrl) return null;
   try {
-    const resp = await fetch(msg.fileUrl);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), MIDIA_TIMEOUT_MS);
+    const resp = await fetch(msg.fileUrl, { signal: ctrl.signal }).finally(() => clearTimeout(t));
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const buf = Buffer.from(await resp.arrayBuffer());
     const ct = resp.headers.get("content-type") || "application/octet-stream";
@@ -194,9 +198,14 @@ async function processarAtendimento(at) {
     let mediaUrl = null;
     let conteudo = msg.mensagem || "";
     if (msg.fileUrl) {
-      mediaUrl = await migrarMidia(msg, at.id);
-      estat.midia++;
-      if (!conteudo) conteudo = msg.nomePDF || mediaUrl || "";
+      if (SEM_MIDIA) {
+        // Não baixa o arquivo: mantém o tipo e registra um rótulo legível
+        if (!conteudo) conteudo = msg.nomePDF || `[${tipo}]`;
+      } else {
+        mediaUrl = await migrarMidia(msg, at.id);
+        estat.midia++;
+        if (!conteudo) conteudo = msg.nomePDF || mediaUrl || "";
+      }
     }
     linhas.push({
       multi360_msg_id: msg.id,
@@ -242,7 +251,10 @@ async function main() {
         process.stdout.write(`\r  [${n}/${pendentes.length}] atend ${at.id} ✓  | msgs:${estat.msgs} mídia:${estat.midia}   `);
       } catch (e) {
         estat.erros++;
-        console.error(`\n  ✖ atend ${at.id}: ${String(e).slice(0, 120)}`);
+        const det = e?.message || e?.details || e?.hint || e?.code
+          ? `${e.message || ""} | details: ${e.details || ""} | hint: ${e.hint || ""} | code: ${e.code || ""}`
+          : JSON.stringify(e);
+        console.error(`\n  ✖ atend ${at.id}: ${det}`);
       }
     }
   }
