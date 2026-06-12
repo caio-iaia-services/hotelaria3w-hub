@@ -112,6 +112,30 @@ function formatDataHora(iso: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+// Rótulo do separador de dia entre mensagens (estilo WhatsApp)
+function formatDiaSeparador(iso: string) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (d.toDateString() === hoje.toDateString()) return "Hoje";
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  const esteAno = d.getFullYear() === hoje.getFullYear();
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "long", ...(esteAno ? {} : { year: "numeric" }),
+  });
+}
+
+function SeparadorData({ iso }: { iso: string }) {
+  return (
+    <div className="flex items-center justify-center my-3">
+      <span className="text-[10px] font-medium text-muted-foreground bg-muted/70 px-3 py-1 rounded-full capitalize">
+        {formatDiaSeparador(iso)}
+      </span>
+    </div>
+  );
+}
+
 // Resolve a URL exibível da mídia:
 // - URL pública (Supabase Storage, enviada pelo hub) → usa direto
 // - JSON {u,k,m,t} salvo pelo n8n (mídia recebida) → /api/midia descriptografa
@@ -947,7 +971,16 @@ function ChatView({
             <p className="text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          mensagens.map(msg => <BolhaMsg key={msg.id} msg={msg} />)
+          mensagens.map((msg, i) => {
+            const anterior = mensagens[i - 1];
+            const novoDia = !anterior || new Date(anterior.criado_em).toDateString() !== new Date(msg.criado_em).toDateString();
+            return (
+              <div key={msg.id}>
+                {novoDia && <SeparadorData iso={msg.criado_em} />}
+                <BolhaMsg msg={msg} />
+              </div>
+            );
+          })
         )}
         <div ref={bottomRef} />
       </div>
