@@ -844,6 +844,11 @@ function ChatView({
             <p className="text-sm font-semibold leading-tight">{nomeContato}</p>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
               <span className="text-[11px] text-muted-foreground">{chat.contato?.telefone}</span>
+              {chat.multi360_id && (
+                <span className="inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700" title="Conversa importada do Multi360">
+                  Multi360
+                </span>
+              )}
               {/* Tags da conversa */}
               {tagsChat.map(tid => {
                 const tag = tagsDisponiveis.find(t => t.id === tid);
@@ -1514,7 +1519,12 @@ function ListaChats({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs font-semibold truncate">{nome}</p>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className="text-xs font-semibold truncate">{nome}</p>
+                        {chat.multi360_id && (
+                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-violet-500" title="Importado do Multi360" />
+                        )}
+                      </div>
                       {chat.ultima_mensagem_em && !confirmando && (
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {formatDataHora(chat.ultima_mensagem_em)}

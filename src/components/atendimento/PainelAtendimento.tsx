@@ -422,6 +422,11 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
               {chat.multi360_id ?? chat.id.slice(0, 8)}
             </span>
           </div>
+          {chat.multi360_id && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+              Importado do Multi360
+            </span>
+          )}
 
           {/* Métricas */}
           <div className="grid grid-cols-2 gap-2">
