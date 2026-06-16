@@ -34,6 +34,9 @@ ativos do Multi360 para o módulo de Atendimento do hub 3W.
 - `--sem-midia` — **muito mais rápido**: migra só o texto. Imagens/áudios/vídeos
   não são baixados; a mensagem fica como `[imagem]`/`[video]`/`[audio]` ou o nome
   do arquivo. Use se o cliente não precisar abrir as mídias antigas.
+- `--midia-desde YYYY-MM-DD` — baixa mídia só de mensagens a partir da data; as
+  anteriores viram rótulo. Texto de TODAS as conversas é sempre migrado.
+  Ex.: `--midia-desde 2026-01-01` (anexos só de janeiro/2026 pra frente).
 
 ## Mapeamento de canais (ajustável em `migrar.mjs`)
 - Fabiano / Comercial 1 → **G1**

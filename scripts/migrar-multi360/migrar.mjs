@@ -31,6 +31,11 @@ const args = process.argv.slice(2);
 const LIMIT = args.includes("--limit") ? Number(args[args.indexOf("--limit") + 1]) : Infinity;
 const DRY = args.includes("--dry");
 const SEM_MIDIA = args.includes("--sem-midia"); // migra só texto (mídia vira "[tipo] nome")
+// --midia-desde YYYY-MM-DD : só baixa mídia de mensagens a partir dessa data;
+// anteriores viram rótulo [tipo]. Texto de TODAS as conversas é sempre migrado.
+const MIDIA_DESDE = args.includes("--midia-desde")
+  ? new Date(args[args.indexOf("--midia-desde") + 1] + "T00:00:00").getTime()
+  : null;
 const CONCORRENCIA = 4;       // atendimentos processados em paralelo
 const MIDIA_TIMEOUT_MS = 20000; // aborta download de mídia preso após 20s
 
@@ -164,7 +169,7 @@ async function obterContatoId(at) {
 }
 
 // ── 5. Processa um atendimento completo ────────────────────────────────────────
-const estat = { atend: 0, msgs: 0, midia: 0, midiaFalha: 0, sistema: 0, erros: 0, porCanal: {} };
+const estat = { atend: 0, msgs: 0, midia: 0, midiaPulada: 0, midiaFalha: 0, sistema: 0, erros: 0, porCanal: {} };
 
 async function processarAtendimento(at) {
   const canal = resolverCanal(at);
@@ -198,13 +203,16 @@ async function processarAtendimento(at) {
     let mediaUrl = null;
     let conteudo = msg.mensagem || "";
     if (msg.fileUrl) {
-      if (SEM_MIDIA) {
-        // Não baixa o arquivo: mantém o tipo e registra um rótulo legível
-        if (!conteudo) conteudo = msg.nomePDF || `[${tipo}]`;
-      } else {
+      const dataMsg = Number(msg.dataCriacao || msg.createdAt) || 0;
+      const baixar = !SEM_MIDIA && (MIDIA_DESDE === null || dataMsg >= MIDIA_DESDE);
+      if (baixar) {
         mediaUrl = await migrarMidia(msg, at.id);
         estat.midia++;
         if (!conteudo) conteudo = msg.nomePDF || mediaUrl || "";
+      } else {
+        // Fora da janela de mídia (ou --sem-midia): mantém o tipo e um rótulo legível
+        estat.midiaPulada++;
+        if (!conteudo) conteudo = msg.nomePDF || `[${tipo}]`;
       }
     }
     linhas.push({
@@ -265,6 +273,7 @@ async function main() {
   console.log(`Atendimentos migrados : ${estat.atend}`);
   console.log(`Mensagens             : ${estat.msgs}`);
   console.log(`Mídias migradas       : ${estat.midia} (falhas de download: ${estat.midiaFalha})`);
+  console.log(`Mídias puladas (rótulo): ${estat.midiaPulada}${MIDIA_DESDE ? " — fora da janela de data" : ""}`);
   console.log(`Eventos de sistema    : ${estat.sistema} (ignorados)`);
   console.log(`Erros                 : ${estat.erros}`);
   console.log(`Distribuição por canal: ${JSON.stringify(estat.porCanal)}`);
