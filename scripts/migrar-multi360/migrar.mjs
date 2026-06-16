@@ -36,7 +36,9 @@ const SEM_MIDIA = args.includes("--sem-midia"); // migra só texto (mídia vira 
 const MIDIA_DESDE = args.includes("--midia-desde")
   ? new Date(args[args.indexOf("--midia-desde") + 1] + "T00:00:00").getTime()
   : null;
-const CONCORRENCIA = 4;       // atendimentos processados em paralelo
+const CONCORRENCIA = args.includes("--concorrencia")
+  ? Number(args[args.indexOf("--concorrencia") + 1])
+  : 8;       // atendimentos processados em paralelo (maior = mais rápido)
 const MIDIA_TIMEOUT_MS = 20000; // aborta download de mídia preso após 20s
 
 if (!TOKEN || !SUPABASE_URL || !SERVICE_KEY) {
@@ -108,13 +110,21 @@ async function coletarAtendimentos() {
 // ── 2. Coleta todas as mensagens de um atendimento ─────────────────────────────
 async function coletarMensagens(atendimentoId) {
   const todas = [];
-  for (let offset = 0; ; offset += 200) {
+  const vistos = new Set(); // dedup — a paginação do Multi360 repete mensagens entre páginas
+  let offset = 0;
+  // Limite de segurança: a API às vezes ignora o offset e repete a 1ª página
+  // (loop infinito → OOM). Paramos quando uma página não traz nenhum ID novo.
+  for (let pagina = 0; pagina < 500; pagina++) {
     const arr = await m360(
       `/api/atendimentos/${atendimentoId}/mensagens/v2?filtro=0&filtroDataCriacao=0&filtroOriginalId=0&offset=${offset}&limit=200&paginationDownUpEnum=UP`
     );
     const lote = Array.isArray(arr) ? arr : (arr.registros || []);
-    todas.push(...lote);
-    if (lote.length < 200) break;
+    let novos = 0;
+    for (const m of lote) {
+      if (!vistos.has(m.id)) { vistos.add(m.id); todas.push(m); novos++; }
+    }
+    if (lote.length < 200 || novos === 0) break; // fim da conversa OU página só repetida
+    offset += 200;
   }
   return todas;
 }
@@ -180,6 +190,7 @@ async function processarAtendimento(at) {
   const contatoId = await obterContatoId(at);
 
   // chat (upsert por multi360_id)
+  let chatId;
   const { data: chatRow, error: chatErr } = await supabase.from("chats").upsert({
     multi360_id: at.id,
     contato_id: contatoId,
@@ -188,8 +199,19 @@ async function processarAtendimento(at) {
     ia_ativa: false,
     ultima_mensagem_em: new Date(Number(at.dataUltimaMensagem || at.dataCriacao)).toISOString(),
   }, { onConflict: "multi360_id" }).select("id").single();
-  if (chatErr) throw chatErr;
-  const chatId = chatRow.id;
+  if (chatErr) {
+    // Contato já tem uma conversa ativa neste canal (vários atendimentos no
+    // Multi360 → 1 chat no hub): mescla as mensagens na conversa existente.
+    if (chatErr.code === "23505") {
+      const { data: existente } = await supabase.from("chats")
+        .select("id").eq("contato_id", contatoId).eq("canal", canal).eq("status", "ativo").limit(1).maybeSingle();
+      if (!existente) throw chatErr;
+      chatId = existente.id;
+      estat.mesclados = (estat.mesclados || 0) + 1;
+    } else throw chatErr;
+  } else {
+    chatId = chatRow.id;
+  }
 
   // mensagens
   const mensagens = await coletarMensagens(at.id);
