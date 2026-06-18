@@ -76,6 +76,20 @@ function getStatusVariant(status: string): "default" | "secondary" | "destructiv
   return variants[status] || "secondary";
 }
 
+function getStatusClass(status: string): string {
+  const classes: Record<string, string> = {
+    rascunho:    "bg-slate-100 text-slate-600 border border-slate-200 hover:opacity-80",
+    enviado:     "bg-blue-100 text-blue-700 border border-blue-200 hover:opacity-80",
+    aprovado:    "bg-emerald-100 text-emerald-700 border border-emerald-200 hover:opacity-80",
+    consolidado: "bg-green-100 text-green-800 border border-green-300 hover:opacity-80",
+    rejeitado:   "bg-red-100 text-red-700 border border-red-200 hover:opacity-80",
+    refutado:    "bg-rose-100 text-rose-700 border border-rose-200 hover:opacity-80",
+    expirado:    "bg-amber-100 text-amber-700 border border-amber-200 hover:opacity-80",
+    cancelado:   "bg-zinc-100 text-zinc-500 border border-zinc-200 hover:opacity-80",
+  };
+  return classes[status] || "bg-slate-100 text-slate-600 border border-slate-200 hover:opacity-80";
+}
+
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     rascunho: "Rascunho",
@@ -185,7 +199,16 @@ export default function Orcamentos() {
     expirado: 0,
     cancelado: 0,
   });
-  const [filtros, setFiltros] = useState({ busca: "", gestao: "" });
+  const [filtros, setFiltros] = useState({
+    busca: "",
+    gestao: "",
+    fornecedor: "",
+    dataInicio: "",
+    dataFim: "",
+    valorMin: "",
+    valorMax: "",
+  });
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [modalVisualizar, setModalVisualizar] = useState(false);
   const [orcamentoVisualizar, setOrcamentoVisualizar] = useState<Orcamento | null>(null);
   const [itensVisualizar, setItensVisualizar] = useState<OrcamentoItem[]>([]);
@@ -231,7 +254,13 @@ export default function Orcamentos() {
   const buscarContadores = useCallback(async () => {
     const base = () => {
       let q = supabase.from("orcamentos").select("*", { count: "exact", head: true });
-      if (gestaoFiltro) q = q.eq("gestao", gestaoFiltro);
+      const gestao = gestaoFiltro || filtros.gestao;
+      if (gestao) q = q.eq("gestao", gestao);
+      if (filtros.fornecedor) q = q.ilike("fornecedor_nome", `%${filtros.fornecedor}%`);
+      if (filtros.dataInicio) q = q.gte("data_emissao", filtros.dataInicio);
+      if (filtros.dataFim) q = q.lte("data_emissao", filtros.dataFim);
+      if (filtros.valorMin) q = q.gte("total", parseFloat(filtros.valorMin));
+      if (filtros.valorMax) q = q.lte("total", parseFloat(filtros.valorMax));
       return q;
     };
     const counts = await Promise.all([
@@ -256,7 +285,7 @@ export default function Orcamentos() {
       expirado: counts[7].count || 0,
       cancelado: counts[8].count || 0,
     });
-  }, []);
+  }, [gestaoFiltro, filtros]);
 
   const atualizarStatus = async (orcamento: Orcamento, novoStatus: string) => {
     if (orcamento.status === novoStatus) return;
@@ -281,7 +310,15 @@ export default function Orcamentos() {
     setLoading(true);
     let query = supabase.from("orcamentos").select("*", { count: "exact" });
     if (statusAtivo !== "todos") query = query.eq("status", statusAtivo);
-    if (filtros.busca) query = query.or(`numero.ilike.%${filtros.busca}%`);
+    if (filtros.busca) {
+      const b = filtros.busca.replace(/'/g, "''");
+      query = query.or(`numero.ilike.%${b}%,cliente_nome.ilike.%${b}%,fornecedor_nome.ilike.%${b}%,cliente_cnpj.ilike.%${b}%`);
+    }
+    if (filtros.fornecedor) query = query.ilike("fornecedor_nome", `%${filtros.fornecedor}%`);
+    if (filtros.dataInicio) query = query.gte("data_emissao", filtros.dataInicio);
+    if (filtros.dataFim)    query = query.lte("data_emissao", filtros.dataFim);
+    if (filtros.valorMin)   query = query.gte("total", parseFloat(filtros.valorMin));
+    if (filtros.valorMax)   query = query.lte("total", parseFloat(filtros.valorMax));
     // Filtro por gestão: preferencia do perfil do usuário, depois filtro manual
     if (gestaoFiltro) {
       query = query.eq("gestao", gestaoFiltro);
@@ -1382,41 +1419,103 @@ export default function Orcamentos() {
         </TabsList>
       </Tabs>
 
+      {/* ── Barra de busca principal ── */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[250px]">
+        <div className="relative flex-1 min-w-[260px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número, cliente ou fornecedor..."
+            placeholder="Buscar por número, cliente, CNPJ ou fornecedor..."
             className="pl-10 bg-[#fcfcfc] border-[#e8e8e8]"
             onChange={(e) => handleBuscaChange(e.target.value)}
           />
         </div>
-        <select
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-          value={filtros.gestao}
-          onChange={(e) => {
-            setFiltros((prev) => ({ ...prev, gestao: e.target.value }));
-            setPage(1);
-          }}
+        {!gestaoFiltro && (
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filtros.gestao}
+            onChange={(e) => { setFiltros((prev) => ({ ...prev, gestao: e.target.value })); setPage(1); }}
+          >
+            <option value="">Todas as Gestões</option>
+            <option value="G1">Gestão 1</option>
+            <option value="G2">Gestão 2</option>
+            <option value="G3">Gestão 3</option>
+            <option value="G4">Gestão 4</option>
+          </select>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFiltrosAbertos((v) => !v)}
+          className={filtrosAbertos ? "border-[#1a4168] text-[#1a4168]" : ""}
         >
-          <option value="">Todas as Gestões</option>
-          <option value="G1">Gestão 1</option>
-          <option value="G2">Gestão 2</option>
-          <option value="G3">Gestão 3</option>
-          <option value="G4">Gestão 4</option>
-        </select>
+          <Filter className="h-4 w-4 mr-1" />
+          {filtrosAbertos ? "Fechar filtros" : "Mais filtros"}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
-            setFiltros({ busca: "", gestao: "" });
+            setFiltros({ busca: "", gestao: "", fornecedor: "", dataInicio: "", dataFim: "", valorMin: "", valorMax: "" });
             setStatusAtivo("todos");
             setPage(1);
           }}
         >
-          <Filter className="h-4 w-4 mr-1" /> Limpar Filtros
+          <X className="h-4 w-4 mr-1" /> Limpar
         </Button>
       </div>
+
+      {/* ── Filtros avançados ── */}
+      {filtrosAbertos && (
+        <div className="flex flex-wrap gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="flex flex-col gap-1 min-w-[180px] flex-1">
+            <label className="text-xs font-medium text-muted-foreground">Fornecedor</label>
+            <Input
+              placeholder="Ex: CASTOR, MIDEA..."
+              className="h-9 bg-white"
+              value={filtros.fornecedor}
+              onChange={(e) => { setFiltros((p) => ({ ...p, fornecedor: e.target.value })); setPage(1); }}
+            />
+          </div>
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <label className="text-xs font-medium text-muted-foreground">Data início</label>
+            <Input
+              type="date"
+              className="h-9 bg-white"
+              value={filtros.dataInicio}
+              onChange={(e) => { setFiltros((p) => ({ ...p, dataInicio: e.target.value })); setPage(1); }}
+            />
+          </div>
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <label className="text-xs font-medium text-muted-foreground">Data fim</label>
+            <Input
+              type="date"
+              className="h-9 bg-white"
+              value={filtros.dataFim}
+              onChange={(e) => { setFiltros((p) => ({ ...p, dataFim: e.target.value })); setPage(1); }}
+            />
+          </div>
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <label className="text-xs font-medium text-muted-foreground">Valor mín. (R$)</label>
+            <Input
+              type="number"
+              placeholder="0"
+              className="h-9 bg-white"
+              value={filtros.valorMin}
+              onChange={(e) => { setFiltros((p) => ({ ...p, valorMin: e.target.value })); setPage(1); }}
+            />
+          </div>
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <label className="text-xs font-medium text-muted-foreground">Valor máx. (R$)</label>
+            <Input
+              type="number"
+              placeholder="999999"
+              className="h-9 bg-white"
+              value={filtros.valorMax}
+              onChange={(e) => { setFiltros((p) => ({ ...p, valorMax: e.target.value })); setPage(1); }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="rounded-md border border-[#e8e8e8] bg-[#fcfcfc]">
         <Table>
@@ -1486,13 +1585,10 @@ export default function Orcamentos() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="focus:outline-none" title="Alterar status">
-                          <Badge
-                            variant={getStatusVariant(orcamento.status)}
-                            className="cursor-pointer hover:opacity-80 transition-opacity gap-1 pr-1.5"
-                          >
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-opacity ${getStatusClass(orcamento.status)}`}>
                             {getStatusLabel(orcamento.status)}
                             <ChevronDown className="w-3 h-3" />
-                          </Badge>
+                          </span>
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-40">
