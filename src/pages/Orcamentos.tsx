@@ -67,7 +67,9 @@ function getStatusVariant(status: string): "default" | "secondary" | "destructiv
     rascunho: "secondary",
     enviado: "default",
     aprovado: "default",
+    consolidado: "default",
     rejeitado: "destructive",
+    refutado: "destructive",
     expirado: "secondary",
     cancelado: "destructive",
   };
@@ -79,7 +81,9 @@ function getStatusLabel(status: string) {
     rascunho: "Rascunho",
     enviado: "Enviado",
     aprovado: "Aprovado",
+    consolidado: "Consolidado",
     rejeitado: "Rejeitado",
+    refutado: "Refutado",
     expirado: "Expirado",
     cancelado: "Cancelado",
   };
@@ -90,12 +94,14 @@ function getStatusLabel(status: string) {
 const LINK_PLACEHOLDER = "{{LINK_ORCAMENTO}}";
 
 const STATUS_OPCOES = [
-  { value: "rascunho",  label: "Rascunho",  dot: "bg-slate-400" },
-  { value: "enviado",   label: "Enviado",   dot: "bg-blue-500" },
-  { value: "aprovado",  label: "Aprovado",  dot: "bg-emerald-500" },
-  { value: "rejeitado", label: "Rejeitado", dot: "bg-red-500" },
-  { value: "expirado",  label: "Expirado",  dot: "bg-amber-500" },
-  { value: "cancelado", label: "Cancelado", dot: "bg-zinc-500" },
+  { value: "rascunho",    label: "Rascunho",    dot: "bg-slate-400" },
+  { value: "enviado",     label: "Enviado",     dot: "bg-blue-500" },
+  { value: "aprovado",    label: "Aprovado",    dot: "bg-emerald-500" },
+  { value: "consolidado", label: "Consolidado", dot: "bg-green-600" },
+  { value: "rejeitado",   label: "Rejeitado",   dot: "bg-red-500" },
+  { value: "refutado",    label: "Refutado",    dot: "bg-rose-500" },
+  { value: "expirado",    label: "Expirado",    dot: "bg-amber-500" },
+  { value: "cancelado",   label: "Cancelado",   dot: "bg-zinc-500" },
 ];
 
 function parseNum(value: any): number {
@@ -173,7 +179,9 @@ export default function Orcamentos() {
     rascunho: 0,
     enviado: 0,
     aprovado: 0,
+    consolidado: 0,
     rejeitado: 0,
+    refutado: 0,
     expirado: 0,
     cancelado: 0,
   });
@@ -231,7 +239,9 @@ export default function Orcamentos() {
       base().eq("status", "rascunho"),
       base().eq("status", "enviado"),
       base().eq("status", "aprovado"),
+      base().eq("status", "consolidado"),
       base().eq("status", "rejeitado"),
+      base().eq("status", "refutado"),
       base().eq("status", "expirado"),
       base().eq("status", "cancelado"),
     ]);
@@ -240,9 +250,11 @@ export default function Orcamentos() {
       rascunho: counts[1].count || 0,
       enviado: counts[2].count || 0,
       aprovado: counts[3].count || 0,
-      rejeitado: counts[4].count || 0,
-      expirado: counts[5].count || 0,
-      cancelado: counts[6].count || 0,
+      consolidado: counts[4].count || 0,
+      rejeitado: counts[5].count || 0,
+      refutado: counts[6].count || 0,
+      expirado: counts[7].count || 0,
+      cancelado: counts[8].count || 0,
     });
   }, []);
 
@@ -1337,10 +1349,22 @@ export default function Orcamentos() {
               {contadores.aprovado}
             </Badge>
           </TabsTrigger>
+          <TabsTrigger value="consolidado">
+            Consolidado{" "}
+            <Badge variant="secondary" className="ml-2">
+              {contadores.consolidado}
+            </Badge>
+          </TabsTrigger>
           <TabsTrigger value="rejeitado">
             Rejeitado{" "}
             <Badge variant="secondary" className="ml-2">
               {contadores.rejeitado}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="refutado">
+            Refutado{" "}
+            <Badge variant="secondary" className="ml-2">
+              {contadores.refutado}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="expirado">
