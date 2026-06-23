@@ -22,7 +22,14 @@ export default async function handler(req: Request): Promise<Response> {
 
     // Sanitiza: remove tudo que não é dígito, garante DDI 55
     const telRaw = String(telefone_cliente || "").replace(/\D/g, "");
-    const telFinal = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
+    let telFinal = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
+
+    // Brasil: números móveis precisam do dígito 9 após o DDD
+    // 12 dígitos = 55 + DDD(2) + número(8) → insere 9 antes dos 8 dígitos finais
+    if (telFinal.length === 12) {
+      telFinal = telFinal.slice(0, 4) + "9" + telFinal.slice(4);
+    }
+
     console.log(`[enviar-mensagem] telefone raw="${telefone_cliente}" → "${telFinal}"`);
 
     if (telFinal.length < 12 || telFinal.length > 13) {
