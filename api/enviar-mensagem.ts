@@ -22,22 +22,20 @@ export default async function handler(req: Request): Promise<Response> {
 
     // Sanitiza: remove tudo que não é dígito, garante DDI 55
     const telRaw = String(telefone_cliente || "").replace(/\D/g, "");
-    let telFinal = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
+    const telDigits = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
 
-    // Brasil: números móveis precisam do dígito 9 após o DDD
-    // 12 dígitos = 55 + DDD(2) + número(8) → insere 9 antes dos 8 dígitos finais
-    if (telFinal.length === 12) {
-      telFinal = telFinal.slice(0, 4) + "9" + telFinal.slice(4);
-    }
+    console.log(`[enviar-mensagem] telefone raw="${telefone_cliente}" → "${telDigits}"`);
 
-    console.log(`[enviar-mensagem] telefone raw="${telefone_cliente}" → "${telFinal}"`);
-
-    if (telFinal.length < 12 || telFinal.length > 13) {
+    if (telDigits.length < 10) {
       return new Response(
-        JSON.stringify({ ok: false, error: "Número de telefone inválido", numero: telFinal }),
+        JSON.stringify({ ok: false, error: "Número de telefone inválido", numero: telDigits }),
         { status: 422, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    // Passa o JID completo para bypassar a validação de existência da Evolution API
+    // (evita falso "exists: false" em números VoIP, linhas com 8 dígitos, etc.)
+    const telFinal = `${telDigits}@s.whatsapp.net`;
 
     const temMidia = !!(arquivo_url && arquivo_url.length > 0);
 
