@@ -627,9 +627,9 @@ function ChatView({
         body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, mensagem: msg }),
       });
       const json = await res.json().catch(() => ({}));
-      console.log("[enviar] n8n response:", res.status, json);
+      console.log("[enviar] response:", res.status, json);
       if (!res.ok) {
-        toast.error(`Mensagem salva, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+        toast.error("Mensagem salva, mas falha ao enviar no WhatsApp", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
       }
     } catch (err) {
       console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
@@ -768,9 +768,9 @@ function ChatView({
           }),
         });
         const json = await res.json().catch(() => ({}));
-        console.log("[enviarArquivo] n8n response:", res.status, json);
+        console.log("[enviarArquivo] response:", res.status, json);
         if (!res.ok) {
-          toast.error(`Arquivo salvo, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+          toast.error("Arquivo salvo, mas falha ao enviar no WhatsApp", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
         }
       } catch (err) {
         console.error("[enviarArquivo] erro:", err);

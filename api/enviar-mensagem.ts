@@ -19,6 +19,19 @@ export default async function handler(req: Request): Promise<Response> {
     console.log("[enviar-mensagem] payload →", JSON.stringify(body));
 
     const { telefone_cliente, mensagem, arquivo_url, tipo_midia } = body;
+
+    // Sanitiza: remove tudo que não é dígito, garante DDI 55
+    const telRaw = String(telefone_cliente || "").replace(/\D/g, "");
+    const telFinal = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
+    console.log(`[enviar-mensagem] telefone raw="${telefone_cliente}" → "${telFinal}"`);
+
+    if (telFinal.length < 12 || telFinal.length > 13) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Número de telefone inválido", numero: telFinal }),
+        { status: 422, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const temMidia = !!(arquivo_url && arquivo_url.length > 0);
 
     let endpoint: string;
@@ -35,7 +48,7 @@ export default async function handler(req: Request): Promise<Response> {
       const fileName = (arquivo_url as string).split("/").pop()?.split("?")[0] ?? "arquivo";
       endpoint = "sendMedia";
       payload = {
-        number: telefone_cliente,
+        number: telFinal,
         mediatype,
         media: arquivo_url,
         caption: mensagem || "",
@@ -44,7 +57,7 @@ export default async function handler(req: Request): Promise<Response> {
     } else {
       endpoint = "sendText";
       payload = {
-        number: telefone_cliente,
+        number: telFinal,
         text: mensagem,
       };
     }
@@ -64,12 +77,27 @@ export default async function handler(req: Request): Promise<Response> {
     const text = await evoRes.text();
     console.log(`[enviar-mensagem] Evolution status=${evoRes.status} body=${text}`);
 
+    // Evolution retorna 400 com exists:false quando número não está no WhatsApp
+    if (!evoRes.ok) {
+      let errorMsg = `Erro ${evoRes.status}`;
+      try {
+        const parsed = JSON.parse(text);
+        const msgs = parsed?.response?.message;
+        if (Array.isArray(msgs) && msgs[0]?.exists === false) {
+          errorMsg = `Número ${telFinal} não encontrado no WhatsApp`;
+        } else if (parsed?.message) {
+          errorMsg = parsed.message;
+        }
+      } catch {}
+      return new Response(
+        JSON.stringify({ ok: false, status: evoRes.status, error: errorMsg, raw: text }),
+        { status: evoRes.status, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ ok: evoRes.ok, status: evoRes.status, body: text }),
-      {
-        status: evoRes.ok ? 200 : evoRes.status,
-        headers: { "Content-Type": "application/json" },
-      }
+      JSON.stringify({ ok: true, status: evoRes.status, body: text }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("[enviar-mensagem] erro:", err);
