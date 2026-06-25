@@ -66,6 +66,7 @@ export interface Contato {
   cargo: string | null
   origem: string | null
   status: string
+  qualificacao: string
   preferencia_contato: string | null
   observacoes: string | null
   created_at: string

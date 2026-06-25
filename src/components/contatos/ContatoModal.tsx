@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, X, Plus, Search, Building2, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import type { Contato } from "@/lib/types";
 
 interface ClienteVinculo {
@@ -28,6 +29,17 @@ interface Props {
 const ORIGENS = ["WIX", "Indicação", "Feira", "Prospecção ativa", "Site", "Outros"];
 const PREFERENCIAS = ["E-mail", "WhatsApp", "Telefone"];
 
+const QUALIFICACAO_OPTIONS = [
+  { value: "cadastrado",            label: "Cadastrado" },
+  { value: "higienizado",           label: "Higienizado" },
+  { value: "aquecido",              label: "Aquecido" },
+  { value: "em_prospeccao",         label: "Em Prospecção" },
+  { value: "ativo_super",           label: "Ativo Super" },
+  { value: "ativo_interessado",     label: "Ativo Interessado" },
+  { value: "ativo_em_observacao",   label: "Ativo Em Observação" },
+  { value: "inativo",               label: "Inativo" },
+];
+
 function formatCNPJ(cnpj: string) {
   const d = cnpj.replace(/\D/g, "");
   if (d.length !== 14) return cnpj;
@@ -37,7 +49,7 @@ function formatCNPJ(cnpj: string) {
 export default function ContatoModal({ open, onClose, contato, clientePreVinculado, onSaved }: Props) {
   const editing = !!contato;
   const [form, setForm] = useState<Partial<Contato>>({
-    nome: "", email: "", status: "ativo",
+    nome: "", email: "", status: "ativo", qualificacao: "cadastrado",
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -53,7 +65,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
         setForm({ ...contato });
         carregarClientes(contato.id);
       } else {
-        setForm({ nome: "", email: "", status: "ativo" });
+        setForm({ nome: "", email: "", status: "ativo", qualificacao: "cadastrado" });
         setClientes(clientePreVinculado ? [clientePreVinculado] : []);
       }
       setBusca("");
@@ -115,6 +127,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           whatsapp: form.whatsapp || null, cpf: form.cpf || null,
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
+          qualificacao: form.qualificacao || "cadastrado",
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).eq("id", contatoId);
@@ -125,6 +138,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           whatsapp: form.whatsapp || null, cpf: form.cpf || null,
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
+          qualificacao: form.qualificacao || "cadastrado",
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).select("id").single();
@@ -233,6 +247,27 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
                   {PREFERENCIAS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Qualificação</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {QUALIFICACAO_OPTIONS.map(q => (
+                  <button
+                    key={q.value}
+                    type="button"
+                    onClick={() => set("qualificacao", q.value)}
+                    className={cn(
+                      "flex items-center gap-2 p-2.5 rounded-xl border-2 text-sm font-medium transition-all text-left",
+                      form.qualificacao === q.value
+                        ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
+                        : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
+                    )}
+                  >
+                    <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.qualificacao === q.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
+                    {q.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Observações</Label>
