@@ -79,6 +79,13 @@ export interface ContatoClienteRel {
   created_at: string
 }
 
+export interface ContatoEmail {
+  id: string
+  contato_id: string
+  email: string
+  created_at: string
+}
+
 export interface ContatoComClientes extends Contato {
   clientes?: { id: string; nome_fantasia: string; cnpj: string }[]
 }

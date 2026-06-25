@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, X, Plus, Search, Building2, Loader2, Trash2 } from "lucide-react";
+import { Pencil, X, Plus, Search, Building2, Loader2, Trash2, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
@@ -15,6 +15,12 @@ interface ClienteVinculo {
   id: string;
   nome_fantasia: string;
   cnpj: string;
+}
+
+interface EmailRow {
+  id?: string;
+  email: string;
+  principal: boolean;
 }
 
 interface Props {
@@ -39,6 +45,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
   const [form, setForm] = useState<Partial<Contato>>({
     nome: "", email: "", status: "ativo",
   });
+  const [emails, setEmails] = useState<EmailRow[]>([{ email: "", principal: true }]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [clientes, setClientes] = useState<ClienteVinculo[]>([]);
@@ -52,15 +59,28 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
       if (contato) {
         setForm({ ...contato });
         carregarClientes(contato.id);
+        carregarEmails(contato);
       } else {
         setForm({ nome: "", email: "", status: "ativo" });
         setClientes(clientePreVinculado ? [clientePreVinculado] : []);
+        setEmails([{ email: "", principal: true }]);
       }
       setBusca("");
       setResultados([]);
       setMostrarBusca(false);
     }
   }, [open, contato, clientePreVinculado]);
+
+  async function carregarEmails(c: Contato) {
+    const { data } = await supabase
+      .from("contato_emails")
+      .select("id, email")
+      .eq("contato_id", c.id);
+    setEmails([
+      { email: c.email, principal: true },
+      ...(data || []).map(e => ({ id: e.id, email: e.email, principal: false })),
+    ]);
+  }
 
   async function carregarClientes(contatoId: string) {
     const { data } = await supabase
@@ -103,15 +123,39 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
   const set = (field: keyof Contato, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
+  function adicionarEmail() {
+    setEmails(prev => [...prev, { email: "", principal: false }]);
+  }
+
+  function removerEmail(idx: number) {
+    setEmails(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (!next.some(e => e.principal) && next.length > 0) next[0].principal = true;
+      return [...next];
+    });
+  }
+
+  function alterarEmail(idx: number, valor: string) {
+    setEmails(prev => prev.map((e, i) => (i === idx ? { ...e, email: valor } : e)));
+  }
+
+  function marcarPrincipal(idx: number) {
+    setEmails(prev => prev.map((e, i) => ({ ...e, principal: i === idx })));
+  }
+
   async function handleSave() {
     if (!form.nome?.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
-    if (!form.email?.trim()) { toast({ title: "E-mail é obrigatório", variant: "destructive" }); return; }
+    const emailsPreenchidos = emails.filter(e => e.email.trim() !== "");
+    const principal = emailsPreenchidos.find(e => e.principal) || emailsPreenchidos[0];
+    if (!principal) { toast({ title: "Pelo menos um e-mail é obrigatório", variant: "destructive" }); return; }
+    const extras = emailsPreenchidos.filter(e => e !== principal);
+
     setSaving(true);
     try {
       let contatoId = contato?.id;
       if (editing && contatoId) {
         const { error } = await supabase.from("contatos").update({
-          nome: form.nome, email: form.email, telefone: form.telefone || null,
+          nome: form.nome, email: principal.email, telefone: form.telefone || null,
           whatsapp: form.whatsapp || null, cpf: form.cpf || null,
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
@@ -121,7 +165,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from("contatos").insert({
-          nome: form.nome, email: form.email, telefone: form.telefone || null,
+          nome: form.nome, email: principal.email, telefone: form.telefone || null,
           whatsapp: form.whatsapp || null, cpf: form.cpf || null,
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
@@ -137,6 +181,13 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
         if (clientes.length > 0) {
           await supabase.from("contato_cliente").insert(
             clientes.map(c => ({ contato_id: contatoId, cliente_id: c.id }))
+          );
+        }
+        // Sincroniza e-mails extras: remove todos e reinsere
+        await supabase.from("contato_emails").delete().eq("contato_id", contatoId);
+        if (extras.length > 0) {
+          await supabase.from("contato_emails").insert(
+            extras.map(e => ({ contato_id: contatoId, email: e.email }))
           );
         }
       }
@@ -181,9 +232,39 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
               <Label>Nome completo <span className="text-destructive">*</span></Label>
               <Input value={form.nome || ""} onChange={e => set("nome", e.target.value)} placeholder="Nome da pessoa" />
             </div>
-            <div className="space-y-1.5">
-              <Label>E-mail <span className="text-destructive">*</span></Label>
-              <Input type="email" value={form.email || ""} onChange={e => set("email", e.target.value)} placeholder="email@contato.com" />
+            <div className="col-span-2 space-y-1.5">
+              <Label>E-mail(s) <span className="text-destructive">*</span></Label>
+              <div className="space-y-1.5">
+                {emails.map((e, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => marcarPrincipal(idx)}
+                      title={e.principal ? "E-mail principal" : "Marcar como principal"}
+                      className="shrink-0"
+                    >
+                      <Star
+                        size={16}
+                        className={e.principal ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}
+                      />
+                    </button>
+                    <Input
+                      type="email"
+                      value={e.email}
+                      onChange={ev => alterarEmail(idx, ev.target.value)}
+                      placeholder="email@contato.com"
+                    />
+                    {emails.length > 1 && (
+                      <button type="button" onClick={() => removerEmail(idx)} className="text-muted-foreground hover:text-destructive shrink-0">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={adicionarEmail}>
+                  <Plus size={12} className="mr-1" /> Adicionar e-mail
+                </Button>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Telefone</Label>
