@@ -25,6 +25,7 @@ import AdminMarketing from "./pages/AdminMarketing";
 import Financeiro from "./pages/Financeiro";
 import RH from "./pages/RH";
 import Inteligencia from "./pages/Inteligencia";
+import Contatos from "./pages/Contatos";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/" element={<Login />} />
               <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
               <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
+              <Route path="/contatos" element={<Protected><Contatos /></Protected>} />
               <Route path="/oportunidades" element={<Protected><Oportunidades /></Protected>} />
               <Route path="/planejamento" element={<Protected><Planejamento /></Protected>} />
               <Route path="/crm/:gestaoId" element={<Protected><CrmGestao /></Protected>} />

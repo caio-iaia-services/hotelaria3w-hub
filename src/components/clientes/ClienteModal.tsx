@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, X } from "lucide-react";
+import { Pencil, X, ChevronDown, ChevronRight } from "lucide-react";
 import type { Cliente } from "@/lib/types";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 import SegmentoMultiSelect, { SegmentosBadges } from "@/components/clientes/SegmentoMultiSelect";
+import ContatosClienteSection from "@/components/contatos/ContatosClienteSection";
 
 interface Props {
   cliente: Cliente | null;
@@ -39,6 +40,7 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Cliente>>({});
+  const [contatosAbertos, setContatosAbertos] = useState(false);
   const { cidades, loading: loadingCidades } = useCidadesIBGE(form.estado);
 
   useEffect(() => {
@@ -251,6 +253,29 @@ export default function ClienteModal({ cliente, open, onClose, onSave, onDelete 
                 <p className="text-sm">{cliente.observacoes}</p>
               </div>
             )}
+
+            {/* Seção de Contatos */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
+                onClick={() => setContatosAbertos(v => !v)}
+              >
+                <span>Contatos</span>
+                {contatosAbertos
+                  ? <ChevronDown size={15} className="text-muted-foreground" />
+                  : <ChevronRight size={15} className="text-muted-foreground" />
+                }
+              </button>
+              {contatosAbertos && (
+                <div className="px-3 pb-3 pt-1 border-t">
+                  <ContatosClienteSection
+                    clienteId={cliente.id}
+                    clienteNome={cliente.nome_fantasia}
+                    clienteCnpj={cliente.cnpj}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </DialogContent>

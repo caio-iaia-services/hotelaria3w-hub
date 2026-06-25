@@ -55,6 +55,34 @@ export interface ContatoCliente {
   created_at: string
 }
 
+export interface Contato {
+  id: string
+  nome: string
+  email: string
+  telefone: string | null
+  whatsapp: string | null
+  cpf: string | null
+  data_nascimento: string | null
+  cargo: string | null
+  origem: string | null
+  status: string
+  preferencia_contato: string | null
+  observacoes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ContatoClienteRel {
+  id: string
+  contato_id: string
+  cliente_id: string
+  created_at: string
+}
+
+export interface ContatoComClientes extends Contato {
+  clientes?: { id: string; nome_fantasia: string; cnpj: string }[]
+}
+
 export interface Oportunidade {
   id: string
   numero: string
