@@ -6,7 +6,7 @@
 export const config = { runtime: "edge" };
 
 const EVOLUTION_BASE = "https://n8n-evolution-api.3sq8ua.easypanel.host";
-const EVOLUTION_INSTANCE = "3W-Atendimento";
+const EVOLUTION_INSTANCE = "3W-Hotelaria";
 const EVOLUTION_APIKEY = "429683C4C977415CAAFCCE10F7D57E11";
 
 export default async function handler(req: Request): Promise<Response> {
