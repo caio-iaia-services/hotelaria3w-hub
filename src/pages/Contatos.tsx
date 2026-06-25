@@ -65,7 +65,7 @@ export default function Contatos() {
     if (!busca) return true;
     const q = busca.toLowerCase();
     return (
-      c.nome.toLowerCase().includes(q) ||
+      (c.nome || "").toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       (c.cargo || "").toLowerCase().includes(q) ||
       (c.clientes || []).some(cl => cl.nome_fantasia.toLowerCase().includes(q))
@@ -173,7 +173,7 @@ export default function Contatos() {
                         <UserRound size={16} className="text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{c.nome}</p>
+                        <p className="font-medium text-sm truncate">{c.nome || c.email}</p>
                         {c.cargo && <p className="text-xs text-muted-foreground truncate">{c.cargo}</p>}
                       </div>
                     </div>

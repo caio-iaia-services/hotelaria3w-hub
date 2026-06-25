@@ -57,7 +57,7 @@ export interface ContatoCliente {
 
 export interface Contato {
   id: string
-  nome: string
+  nome: string | null
   email: string
   telefone: string | null
   whatsapp: string | null
@@ -76,13 +76,6 @@ export interface ContatoClienteRel {
   id: string
   contato_id: string
   cliente_id: string
-  created_at: string
-}
-
-export interface ContatoEmail {
-  id: string
-  contato_id: string
-  email: string
   created_at: string
 }
 

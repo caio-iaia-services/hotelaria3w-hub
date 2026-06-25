@@ -70,7 +70,7 @@ export default function ContatosClienteSection({ clienteId, clienteNome, cliente
     if (error) {
       toast({ title: "Erro ao vincular", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `${contato.nome} vinculado` });
+      toast({ title: `${contato.nome || contato.email} vinculado` });
       setContatos(prev => [...prev, contato]);
       setBusca("");
       setResultados([]);
@@ -137,7 +137,7 @@ export default function ContatosClienteSection({ clienteId, clienteNome, cliente
                   disabled={vinculando === c.id}
                 >
                   <div>
-                    <p className="text-sm font-medium">{c.nome}</p>
+                    <p className="text-sm font-medium">{c.nome || c.email}</p>
                     <p className="text-xs text-muted-foreground">{c.email} {c.cargo ? `· ${c.cargo}` : ""}</p>
                   </div>
                   {vinculando === c.id && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
@@ -170,7 +170,7 @@ export default function ContatosClienteSection({ clienteId, clienteNome, cliente
               >
                 <div className="flex items-center gap-2">
                   <UserRound size={14} className="text-muted-foreground shrink-0" />
-                  <p className="text-sm font-medium">{c.nome}</p>
+                  <p className="text-sm font-medium">{c.nome || c.email}</p>
                   <Badge className={`text-[10px] h-4 px-1.5 ${statusColors[c.status] || statusColors.ativo}`}>
                     {c.status}
                   </Badge>
@@ -190,7 +190,7 @@ export default function ContatosClienteSection({ clienteId, clienteNome, cliente
                 </div>
               </button>
               <button
-                onClick={() => desvincular(c.id, c.nome)}
+                onClick={() => desvincular(c.id, c.nome || c.email)}
                 disabled={desvinculando === c.id}
                 className="text-muted-foreground hover:text-destructive transition-colors ml-2 opacity-0 group-hover:opacity-100 mt-0.5"
               >
