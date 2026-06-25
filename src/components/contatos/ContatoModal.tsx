@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, X, Plus, Search, Building2, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import type { Contato } from "@/lib/types";
 
 interface ClienteVinculo {
@@ -248,26 +247,14 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1.5">
+            <div className="space-y-1.5">
               <Label>Qualificação</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {QUALIFICACAO_OPTIONS.map(q => (
-                  <button
-                    key={q.value}
-                    type="button"
-                    onClick={() => set("qualificacao", q.value)}
-                    className={cn(
-                      "flex items-center gap-2 p-2.5 rounded-xl border-2 text-sm font-medium transition-all text-left",
-                      form.qualificacao === q.value
-                        ? "border-[#164B6E] bg-[#164B6E]/5 text-[#164B6E]"
-                        : "border-border hover:border-[#164B6E]/40 text-muted-foreground"
-                    )}
-                  >
-                    <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", form.qualificacao === q.value ? "border-[#164B6E] bg-[#164B6E]" : "border-muted-foreground")} />
-                    {q.label}
-                  </button>
-                ))}
-              </div>
+              <Select value={form.qualificacao || "cadastrado"} onValueChange={v => set("qualificacao", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-card z-50">
+                  {QUALIFICACAO_OPTIONS.map(q => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Observações</Label>

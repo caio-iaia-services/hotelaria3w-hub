@@ -22,6 +22,18 @@ const preferenciaBadge: Record<string, string> = {
   "Telefone":  "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
 };
 
+const QUALIFICACAO_OPTIONS = [
+  { value: "cadastrado",            label: "Cadastrado" },
+  { value: "higienizado",           label: "Higienizado" },
+  { value: "aquecido",              label: "Aquecido" },
+  { value: "em_prospeccao",         label: "Em Prospecção" },
+  { value: "ativo_super",           label: "Ativo Super" },
+  { value: "ativo_interessado",     label: "Ativo Interessado" },
+  { value: "ativo_em_observacao",   label: "Ativo Em Observação" },
+  { value: "inativo",               label: "Inativo" },
+];
+const qualificacaoLabel: Record<string, string> = Object.fromEntries(QUALIFICACAO_OPTIONS.map(q => [q.value, q.label]));
+
 interface ContatoComClientes extends Contato {
   clientes?: { id: string; nome_fantasia: string; cnpj: string }[];
 }
@@ -32,6 +44,7 @@ export default function Contatos() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroOrigem, setFiltroOrigem] = useState("todas");
+  const [filtroQualificacao, setFiltroQualificacao] = useState("todas");
   const [modalOpen, setModalOpen] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
 
@@ -44,6 +57,7 @@ export default function Contatos() {
 
     if (filtroStatus !== "todos") q = q.eq("status", filtroStatus);
     if (filtroOrigem !== "todas") q = q.eq("origem", filtroOrigem);
+    if (filtroQualificacao !== "todas") q = q.eq("qualificacao", filtroQualificacao);
 
     const { data, error } = await q;
     if (error) {
@@ -57,7 +71,7 @@ export default function Contatos() {
       );
     }
     setCarregando(false);
-  }, [filtroStatus, filtroOrigem]);
+  }, [filtroStatus, filtroOrigem, filtroQualificacao]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -139,6 +153,15 @@ export default function Contatos() {
               <SelectItem value="Outros">Outros</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filtroQualificacao} onValueChange={setFiltroQualificacao}>
+            <SelectTrigger className="w-44 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-card z-50">
+              <SelectItem value="todas">Todas as qualificações</SelectItem>
+              {QUALIFICACAO_OPTIONS.map(q => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -153,7 +176,7 @@ export default function Contatos() {
             <UserRound size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">Nenhum contato encontrado</p>
             <p className="text-sm mt-1">
-              {busca || filtroStatus !== "todos" || filtroOrigem !== "todas"
+              {busca || filtroStatus !== "todos" || filtroOrigem !== "todas" || filtroQualificacao !== "todas"
                 ? "Tente ajustar os filtros de busca"
                 : "Clique em \"Novo Contato\" para começar"}
             </p>
@@ -206,6 +229,11 @@ export default function Contatos() {
                     {c.origem && (
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5">
                         {c.origem}
+                      </Badge>
+                    )}
+                    {c.qualificacao && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                        {qualificacaoLabel[c.qualificacao] || c.qualificacao}
                       </Badge>
                     )}
                   </div>
