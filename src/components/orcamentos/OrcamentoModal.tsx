@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Upload, X, Image as ImageIcon, Star } from "lucide-react";
+import { Plus, Trash2, Upload, X, Image as ImageIcon, Star, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { getLocalDateString, addDaysToLocalDateString } from "@/lib/date";
 import { montarCondicoesPagamentoPayload } from "@/lib/condicoesPagamento";
@@ -52,6 +53,15 @@ interface FornecedorLocal {
   tipo_layout: string | null;
   frete_tipo_padrao: string | null;
 }
+
+interface ContatoVinculo {
+  id: string;
+  nome: string | null;
+  email: string;
+  cargo: string | null;
+}
+
+const MAX_CONTATOS_ORCAMENTO = 7;
 
 interface ImagemMarketingState {
   preview: string;
@@ -146,6 +156,9 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
   const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([]);
   const [imagensAdicionaisPreview, setImagensAdicionaisPreview] = useState<string[]>([]);
   const [dados, setDados] = useState(DADOS_INICIAL);
+  const [contatosDoCliente, setContatosDoCliente] = useState<ContatoVinculo[]>([]);
+  const [contatosSelecionados, setContatosSelecionados] = useState<string[]>([]);
+  const [contatoPrincipalId, setContatoPrincipalId] = useState<string | null>(null);
 
   // Initialize when modal opens
   useEffect(() => {
@@ -166,6 +179,15 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
       .maybeSingle();
 
     setClienteCompleto(cliente as ClienteCompleto | null);
+
+    const { data: vinculos } = await supabase
+      .from("contato_cliente")
+      .select("contatos(id, nome, email, cargo)")
+      .eq("cliente_id", card.cliente_id);
+    const contatosCarregados = (vinculos || []).map((v: any) => v.contatos).filter(Boolean) as ContatoVinculo[];
+    setContatosDoCliente(contatosCarregados);
+    setContatosSelecionados([]);
+    setContatoPrincipalId(null);
 
     const partes: string[] = [];
     if (cliente?.logradouro) partes.push(cliente.logradouro);
@@ -200,6 +222,23 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
       setOperacaoSelecionada("");
       setFornecedorSelecionado(null);
     }
+  }
+
+  function toggleContato(id: string) {
+    setContatosSelecionados(prev => {
+      if (prev.includes(id)) {
+        const next = prev.filter(c => c !== id);
+        if (contatoPrincipalId === id) setContatoPrincipalId(next[0] || null);
+        return next;
+      }
+      if (prev.length >= MAX_CONTATOS_ORCAMENTO) {
+        toast.error(`Máximo de ${MAX_CONTATOS_ORCAMENTO} contatos por orçamento`);
+        return prev;
+      }
+      const next = [...prev, id];
+      if (!contatoPrincipalId) setContatoPrincipalId(id);
+      return next;
+    });
   }
 
   async function buscarFornecedores(): Promise<FornecedorLocal[]> {
@@ -423,6 +462,11 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
       toast.error("Adicione pelo menos um item ao orçamento");
       return;
     }
+    if (contatosSelecionados.length === 0 && !confirm(
+      "Nenhum contato vinculado a este orçamento. O recomendado é ter pelo menos 1 contato (pessoa) para quem o orçamento se destina.\n\nContinuar sem contato?"
+    )) {
+      return;
+    }
     const itensInvalidos = itens.filter((item) => {
       const qty = parseFloat(String(item.quantidade).replace(",", ".")) || 0;
       const price = parseFloat(String(item.preco_unitario).replace(",", ".")) || 0;
@@ -591,6 +635,16 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
       const { error: erroItens } = await supabase.from("orcamento_itens").insert(itensParaInserir);
       if (erroItens) throw erroItens;
 
+      if (contatosSelecionados.length > 0) {
+        await supabase.from("orcamento_contato").insert(
+          contatosSelecionados.map(contato_id => ({
+            orcamento_id: orcamento.id,
+            contato_id,
+            principal: contato_id === contatoPrincipalId,
+          }))
+        );
+      }
+
       await supabase.from("acoes_comerciais_log").insert({
         card_id: card.id,
         acao: "orcamento_gerado",
@@ -647,6 +701,46 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
                 <Badge variant="outline">{card.gestao}</Badge>
               </div>
             </div>
+          </div>
+
+          {/* CONTATOS DO ORÇAMENTO */}
+          <div className="bg-card border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">
+                <UserRound size={14} className="text-muted-foreground" />
+                Contatos do orçamento
+              </Label>
+              <span className="text-xs text-muted-foreground">{contatosSelecionados.length}/{MAX_CONTATOS_ORCAMENTO}</span>
+            </div>
+            {contatosDoCliente.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Nenhum contato vinculado a este cliente. Cadastre em Clientes ou no módulo Contatos.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {contatosDoCliente.map(c => {
+                  const selecionado = contatosSelecionados.includes(c.id);
+                  return (
+                    <div key={c.id} className="flex items-center justify-between border rounded px-2.5 py-1.5">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer flex-1">
+                        <Checkbox checked={selecionado} onCheckedChange={() => toggleContato(c.id)} />
+                        <span className="font-medium">{c.nome || c.email}</span>
+                        <span className="text-xs text-muted-foreground">{c.email}</span>
+                      </label>
+                      {selecionado && (
+                        <button
+                          type="button"
+                          onClick={() => setContatoPrincipalId(c.id)}
+                          title={contatoPrincipalId === c.id ? "Contato principal" : "Marcar como principal"}
+                        >
+                          <Star size={14} className={contatoPrincipalId === c.id ? "fill-amber-400 text-amber-400" : "text-muted-foreground"} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* FORNECEDOR (auto-selecionado) */}
