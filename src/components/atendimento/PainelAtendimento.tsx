@@ -9,10 +9,16 @@ import {
 } from "@/components/ui/select";
 import {
   Building2, MapPin, Phone, Mail, Tag, Search, Save, Target, UserSearch,
-  Hash, MessageSquare, Layers, FileText, ImageIcon,
+  Hash, MessageSquare, Layers, FileText, ImageIcon, UserRound, Plus, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { type Cliente } from "@/lib/types";
+
+interface ContatoVinculo {
+  id: string;
+  nome: string | null;
+  email: string;
+}
 
 // Subset do Chat que o painel precisa
 interface ChatParaPainel {
@@ -72,6 +78,14 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
   const [salvando, setSalvando] = useState(false);
   const [ficha, setFicha] = useState<FichaTecnica | null>(null);
 
+  // Contatos (pessoas) vinculados a este número de WhatsApp
+  const [contatosVinculados, setContatosVinculados] = useState<ContatoVinculo[]>([]);
+  const [buscaContato, setBuscaContato] = useState("");
+  const [resultadosContato, setResultadosContato] = useState<ContatoVinculo[]>([]);
+  const [buscandoContato, setBuscandoContato] = useState(false);
+  const [mostrarBuscaContato, setMostrarBuscaContato] = useState(false);
+  const [criandoContato, setCriandoContato] = useState(false);
+
   // Recarrega tudo quando muda o chat
   useEffect(() => {
     if (!chat) {
@@ -83,6 +97,10 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
       setBuscaCliente("");
       setResultadosBusca([]);
       setMostrarBusca(false);
+      setContatosVinculados([]);
+      setMostrarBuscaContato(false);
+      setBuscaContato("");
+      setResultadosContato([]);
       return;
     }
     setInteresse(chat.interesse_cliente || "");
@@ -92,6 +110,15 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
     setMostrarBusca(false);
     setBuscaCliente("");
     setResultadosBusca([]);
+    setMostrarBuscaContato(false);
+    setBuscaContato("");
+    setResultadosContato([]);
+
+    if (chat.contato_id) {
+      carregarContatosVinculados(chat.contato_id);
+    } else {
+      setContatosVinculados([]);
+    }
 
     if (chat.cliente_id) {
       carregarCliente(chat.cliente_id);
@@ -277,6 +304,75 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
     toast.success("Cliente vinculado");
   };
 
+  // ── Contatos (pessoas) vinculados ao número de WhatsApp ──────────────────────
+  const carregarContatosVinculados = async (contatoWhatsappId: string) => {
+    const { data } = await supabase
+      .from("contato_whatsapp")
+      .select("contatos(id, nome, email)")
+      .eq("contato_whatsapp_id", contatoWhatsappId);
+    setContatosVinculados((data || []).map((r: any) => r.contatos).filter(Boolean));
+  };
+
+  useEffect(() => {
+    if (buscaContato.length < 2) { setResultadosContato([]); return; }
+    const timer = setTimeout(async () => {
+      setBuscandoContato(true);
+      const { data } = await supabase
+        .from("contatos")
+        .select("id, nome, email")
+        .or(`nome.ilike.%${buscaContato}%,email.ilike.%${buscaContato}%`)
+        .limit(6);
+      setResultadosContato((data || []).filter((c: any) => !contatosVinculados.find(v => v.id === c.id)));
+      setBuscandoContato(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [buscaContato, contatosVinculados]);
+
+  const vincularContato = async (c: ContatoVinculo) => {
+    if (!chat?.contato_id) return;
+    const { error } = await supabase.from("contato_whatsapp").insert({
+      contato_id: c.id,
+      contato_whatsapp_id: chat.contato_id,
+    });
+    if (error) { toast.error("Erro ao vincular contato"); return; }
+    if (cliente) {
+      await supabase
+        .from("contato_cliente")
+        .upsert({ contato_id: c.id, cliente_id: cliente.id }, { onConflict: "contato_id,cliente_id" });
+    }
+    setContatosVinculados(prev => [...prev, c]);
+    setBuscaContato("");
+    setResultadosContato([]);
+    setMostrarBuscaContato(false);
+    toast.success(`${c.nome || c.email} vinculado`);
+  };
+
+  const criarEVincularContato = async () => {
+    if (!chat?.contato_id) return;
+    const email = buscaContato.trim();
+    if (!email.includes("@")) { toast.error("Informe um e-mail válido"); return; }
+    setCriandoContato(true);
+    try {
+      const { data: existente } = await supabase.from("contatos").select("id, nome, email").eq("email", email).maybeSingle();
+      const c = existente || (await supabase.from("contatos").insert({ email, origem: "Atendimento WhatsApp" }).select("id, nome, email").single()).data;
+      if (c) await vincularContato(c as ContatoVinculo);
+    } catch (err: any) {
+      toast.error("Erro ao criar contato: " + (err?.message || ""));
+    } finally {
+      setCriandoContato(false);
+    }
+  };
+
+  const desvincularContato = async (contatoId: string) => {
+    if (!chat?.contato_id) return;
+    await supabase
+      .from("contato_whatsapp")
+      .delete()
+      .eq("contato_id", contatoId)
+      .eq("contato_whatsapp_id", chat.contato_id);
+    setContatosVinculados(prev => prev.filter(c => c.id !== contatoId));
+  };
+
   const salvarAnotacoes = async () => {
     if (!chat) return;
     setSalvando(true);
@@ -410,6 +506,83 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
 
       {/* ── Corpo: Anotações ──────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+
+        {/* ── Contatos (pessoas) vinculados ao WhatsApp ── */}
+        {chat.contato_id && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                <UserRound size={11} /> Contatos
+              </Label>
+              <button
+                onClick={() => setMostrarBuscaContato(v => !v)}
+                className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+              >
+                <Plus size={11} /> Vincular
+              </button>
+            </div>
+
+            {mostrarBuscaContato && (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    autoFocus
+                    value={buscaContato}
+                    onChange={e => setBuscaContato(e.target.value)}
+                    placeholder="Buscar por nome ou e-mail..."
+                    className="h-7 text-[11px] pl-7"
+                  />
+                </div>
+                {buscandoContato && <p className="text-[10px] text-muted-foreground">Buscando...</p>}
+                {resultadosContato.length > 0 && (
+                  <div className="border rounded-md bg-card divide-y max-h-32 overflow-y-auto">
+                    {resultadosContato.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => vincularContato(c)}
+                        className="w-full text-left px-2.5 py-1.5 hover:bg-muted/50 transition-colors"
+                      >
+                        <p className="text-[11px] font-medium">{c.nome || c.email}</p>
+                        {c.nome && <p className="text-[10px] text-muted-foreground">{c.email}</p>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {buscaContato.includes("@") && resultadosContato.length === 0 && !buscandoContato && (
+                  <button
+                    onClick={criarEVincularContato}
+                    disabled={criandoContato}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    {criandoContato ? "Criando..." : `+ Criar contato com e-mail "${buscaContato}"`}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {contatosVinculados.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">Nenhum contato vinculado a este número.</p>
+            ) : (
+              <div className="space-y-1">
+                {contatosVinculados.map(c => (
+                  <div key={c.id} className="flex items-center justify-between bg-muted/40 rounded px-2 py-1.5 group">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium truncate">{c.nome || c.email}</p>
+                      {c.nome && <p className="text-[10px] text-muted-foreground truncate">{c.email}</p>}
+                    </div>
+                    <button
+                      onClick={() => desvincularContato(c.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Ficha do Atendimento (protocolo, métricas e mídias) ── */}
         <div className="space-y-2.5">
