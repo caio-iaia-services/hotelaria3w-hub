@@ -25,7 +25,7 @@ interface Props {
   onSaved?: () => void;
 }
 
-const ORIGENS = ["WIX", "Indicação", "Feira", "Prospecção ativa", "Site", "Outros"];
+const ORIGENS = ["WIX", "Indicação", "Feira", "Prospecção ativa", "Site", "Base Clientes", "Outros"];
 const PREFERENCIAS = ["E-mail", "WhatsApp", "Telefone"];
 
 const QUALIFICACAO_OPTIONS = [

@@ -150,6 +150,7 @@ export default function Contatos() {
               <SelectItem value="Feira">Feira</SelectItem>
               <SelectItem value="Prospecção ativa">Prospecção ativa</SelectItem>
               <SelectItem value="Site">Site</SelectItem>
+              <SelectItem value="Base Clientes">Base Clientes</SelectItem>
               <SelectItem value="Outros">Outros</SelectItem>
             </SelectContent>
           </Select>
