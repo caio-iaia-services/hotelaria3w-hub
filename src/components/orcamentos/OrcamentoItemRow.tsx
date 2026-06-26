@@ -10,6 +10,8 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+const MEDIDA_PADRAO: MedidaPreco = { medida: '88x198', preco: 1348.00 }
+
 function parsePrice(value: string | number | null | undefined): number {
   if (value === null || value === undefined) return 0
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -86,7 +88,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
 
   function handleMedidaChange(value: string) {
     onUpdate(item.id, 'medidas', value)
-    const found = medidas.find(m => m.medida === value)
+    const found = [...medidas, MEDIDA_PADRAO].find(m => m.medida === value)
     if (found) {
       onUpdate(item.id, 'preco_unitario', found.preco)
     }
@@ -178,26 +180,21 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         {tipoLayout === 'castor' && (
           <div className="col-span-2">
             <Label>Medidas</Label>
-            {medidas.length > 0 ? (
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                value={item.medidas || ''}
-                onChange={(e) => handleMedidaChange(e.target.value)}
-              >
-                <option value="">Selecione...</option>
-                {medidas.map(m => (
-                  <option key={m.medida} value={m.medida}>
-                    {m.medida}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <Input
-                placeholder="Ex: Queen 158x198"
-                value={item.medidas || ''}
-                onChange={(e) => onUpdate(item.id, 'medidas', e.target.value)}
-              />
-            )}
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              value={item.medidas || ''}
+              onChange={(e) => handleMedidaChange(e.target.value)}
+            >
+              <option value="">Selecione...</option>
+              {medidas.map(m => (
+                <option key={m.medida} value={m.medida}>
+                  {m.medida}
+                </option>
+              ))}
+              {!medidas.some(m => m.medida === MEDIDA_PADRAO.medida) && (
+                <option value={MEDIDA_PADRAO.medida}>{MEDIDA_PADRAO.medida}</option>
+              )}
+            </select>
           </div>
         )}
 
