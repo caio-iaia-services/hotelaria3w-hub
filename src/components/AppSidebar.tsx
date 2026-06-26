@@ -90,7 +90,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         { title: "Orçamentos", url: "/orcamentos", icon: FileText, modulo: "orcamentos" },
         { title: "Ações Comerciais", url: "/acoes-comerciais", icon: Zap, modulo: "acoes_comerciais" },
         { title: "Clientes", url: "/clientes", icon: Users, modulo: "clientes" },
-        { title: "Contatos", url: "/contatos", icon: User, modulo: "clientes" },
+        { title: "Contatos", url: "/contatos", icon: User, modulo: "contatos" },
       ],
     },
     {

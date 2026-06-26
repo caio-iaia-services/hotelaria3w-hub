@@ -15,6 +15,7 @@ export const TODOS_MODULOS = [
   { key: 'orcamentos',       label: 'Orçamentos' },
   { key: 'acoes_comerciais', label: 'Ações Comerciais' },
   { key: 'clientes',         label: 'Clientes' },
+  { key: 'contatos',         label: 'Contatos' },
   { key: 'atendimento',      label: 'Atendimento' },
   { key: 'fornecedores',     label: 'Fornecedores' },
   { key: 'marketing',        label: 'Marketing' },
@@ -26,7 +27,7 @@ export const TODOS_MODULOS = [
 
 export const MODULOS_COMERCIAL_PADRAO = [
   'dashboard', 'oportunidades', 'crm', 'orcamentos',
-  'acoes_comerciais', 'clientes', 'atendimento', 'fornecedores',
+  'acoes_comerciais', 'clientes', 'contatos', 'atendimento', 'fornecedores',
 ]
 
 export const MODULOS_ADMIN_PADRAO = TODOS_MODULOS.map(m => m.key)
