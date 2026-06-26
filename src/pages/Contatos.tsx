@@ -251,50 +251,50 @@ export default function Contatos() {
             </p>
           </div>
         ) : visualizacao === "lista" ? (
-          <Card className="border">
-            <Table>
+          <Card className="border overflow-x-auto">
+            <Table className="table-fixed w-full min-w-[920px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefone/WhatsApp</TableHead>
-                  <TableHead>Empresas</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Qualificação</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="w-[24%]">Contato</TableHead>
+                  <TableHead className="w-[14%]">Telefone/WhatsApp</TableHead>
+                  <TableHead className="w-[20%]">Empresas</TableHead>
+                  <TableHead className="w-[12%]">Origem</TableHead>
+                  <TableHead className="w-[16%]">Qualificação</TableHead>
+                  <TableHead className="w-[14%] text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {contatos.map(c => (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => abrirEditar(c)}>
-                    <TableCell>
-                      <p className="font-medium text-sm">{c.nome || c.email}</p>
-                      {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
+                    <TableCell className="overflow-hidden">
+                      <p className="font-medium text-sm truncate">{c.nome || c.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {c.nome ? c.email : (c.cargo || "")}
+                      </p>
                     </TableCell>
-                    <TableCell className="text-sm">{c.email}</TableCell>
-                    <TableCell className="text-sm">{c.whatsapp || c.telefone || "-"}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-sm truncate">{c.whatsapp || c.telefone || "-"}</TableCell>
+                    <TableCell className="overflow-hidden">
                       {c.clientes && c.clientes.length > 0 ? (
                         <div className="flex items-center gap-1 flex-wrap">
-                          {c.clientes.slice(0, 2).map(cl => (
-                            <span key={cl.id} className="text-[11px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                          {c.clientes.slice(0, 1).map(cl => (
+                            <span key={cl.id} className="text-[11px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded truncate max-w-[140px]">
                               {cl.nome_fantasia}
                             </span>
                           ))}
-                          {c.clientes.length > 2 && (
-                            <span className="text-[11px] text-muted-foreground">+{c.clientes.length - 2}</span>
+                          {c.clientes.length > 1 && (
+                            <span className="text-[11px] text-muted-foreground shrink-0">+{c.clientes.length - 1}</span>
                           )}
                         </div>
                       ) : <span className="text-muted-foreground text-sm">-</span>}
                     </TableCell>
-                    <TableCell>
-                      {c.origem ? <Badge variant="outline" className="text-[10px] h-4 px-1.5">{c.origem}</Badge> : "-"}
+                    <TableCell className="overflow-hidden">
+                      {c.origem ? <Badge variant="outline" className="text-[10px] h-5 px-1.5 truncate max-w-full">{c.origem}</Badge> : <span className="text-muted-foreground text-sm">-</span>}
                     </TableCell>
-                    <TableCell>
-                      {c.qualificacao ? <Badge variant="outline" className="text-[10px] h-4 px-1.5">{qualificacaoLabel[c.qualificacao] || c.qualificacao}</Badge> : "-"}
+                    <TableCell className="overflow-hidden">
+                      {c.qualificacao ? <Badge variant="outline" className="text-[10px] h-5 px-1.5 truncate max-w-full">{qualificacaoLabel[c.qualificacao] || c.qualificacao}</Badge> : <span className="text-muted-foreground text-sm">-</span>}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge className={`text-[10px] h-4 px-1.5 ${statusColors[c.status] || statusColors.ativo}`}>
+                      <Badge className={`text-[10px] h-5 px-1.5 ${statusColors[c.status] || statusColors.ativo}`}>
                         {c.status}
                       </Badge>
                     </TableCell>
