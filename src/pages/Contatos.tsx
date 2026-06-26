@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon } from "lucide-react";
+import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon, UserCheck, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +56,8 @@ export default function Contatos() {
   const [modalOpen, setModalOpen] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
+  const [totalAtivos, setTotalAtivos] = useState(0);
+  const [totalVinculados, setTotalVinculados] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => { setBuscaDebounced(busca); setPagina(1); }, 400);
@@ -96,7 +98,26 @@ export default function Contatos() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const carregarMetricas = useCallback(async () => {
+    const { count: ativos } = await supabase
+      .from("contatos")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "ativo");
+    setTotalAtivos(ativos || 0);
+
+    const { data: vinculados } = await supabase.rpc("contar_contatos_vinculados");
+    setTotalVinculados(Number(vinculados) || 0);
+  }, []);
+
+  useEffect(() => { carregarMetricas(); }, [carregarMetricas]);
+
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const metrics = [
+    { label: "Total de Contatos", value: total.toLocaleString("pt-BR"), icon: UserRound },
+    { label: "Contatos Ativos", value: totalAtivos.toLocaleString("pt-BR"), icon: UserCheck },
+    { label: "Vinculados a Empresas", value: totalVinculados.toLocaleString("pt-BR"), icon: Link2 },
+  ];
 
   function abrirNovo() {
     setContatoSelecionado(null);
@@ -140,6 +161,23 @@ export default function Contatos() {
               <Plus size={16} className="mr-2" /> Novo Contato
             </Button>
           </div>
+        </div>
+
+        {/* Métricas */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          {metrics.map((m) => (
+            <Card key={m.label} className="border-border/50 bg-[#c4942c]">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-white/20">
+                  <m.icon size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/80 font-medium">{m.label}</p>
+                  <p className="text-lg font-bold text-white">{m.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filtros */}
@@ -365,7 +403,7 @@ export default function Contatos() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); setContatoSelecionado(null); }}
         contato={contatoSelecionado}
-        onSaved={carregar}
+        onSaved={() => { carregar(); carregarMetricas(); }}
       />
     </div>
   );
