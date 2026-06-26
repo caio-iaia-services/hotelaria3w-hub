@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
-import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X } from "lucide-react";
+import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
 import ContatoModal from "@/components/contatos/ContatoModal";
+
+type Visualizacao = "cards" | "lista";
 
 const statusColors: Record<string, string> = {
   ativo:     "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
@@ -52,6 +55,7 @@ export default function Contatos() {
   const [filtroQualificacao, setFiltroQualificacao] = useState("todas");
   const [modalOpen, setModalOpen] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
+  const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
 
   useEffect(() => {
     const t = setTimeout(() => { setBuscaDebounced(busca); setPagina(1); }, 400);
@@ -115,9 +119,27 @@ export default function Contatos() {
               {carregando ? "Carregando..." : `${total.toLocaleString("pt-BR")} contato${total !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <Button onClick={abrirNovo}>
-            <Plus size={16} className="mr-2" /> Novo Contato
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-muted rounded-md p-0.5">
+              <button
+                onClick={() => setVisualizacao("cards")}
+                title="Visualização em cards"
+                className={`p-1.5 rounded-sm transition-colors ${visualizacao === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setVisualizacao("lista")}
+                title="Visualização em lista"
+                className={`p-1.5 rounded-sm transition-colors ${visualizacao === "lista" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <ListIcon size={15} />
+              </button>
+            </div>
+            <Button onClick={abrirNovo}>
+              <Plus size={16} className="mr-2" /> Novo Contato
+            </Button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -190,6 +212,59 @@ export default function Contatos() {
                 : "Clique em \"Novo Contato\" para começar"}
             </p>
           </div>
+        ) : visualizacao === "lista" ? (
+          <Card className="border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Telefone/WhatsApp</TableHead>
+                  <TableHead>Empresas</TableHead>
+                  <TableHead>Origem</TableHead>
+                  <TableHead>Qualificação</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contatos.map(c => (
+                  <TableRow key={c.id} className="cursor-pointer" onClick={() => abrirEditar(c)}>
+                    <TableCell>
+                      <p className="font-medium text-sm">{c.nome || c.email}</p>
+                      {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.email}</TableCell>
+                    <TableCell className="text-sm">{c.whatsapp || c.telefone || "-"}</TableCell>
+                    <TableCell>
+                      {c.clientes && c.clientes.length > 0 ? (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {c.clientes.slice(0, 2).map(cl => (
+                            <span key={cl.id} className="text-[11px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                              {cl.nome_fantasia}
+                            </span>
+                          ))}
+                          {c.clientes.length > 2 && (
+                            <span className="text-[11px] text-muted-foreground">+{c.clientes.length - 2}</span>
+                          )}
+                        </div>
+                      ) : <span className="text-muted-foreground text-sm">-</span>}
+                    </TableCell>
+                    <TableCell>
+                      {c.origem ? <Badge variant="outline" className="text-[10px] h-4 px-1.5">{c.origem}</Badge> : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {c.qualificacao ? <Badge variant="outline" className="text-[10px] h-4 px-1.5">{qualificacaoLabel[c.qualificacao] || c.qualificacao}</Badge> : "-"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge className={`text-[10px] h-4 px-1.5 ${statusColors[c.status] || statusColors.ativo}`}>
+                        {c.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {contatos.map(c => (
