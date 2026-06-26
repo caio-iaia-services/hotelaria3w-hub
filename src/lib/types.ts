@@ -113,6 +113,7 @@ export interface CRMCard {
   id: string
   oportunidade_id: string
   cliente_id: string
+  contato_id?: string | null
   operacao: string
   gestao: string
   estagio: 'lead' | 'contato' | 'proposta' | 'negociacao' | 'fechado' | 'consolidacao' | 'pos_venda' | 'realizado' | 'perdido'

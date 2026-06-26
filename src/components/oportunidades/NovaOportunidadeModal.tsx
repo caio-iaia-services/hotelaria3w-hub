@@ -65,6 +65,10 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
   const [loading, setLoading] = useState(false);
   const [cnpjDuplicado, setCnpjDuplicado] = useState(false);
 
+  // Contato responsável (opcional)
+  const [contatosDoCliente, setContatosDoCliente] = useState<{ id: string; nome: string | null; email: string }[]>([]);
+  const [contatoSelecionadoId, setContatoSelecionadoId] = useState<string | null>(null);
+
   // New client form
   const [novoCliente, setNovoCliente] = useState({
     nomeFantasia: "", razaoSocial: "", cnpj: "", segmento: "",
@@ -83,6 +87,22 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
       setCadastrandoNovo(false);
     }
   }, [open, clientePreSelecionado]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carrega contatos vinculados ao cliente selecionado
+  useEffect(() => {
+    setContatoSelecionadoId(null);
+    if (!clienteSelecionado) {
+      setContatosDoCliente([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("contato_cliente")
+        .select("contatos(id, nome, email)")
+        .eq("cliente_id", clienteSelecionado.id);
+      setContatosDoCliente((data || []).map((v: any) => v.contatos).filter(Boolean));
+    })();
+  }, [clienteSelecionado]);
 
   // Search clients from Supabase
   useEffect(() => {
@@ -137,6 +157,8 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
     setNovoCliente({ nomeFantasia: "", razaoSocial: "", cnpj: "", segmento: "", cidade: "", estado: "", email: "", telefone: "" });
     setOperacoesSelecionadas([]);
     setObservacoes("");
+    setContatosDoCliente([]);
+    setContatoSelecionadoId(null);
   };
 
   const handleClose = (val: boolean) => {
@@ -243,6 +265,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
         .insert({
           numero,
           cliente_id: clienteId,
+          contato_id: contatoSelecionadoId,
           operacao: operacoesSelecionadas.join(", "),
           gestao: gestoesImpactadas.join(", "),
           observacoes,
@@ -257,6 +280,7 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
       const cardsParaInserir = operacoesSelecionadas.map(operacao => ({
         oportunidade_id: opp.id,
         cliente_id: clienteId,
+        contato_id: contatoSelecionadoId,
         operacao,
         gestao: operacaoGestaoLabel[operacao] || "G1",
         estagio: "lead" as const,
@@ -373,6 +397,25 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
                   <p><span className="text-muted-foreground">Cidade:</span> {clienteSelecionado.cidade}/{clienteSelecionado.estado}</p>
                   <p><span className="text-muted-foreground">E-mail:</span> {clienteSelecionado.email}</p>
                   <p><span className="text-muted-foreground">Telefone:</span> {clienteSelecionado.telefone}</p>
+                </div>
+
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs">Contato responsável (opcional)</Label>
+                  {contatosDoCliente.length === 0 ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Nenhum contato vinculado a este cliente ainda. Pode continuar sem — cadastre depois em Clientes ou no módulo Contatos.
+                    </p>
+                  ) : (
+                    <Select value={contatoSelecionadoId || "_nenhum"} onValueChange={(v) => setContatoSelecionadoId(v === "_nenhum" ? null : v)}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Nenhum contato" /></SelectTrigger>
+                      <SelectContent className="bg-card z-50">
+                        <SelectItem value="_nenhum">Nenhum</SelectItem>
+                        {contatosDoCliente.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome || c.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             )}

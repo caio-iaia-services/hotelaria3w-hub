@@ -26,6 +26,7 @@ import {
   ChevronDown,
   MessageSquare,
   PlusCircle,
+  UserRound,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -82,6 +83,11 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
   // Orçamento existente para este card
   const [orcamentoExistente, setOrcamentoExistente] = useState<{ id: string; numero: string } | null>(null);
 
+  // Contato responsável (opcional)
+  const [contatosDoCliente, setContatosDoCliente] = useState<{ id: string; nome: string | null; email: string }[]>([]);
+  const [contatoId, setContatoId] = useState<string | null>(null);
+  const [salvandoContato, setSalvandoContato] = useState(false);
+
   // ── Carregar dados ao abrir ──
   useEffect(() => {
     if (open && card) {
@@ -94,6 +100,8 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
       setPrioridade("media");
       setProximaAcao("");
       setOrcamentoExistente(null);
+      setContatosDoCliente([]);
+      setContatoId(null);
     }
   }, [open, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -139,7 +147,30 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
 
     setOrcamentoExistente(orcData ? { id: orcData.id, numero: orcData.numero || "" } : null);
 
+    // 4. Contatos vinculados ao cliente + contato já atribuído ao card
+    setContatoId(c.contato_id || null);
+    const { data: vinculos } = await supabase
+      .from("contato_cliente")
+      .select("contatos(id, nome, email)")
+      .eq("cliente_id", c.cliente_id);
+    setContatosDoCliente((vinculos || []).map((v: any) => v.contatos).filter(Boolean));
+
     setCarregando(false);
+  }
+
+  async function salvarContato(novoContatoId: string | null) {
+    if (!card) return;
+    setSalvandoContato(true);
+    const { error } = await supabase
+      .from("crm_cards")
+      .update({ contato_id: novoContatoId })
+      .eq("id", card.id);
+    setSalvandoContato(false);
+    if (error) {
+      toast.error("Erro ao vincular contato");
+      return;
+    }
+    setContatoId(novoContatoId);
   }
 
   // ── Salvar anotações em crm_cards (sempre funciona) ──
@@ -254,6 +285,31 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
 
           {/* ── Corpo: Anotações (salvas em crm_cards) ── */}
           <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                <UserRound size={11} /> Contato responsável
+              </Label>
+              {contatosDoCliente.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum contato vinculado a este cliente ainda. Cadastre em Clientes ou no módulo Contatos.
+                </p>
+              ) : (
+                <Select
+                  value={contatoId || "_nenhum"}
+                  onValueChange={(v) => salvarContato(v === "_nenhum" ? null : v)}
+                  disabled={salvandoContato}
+                >
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Nenhum contato" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_nenhum">Nenhum</SelectItem>
+                    {contatosDoCliente.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome || c.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
             <div className="space-y-1.5">
               <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">

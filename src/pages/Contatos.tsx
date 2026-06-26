@@ -38,28 +38,44 @@ interface ContatoComClientes extends Contato {
   clientes?: { id: string; nome_fantasia: string; cnpj: string }[];
 }
 
+const PAGE_SIZE = 50;
+
 export default function Contatos() {
   const [contatos, setContatos] = useState<ContatoComClientes[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState("");
+  const [buscaDebounced, setBuscaDebounced] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroOrigem, setFiltroOrigem] = useState("todas");
   const [filtroQualificacao, setFiltroQualificacao] = useState("todas");
   const [modalOpen, setModalOpen] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => { setBuscaDebounced(busca); setPagina(1); }, 400);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  useEffect(() => {
+    setPagina(1);
+  }, [filtroStatus, filtroOrigem, filtroQualificacao]);
+
   const carregar = useCallback(async () => {
     setCarregando(true);
     let q = supabase
       .from("contatos")
-      .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj))")
+      .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj))", { count: "exact" })
       .order("nome");
 
+    if (buscaDebounced) q = q.or(`nome.ilike.%${buscaDebounced}%,email.ilike.%${buscaDebounced}%,cargo.ilike.%${buscaDebounced}%`);
     if (filtroStatus !== "todos") q = q.eq("status", filtroStatus);
     if (filtroOrigem !== "todas") q = q.eq("origem", filtroOrigem);
     if (filtroQualificacao !== "todas") q = q.eq("qualificacao", filtroQualificacao);
 
-    const { data, error } = await q;
+    const from = (pagina - 1) * PAGE_SIZE;
+    const { data, count, error } = await q.range(from, from + PAGE_SIZE - 1);
     if (error) {
       toast({ title: "Erro ao carregar contatos", description: error.message, variant: "destructive" });
     } else {
@@ -69,22 +85,14 @@ export default function Contatos() {
           clientes: (c.contato_cliente || []).map((r: any) => r.clientes).filter(Boolean),
         }))
       );
+      setTotal(count || 0);
     }
     setCarregando(false);
-  }, [filtroStatus, filtroOrigem, filtroQualificacao]);
+  }, [buscaDebounced, filtroStatus, filtroOrigem, filtroQualificacao, pagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const contatosFiltrados = contatos.filter(c => {
-    if (!busca) return true;
-    const q = busca.toLowerCase();
-    return (
-      (c.nome || "").toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      (c.cargo || "").toLowerCase().includes(q) ||
-      (c.clientes || []).some(cl => cl.nome_fantasia.toLowerCase().includes(q))
-    );
-  });
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function abrirNovo() {
     setContatoSelecionado(null);
@@ -104,7 +112,7 @@ export default function Contatos() {
           <div>
             <h1 className="text-2xl font-heading font-bold">Contatos</h1>
             <p className="text-sm text-muted-foreground">
-              {carregando ? "Carregando..." : `${contatosFiltrados.length} contato${contatosFiltrados.length !== 1 ? "s" : ""}`}
+              {carregando ? "Carregando..." : `${total.toLocaleString("pt-BR")} contato${total !== 1 ? "s" : ""}`}
             </p>
           </div>
           <Button onClick={abrirNovo}>
@@ -172,7 +180,7 @@ export default function Contatos() {
           <div className="flex justify-center items-center py-16">
             <Loader2 size={24} className="animate-spin text-muted-foreground" />
           </div>
-        ) : contatosFiltrados.length === 0 ? (
+        ) : contatos.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <UserRound size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">Nenhum contato encontrado</p>
@@ -184,7 +192,7 @@ export default function Contatos() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {contatosFiltrados.map(c => (
+            {contatos.map(c => (
               <Card
                 key={c.id}
                 className="cursor-pointer hover:shadow-md transition-shadow border hover:border-primary/30"
@@ -260,6 +268,23 @@ export default function Contatos() {
           </div>
         )}
       </div>
+
+      {!carregando && total > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 px-6 py-3 border-t">
+          <p className="text-xs text-muted-foreground">
+            {((pagina - 1) * PAGE_SIZE) + 1}–{Math.min(pagina * PAGE_SIZE, total)} de {total.toLocaleString("pt-BR")} contatos
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">Página {pagina} de {totalPaginas}</span>
+            <Button variant="outline" size="sm" disabled={pagina >= totalPaginas} onClick={() => setPagina(p => p + 1)}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ContatoModal
         open={modalOpen}
