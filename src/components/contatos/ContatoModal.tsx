@@ -45,6 +45,12 @@ function formatCNPJ(cnpj: string) {
   return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
+
+function emailValido(email: string) {
+  return EMAIL_REGEX.test(email.trim());
+}
+
 export default function ContatoModal({ open, onClose, contato, clientePreVinculado, onSaved }: Props) {
   const editing = !!contato;
   const [form, setForm] = useState<Partial<Contato>>({
@@ -116,6 +122,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
 
   async function handleSave() {
     if (!form.email?.trim()) { toast({ title: "E-mail é obrigatório", variant: "destructive" }); return; }
+    if (!emailValido(form.email)) { toast({ title: "E-mail inválido", description: "Use um formato como nome@dominio.com ou nome@dominio.com.br", variant: "destructive" }); return; }
 
     setSaving(true);
     try {
@@ -196,7 +203,16 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
             </div>
             <div className="space-y-1.5">
               <Label>E-mail <span className="text-destructive">*</span></Label>
-              <Input type="email" value={form.email || ""} onChange={e => set("email", e.target.value)} placeholder="email@contato.com" />
+              <Input
+                type="email"
+                value={form.email || ""}
+                onChange={e => set("email", e.target.value)}
+                placeholder="email@contato.com"
+                className={form.email && !emailValido(form.email) ? "border-destructive focus-visible:ring-destructive" : ""}
+              />
+              {form.email && !emailValido(form.email) && (
+                <p className="text-xs text-destructive">Formato inválido. Ex: nome@dominio.com ou nome@dominio.com.br</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Telefone</Label>
