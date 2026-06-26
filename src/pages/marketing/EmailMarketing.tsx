@@ -340,6 +340,37 @@ export default function EmailMarketing() {
     }
   }
 
+  // Resolve os Contatos (pessoas) vinculados aos Clientes que casam com os
+  // filtros. Campanhas falam com Contatos, nunca com o e-mail da Receita
+  // Federal em clientes.email — clientes sem nenhum contato vinculado são
+  // simplesmente excluídos da audiência.
+  async function buscarContatosPorFiltro(f: FiltrosAudiencia): Promise<{ email: string; nome: string }[]> {
+    let queryClientes = supabase.from("clientes").select("id")
+    if (f.segmento) queryClientes = queryClientes.overlaps("segmento", [f.segmento])
+    if (f.status)   queryClientes = queryClientes.eq("status", f.status)
+    if (f.estado)   queryClientes = queryClientes.eq("estado", f.estado)
+    if (f.tipo)     queryClientes = queryClientes.eq("tipo", f.tipo)
+    const { data: clientesIds } = await queryClientes.limit(5000)
+    const ids = (clientesIds ?? []).map((c: any) => c.id)
+    if (ids.length === 0) return []
+
+    const { data: vinculos } = await supabase
+      .from("contato_cliente")
+      .select("contatos(id, nome, email)")
+      .in("cliente_id", ids)
+      .limit(5000)
+
+    const vistos = new Set<string>()
+    const contatos: { email: string; nome: string }[] = []
+    for (const v of (vinculos ?? []) as any[]) {
+      const c = v.contatos
+      if (!c?.email || vistos.has(c.id)) continue
+      vistos.add(c.id)
+      contatos.push({ email: c.email, nome: c.nome || "" })
+    }
+    return contatos
+  }
+
   async function contarAudiencia() {
     setAudienciaLoading(true)
     try {
@@ -356,23 +387,12 @@ export default function EmailMarketing() {
           setAudienciaCount(0)
           return
         }
-        let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
-        if (f.segmento) query = query.overlaps("segmento", [f.segmento])
-        if (f.status)   query = query.eq("status", f.status)
-        if (f.estado)   query = query.eq("estado", f.estado)
-        if (f.tipo)     query = query.eq("tipo", f.tipo)
-        const { count } = await query
-        setAudienciaCount(count || 0)
+        const contatos = await buscarContatosPorFiltro(f)
+        setAudienciaCount(contatos.length)
         return
       }
-      let query = supabase.from("clientes").select("id", { count: "exact", head: true }).not("email", "is", null)
-      const f = form.filtros
-      if (f.segmento) query = query.overlaps("segmento", [f.segmento])
-      if (f.status)   query = query.eq("status", f.status)
-      if (f.estado)   query = query.eq("estado", f.estado)
-      if (f.tipo)     query = query.eq("tipo", f.tipo)
-      const { count } = await query
-      setAudienciaCount(count || 0)
+      const contatos = await buscarContatosPorFiltro(form.filtros)
+      setAudienciaCount(contatos.length)
     } catch (err) {
       console.error("[contarAudiencia]", err)
       setAudienciaCount(0)
@@ -442,22 +462,9 @@ export default function EmailMarketing() {
           `Clique no lápis ao lado da lista para adicionar os e-mails diretos.`
         )
       }
-      let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
-      if (f.segmento) query = query.overlaps("segmento", [f.segmento])
-      if (f.status)   query = query.eq("status", f.status)
-      if (f.estado)   query = query.eq("estado", f.estado)
-      if (f.tipo)     query = query.eq("tipo", f.tipo)
-      const { data } = await query.limit(2000)
-      return (data ?? []).filter((c: any) => c.email).map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
+      return buscarContatosPorFiltro(f)
     }
-    let query = supabase.from("clientes").select("email, nome_fantasia").not("email", "is", null)
-    const f = form.filtros
-    if (f.segmento) query = query.overlaps("segmento", [f.segmento])
-    if (f.status)   query = query.eq("status", f.status)
-    if (f.estado)   query = query.eq("estado", f.estado)
-    if (f.tipo)     query = query.eq("tipo", f.tipo)
-    const { data } = await query.limit(2000)
-    return (data ?? []).filter((c: any) => c.email).map((c: any) => ({ email: c.email as string, nome: c.nome_fantasia || "" }))
+    return buscarContatosPorFiltro(form.filtros)
   }
 
   async function salvar(status: "rascunho" | "agendada") {
