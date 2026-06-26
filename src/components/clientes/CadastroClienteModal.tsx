@@ -12,10 +12,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
+import ContatosClienteSection from "@/components/contatos/ContatosClienteSection";
 import type { Cliente } from "@/lib/types";
 import {
   X, Save, Search, Loader2, ShieldCheck, FileText, Briefcase,
-  Users, TrendingUp, Clock, Lightbulb, Plus, Trash2,
+  Users, TrendingUp, Clock, Lightbulb,
   CheckCircle2, Building2, Phone, Mail, MapPin, User, Pencil,
 } from "lucide-react";
 
@@ -44,17 +45,6 @@ function applyMaskCEP(v: string) {
 }
 
 // ─── Local types ───────────────────────────────────────────────────────────────
-
-interface ContatoLocal {
-  id?: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  whatsapp: string;
-  principal: boolean;
-  isNew?: boolean;
-  isDeleted?: boolean;
-}
 
 interface HistoricoData {
   total: number;
@@ -201,7 +191,6 @@ export default function CadastroClienteModal({
   const [activeTab, setActiveTab] = useState("receita");
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(FORM_INICIAL);
-  const [contatos, setContatos] = useState<ContatoLocal[]>([]);
   const [historico, setHistorico] = useState<HistoricoData | null>(null);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -260,13 +249,11 @@ export default function CadastroClienteModal({
         status_prospeccao:     cliente.status_prospeccao || "cadastrado",
         relacao_comercial:     cliente.relacao_comercial || "sem_historico",
       });
-      loadContatos(cliente.id);
       loadHistorico(cliente.id);
     } else {
       setClienteId(null);
       setIsViewing(false);
       setForm({ ...FORM_INICIAL, segmento: segmentoInicial ? [segmentoInicial] : [] });
-      setContatos([]);
       setHistorico(null);
     }
     setActiveTab("receita");
@@ -320,15 +307,6 @@ export default function CadastroClienteModal({
   };
 
   // ── Load helpers ─────────────────────────────────────────────────────────────
-  const loadContatos = async (id: string) => {
-    const { data } = await supabase
-      .from("contatos_cliente")
-      .select("*")
-      .eq("cliente_id", id)
-      .order("principal", { ascending: false });
-    if (data) setContatos((data as any[]).map(c => ({ ...c, isNew: false })));
-  };
-
   const loadHistorico = async (id: string) => {
     setLoadingHistorico(true);
     const { data } = await supabase
@@ -426,37 +404,6 @@ export default function CadastroClienteModal({
     setSaving(false);
   };
 
-  // ── Save: Aba 3 ──────────────────────────────────────────────────────────────
-  const salvarContatos = async () => {
-    if (!clienteId) { toast.error("Salve os Dados da Receita primeiro"); return; }
-    setSaving(true);
-    try {
-      const toDelete = contatos.filter(c => c.isDeleted && c.id);
-      for (const c of toDelete) {
-        await supabase.from("contatos_cliente").delete().eq("id", c.id!);
-      }
-      const toSave = contatos.filter(c => !c.isDeleted);
-      for (const c of toSave) {
-        const payload = {
-          cliente_id: clienteId,
-          nome:       c.nome,
-          email:      c.email || null,
-          telefone:   c.telefone || null,
-          whatsapp:   c.whatsapp || null,
-          principal:  c.principal,
-        };
-        if (c.id && !c.isNew) {
-          await supabase.from("contatos_cliente").update(payload).eq("id", c.id);
-        } else {
-          await supabase.from("contatos_cliente").insert(payload);
-        }
-      }
-      await loadContatos(clienteId);
-      toast.success("Contatos salvos!");
-    } catch (err: any) { toast.error(`Erro ao salvar contatos: ${err?.message}`); }
-    setSaving(false);
-  };
-
   // ── Save: Aba 4 ──────────────────────────────────────────────────────────────
   const salvarRelacionamento = async () => {
     if (!clienteId) { toast.error("Salve os Dados da Receita primeiro"); return; }
@@ -502,25 +449,8 @@ export default function CadastroClienteModal({
     setSaving(false);
   };
 
-  // ── Contacts helpers ─────────────────────────────────────────────────────────
-  const addContato = () =>
-    setContatos(prev => [...prev, { nome: "", email: "", telefone: "", whatsapp: "", principal: prev.filter(c => !c.isDeleted).length === 0, isNew: true }]);
-
-  const updateContato = (idx: number, field: keyof ContatoLocal, value: any) =>
-    setContatos(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
-
-  const removeContato = (idx: number) =>
-    setContatos(prev => prev.map((c, i) => {
-      if (i !== idx) return c;
-      return c.id ? { ...c, isDeleted: true } : null;
-    }).filter(Boolean) as ContatoLocal[]);
-
-  const setPrincipal = (idx: number) =>
-    setContatos(prev => prev.map((c, i) => ({ ...c, principal: i === idx })));
-
   // ── Derived ──────────────────────────────────────────────────────────────────
   const segPrincipal = form.segmento[0] || segmentoInicial || "";
-  const visibleContatos = contatos.filter(c => !c.isDeleted);
 
   const renderNeedsSave = () => (
     <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground p-6">
@@ -992,90 +922,15 @@ export default function CadastroClienteModal({
           {/* ════ ABA 3: CONTATOS ════ */}
           {activeTab === "contatos" && (!clienteId ? renderNeedsSave() : (
             <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Contatos da Empresa</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Cadastre os responsáveis pelo relacionamento comercial</p>
-                </div>
-                {!isViewing && (
-                  <Button variant="outline" size="sm" onClick={addContato} className="gap-1.5 h-8 text-xs">
-                    <Plus size={13} /> Adicionar
-                  </Button>
-                )}
+              <div>
+                <p className="text-sm font-semibold">Contatos da Empresa</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Pessoas vinculadas a este cliente — gerenciadas no módulo Contatos</p>
               </div>
-
-              {visibleContatos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-xl text-muted-foreground">
-                  <User size={28} className="mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum contato cadastrado</p>
-                  {!isViewing && (
-                    <Button variant="ghost" size="sm" onClick={addContato} className="mt-2 gap-1.5 text-xs">
-                      <Plus size={13} /> Adicionar primeiro contato
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className={cn("space-y-3", isViewing && "pointer-events-none opacity-60")}>
-                  {visibleContatos.map((contato, visIdx) => {
-                    const realIdx = contatos.indexOf(contato);
-                    return (
-                      <div
-                        key={visIdx}
-                        className={cn("border rounded-xl p-4 space-y-3", contato.principal ? "border-[#164B6E]/30 bg-[#164B6E]/3" : "border-border")}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-                              <User size={13} className="text-slate-600" />
-                            </div>
-                            <span className="text-xs font-medium text-muted-foreground">Contato {visIdx + 1}</span>
-                            {contato.principal && (
-                              <Badge className="text-[10px] h-4 px-1.5 bg-[#164B6E] text-white border-0">Principal</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!contato.principal && (
-                              <button onClick={() => setPrincipal(realIdx)} className="text-[10px] text-muted-foreground hover:text-[#164B6E] underline underline-offset-2">
-                                Definir como principal
-                              </button>
-                            )}
-                            <button onClick={() => removeContato(realIdx)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Nome <span className="text-destructive">*</span></Label>
-                            <Input value={contato.nome} onChange={e => updateContato(realIdx, "nome", e.target.value)} placeholder="João Silva" className="h-8 text-sm" />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">E-mail</Label>
-                            <Input type="email" value={contato.email} onChange={e => updateContato(realIdx, "email", e.target.value)} placeholder="joao@empresa.com" className="h-8 text-sm" />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Telefone</Label>
-                            <Input value={contato.telefone} onChange={e => updateContato(realIdx, "telefone", e.target.value)} placeholder="(11) 3333-4444" className="h-8 text-sm" />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">WhatsApp</Label>
-                            <Input value={contato.whatsapp} onChange={e => updateContato(realIdx, "whatsapp", e.target.value)} placeholder="(11) 99999-9999" className="h-8 text-sm" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {!isViewing && (
-                <div className="flex justify-end pt-2 border-t">
-                  <Button onClick={salvarContatos} className="gap-1.5 bg-[#164B6E] hover:bg-[#1a5a84] text-white" disabled={saving}>
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    {saving ? "Salvando…" : "Salvar Contatos"}
-                  </Button>
-                </div>
-              )}
+              <ContatosClienteSection
+                clienteId={clienteId}
+                clienteNome={form.nome_fantasia}
+                clienteCnpj={form.cnpj}
+              />
             </div>
           ))}
 
