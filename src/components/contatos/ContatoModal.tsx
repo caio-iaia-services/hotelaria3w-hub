@@ -36,6 +36,7 @@ const QUALIFICACAO_OPTIONS = [
   { value: "ativo_super",           label: "Ativo Super" },
   { value: "ativo_interessado",     label: "Ativo Interessado" },
   { value: "ativo_em_observacao",   label: "Ativo Em Observação" },
+  { value: "com_defeito",           label: "Com Defeito" },
   { value: "inativo",               label: "Inativo" },
 ];
 
