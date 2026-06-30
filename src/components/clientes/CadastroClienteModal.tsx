@@ -766,7 +766,7 @@ export default function CadastroClienteModal({
                   {form.cnpj_validado && (
                     <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 mb-3 flex items-center gap-1.5">
                       <ShieldCheck size={12} className="shrink-0" />
-                      Dados validados pela Receita Federal — para alterar, use o módulo de Contatos.
+                      Dados validados pela Receita Federal — invioláveis. Não podem ser editados aqui nem por importação.
                     </p>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
