@@ -657,6 +657,7 @@ export default function CadastroClienteModal({
                         value={form.nome_fantasia}
                         onChange={e => set("nome_fantasia", e.target.value)}
                         placeholder="Como o cliente é conhecido no mercado"
+                        disabled={form.cnpj_validado}
                       />
                     </div>
                   </>
@@ -709,31 +710,31 @@ export default function CadastroClienteModal({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-2 space-y-1.5">
                       <Label className="text-xs">Logradouro (Rua / Av.)</Label>
-                      <Input value={form.logradouro} onChange={e => set("logradouro", e.target.value)} placeholder="Rua das Flores" />
+                      <Input value={form.logradouro} onChange={e => set("logradouro", e.target.value)} placeholder="Rua das Flores" disabled={form.cnpj_validado} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Número</Label>
-                      <Input value={form.numero} onChange={e => set("numero", e.target.value)} placeholder="123" />
+                      <Input value={form.numero} onChange={e => set("numero", e.target.value)} placeholder="123" disabled={form.cnpj_validado} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs">Complemento</Label>
-                      <Input value={form.complemento} onChange={e => set("complemento", e.target.value)} placeholder="Sala 2, Apto 42" />
+                      <Input value={form.complemento} onChange={e => set("complemento", e.target.value)} placeholder="Sala 2, Apto 42" disabled={form.cnpj_validado} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Bairro</Label>
-                      <Input value={form.bairro} onChange={e => set("bairro", e.target.value)} />
+                      <Input value={form.bairro} onChange={e => set("bairro", e.target.value)} disabled={form.cnpj_validado} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">CEP</Label>
-                      <Input value={form.cep} onChange={e => set("cep", applyMaskCEP(e.target.value))} placeholder="00000-000" maxLength={9} />
+                      <Input value={form.cep} onChange={e => set("cep", applyMaskCEP(e.target.value))} placeholder="00000-000" maxLength={9} disabled={form.cnpj_validado} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs">Estado</Label>
-                      <Select value={form.estado} onValueChange={v => { set("estado", v); set("cidade", ""); }}>
+                      <Select value={form.estado} onValueChange={v => { set("estado", v); set("cidade", ""); }} disabled={form.cnpj_validado}>
                         <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="UF" /></SelectTrigger>
                         <SelectContent className="bg-card z-[100] max-h-60">
                           {ESTADOS.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
@@ -742,7 +743,7 @@ export default function CadastroClienteModal({
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Cidade</Label>
-                      <Select value={form.cidade} onValueChange={v => set("cidade", v)} disabled={!form.estado || loadingCidades}>
+                      <Select value={form.cidade} onValueChange={v => set("cidade", v)} disabled={form.cnpj_validado || !form.estado || loadingCidades}>
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue placeholder={
                             !form.estado ? "Selecione o estado primeiro" :
@@ -762,18 +763,24 @@ export default function CadastroClienteModal({
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
                     <Phone size={11} /> Contato Principal
                   </p>
+                  {form.cnpj_validado && (
+                    <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 mb-3 flex items-center gap-1.5">
+                      <ShieldCheck size={12} className="shrink-0" />
+                      Dados validados pela Receita Federal — para alterar, use o módulo de Contatos.
+                    </p>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs flex items-center gap-1"><Mail size={11} /> E-mail</Label>
-                      <Input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="contato@empresa.com" />
+                      <Input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="contato@empresa.com" disabled={form.cnpj_validado} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs flex items-center gap-1"><Phone size={11} /> Telefone</Label>
-                      <Input value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(11) 3333-4444" />
+                      <Input value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(11) 3333-4444" disabled={form.cnpj_validado} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">WhatsApp</Label>
-                      <Input value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(11) 99999-9999" />
+                      <Input value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(11) 99999-9999" disabled={form.cnpj_validado} />
                     </div>
                   </div>
                 </div>
@@ -786,12 +793,17 @@ export default function CadastroClienteModal({
                   {form.pessoa_tipo === "PJ" && (
                     <Button
                       variant="outline"
-                      className="gap-1.5 border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                      className={cn(
+                        "gap-1.5",
+                        form.cnpj_validado
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700 opacity-100 disabled:opacity-100"
+                          : "border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                      )}
                       onClick={() => buscarCNPJ(form.cnpj.replace(/\D/g, ""), true)}
                       disabled={saving || validating || form.cnpj_validado || form.cnpj.replace(/\D/g, "").length !== 14}
                     >
                       {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                      {form.cnpj_validado ? "Já Validado" : validating ? "Validando…" : "Validar CNPJ"}
+                      {form.cnpj_validado ? "Validado" : validating ? "Validando…" : "Validar"}
                     </Button>
                   )}
                   <Button
