@@ -198,6 +198,8 @@ export default function CadastroClienteModal({
   const [atualizandoEndereco, setAtualizandoEndereco] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const ultimoCNPJBuscado = useRef("");
+  // Preserva campos atualizados via "Buscar na Receita" para não perder no reopen
+  const enderecoAtualizado = useRef<Partial<FormState>>({});
 
   const { cidades, loading: loadingCidades } = useCidadesIBGE(form.estado || null);
   const set = (field: keyof FormState, value: any) =>
@@ -207,9 +209,12 @@ export default function CadastroClienteModal({
   useEffect(() => {
     if (!open) return;
     if (cliente) {
+      // Ao abrir um cliente diferente, descarta endereço salvo localmente
+      if (cliente.id !== clienteId) enderecoAtualizado.current = {};
       setClienteId(cliente.id);
       setIsViewing(true);
       const tipoPessoa = (cliente as any).pessoa_tipo === "PF" ? "PF" : "PJ";
+      const ea = enderecoAtualizado.current;
       setForm({
         pessoa_tipo:        tipoPessoa,
         cnpj:               tipoPessoa === "PF"
@@ -217,13 +222,13 @@ export default function CadastroClienteModal({
           : applyMaskCNPJ(cliente.cnpj || ""),
         razao_social:       cliente.razao_social || "",
         nome_fantasia:      cliente.nome_fantasia || "",
-        logradouro:         cliente.logradouro || "",
-        numero:             cliente.numero || "",
-        complemento:        cliente.complemento || "",
-        bairro:             cliente.bairro || "",
-        cep:                applyMaskCEP(cliente.cep || ""),
-        estado:             cliente.estado || "",
-        cidade:             cliente.cidade || "",
+        logradouro:         ea.logradouro  || cliente.logradouro  || "",
+        numero:             ea.numero      || cliente.numero      || "",
+        complemento:        ea.complemento || cliente.complemento || "",
+        bairro:             ea.bairro      || cliente.bairro      || "",
+        cep:                ea.cep         || applyMaskCEP(cliente.cep || ""),
+        estado:             ea.estado      || cliente.estado      || "",
+        cidade:             ea.cidade      || cliente.cidade      || "",
         email:              cliente.email || "",
         telefone:           cliente.telefone || "",
         whatsapp:           cliente.whatsapp || "",
@@ -252,6 +257,7 @@ export default function CadastroClienteModal({
       });
       loadHistorico(cliente.id);
     } else {
+      enderecoAtualizado.current = {};
       setClienteId(null);
       setIsViewing(false);
       setForm({ ...FORM_INICIAL, segmento: segmentoInicial ? [segmentoInicial] : [] });
@@ -345,6 +351,7 @@ export default function CadastroClienteModal({
         return;
       }
       setForm(prev => ({ ...prev, ...patchForm }));
+      enderecoAtualizado.current = { ...enderecoAtualizado.current, ...patchForm };
       if (clienteId) {
         const payload: Record<string, any> = {};
         if (patchForm.logradouro)  payload.logradouro  = patchForm.logradouro;
