@@ -316,19 +316,35 @@ export default function CadastroClienteModal({
       if (!res.ok) throw new Error("Não encontrado");
       const d = await res.json();
       const patchForm: Partial<FormState> = {};
-      if (!form.logradouro && d.logradouro) patchForm.logradouro = d.logradouro;
-      if (!form.numero     && d.numero)     patchForm.numero     = d.numero;
+      if (!form.logradouro  && d.logradouro)  patchForm.logradouro  = d.logradouro;
+      if (!form.numero      && d.numero)      patchForm.numero      = d.numero;
       if (!form.complemento && d.complemento) patchForm.complemento = d.complemento;
-      if (!form.bairro     && d.bairro)     patchForm.bairro     = d.bairro;
-      if (!form.cep        && d.cep)        patchForm.cep        = applyMaskCEP(d.cep);
-      if (!form.estado     && d.uf)         patchForm.estado     = d.uf.toUpperCase();
-      if (!form.cidade     && d.municipio)  patchForm.cidade     = d.municipio;
+      if (!form.bairro      && d.bairro)      patchForm.bairro      = d.bairro;
+      if (!form.cep         && d.cep)         patchForm.cep         = applyMaskCEP(d.cep);
+      if (!form.estado      && d.uf)          patchForm.estado      = d.uf.toUpperCase();
+
+      // Busca cidade com nome exato do IBGE para garantir match no Select
+      if (!form.cidade && d.municipio && (patchForm.estado || form.estado)) {
+        const uf = patchForm.estado || form.estado;
+        try {
+          const ibgeRes = await fetch(
+            `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`
+          );
+          if (ibgeRes.ok) {
+            const ibgeData: { nome: string }[] = await ibgeRes.json();
+            const norm = (s: string) =>
+              s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+            const found = ibgeData.find(c => norm(c.nome) === norm(d.municipio));
+            if (found) patchForm.cidade = found.nome;
+          }
+        } catch { /* cidade fica vazia */ }
+      }
+
       if (Object.keys(patchForm).length === 0) {
         toast.info("Nenhum campo de endereço vazio para atualizar.");
         return;
       }
-      const novoForm = { ...form, ...patchForm };
-      setForm(novoForm);
+      setForm(prev => ({ ...prev, ...patchForm }));
       if (clienteId) {
         const payload: Record<string, any> = {};
         if (patchForm.logradouro)  payload.logradouro  = patchForm.logradouro;
