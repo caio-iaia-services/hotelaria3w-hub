@@ -195,6 +195,7 @@ export default function CadastroClienteModal({
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [atualizandoEndereco, setAtualizandoEndereco] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const ultimoCNPJBuscado = useRef("");
 
@@ -303,6 +304,51 @@ export default function CadastroClienteModal({
       else toast.info("CNPJ não encontrado. Preencha os dados manualmente.");
     } finally {
       setValidating(false);
+    }
+  };
+
+  const buscarEnderecoReceita = async () => {
+    const cnpj = form.cnpj.replace(/\D/g, "");
+    if (cnpj.length !== 14) return;
+    setAtualizandoEndereco(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) throw new Error("Não encontrado");
+      const d = await res.json();
+      const patchForm: Partial<FormState> = {};
+      if (!form.logradouro && d.logradouro) patchForm.logradouro = d.logradouro;
+      if (!form.numero     && d.numero)     patchForm.numero     = d.numero;
+      if (!form.complemento && d.complemento) patchForm.complemento = d.complemento;
+      if (!form.bairro     && d.bairro)     patchForm.bairro     = d.bairro;
+      if (!form.cep        && d.cep)        patchForm.cep        = applyMaskCEP(d.cep);
+      if (!form.estado     && d.uf)         patchForm.estado     = d.uf.toUpperCase();
+      if (!form.cidade     && d.municipio)  patchForm.cidade     = d.municipio;
+      if (Object.keys(patchForm).length === 0) {
+        toast.info("Nenhum campo de endereço vazio para atualizar.");
+        return;
+      }
+      const novoForm = { ...form, ...patchForm };
+      setForm(novoForm);
+      if (clienteId) {
+        const payload: Record<string, any> = {};
+        if (patchForm.logradouro)  payload.logradouro  = patchForm.logradouro;
+        if (patchForm.numero)      payload.numero      = patchForm.numero;
+        if (patchForm.complemento) payload.complemento = patchForm.complemento;
+        if (patchForm.bairro)      payload.bairro      = patchForm.bairro;
+        if (patchForm.cep)         payload.cep         = patchForm.cep.replace(/\D/g, "");
+        if (patchForm.estado)      payload.estado      = patchForm.estado;
+        if (patchForm.cidade)      payload.cidade      = patchForm.cidade;
+        const { error } = await supabase.from("clientes").update(payload).eq("id", clienteId);
+        if (error) throw error;
+        toast.success("Endereço atualizado da Receita Federal!");
+        onSaved();
+      } else {
+        toast.success("Endereço preenchido da Receita Federal — salve para confirmar.");
+      }
+    } catch {
+      toast.error("Não foi possível buscar endereço na Receita Federal.");
+    } finally {
+      setAtualizandoEndereco(false);
     }
   };
 
@@ -786,6 +832,26 @@ export default function CadastroClienteModal({
                 </div>
 
               </div>{/* end pointer-events wrapper */}
+
+              {/* Atualizar endereço da Receita — visível sempre que o endereço está vazio */}
+              {form.pessoa_tipo === "PJ" && clienteId && !form.logradouro && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <MapPin size={15} className="text-amber-600 shrink-0" />
+                  <p className="text-xs text-amber-800 flex-1">
+                    Endereço incompleto — os dados podem estar disponíveis na Receita Federal.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 border-amber-400 text-amber-700 hover:bg-amber-100 shrink-0"
+                    onClick={buscarEnderecoReceita}
+                    disabled={atualizandoEndereco}
+                  >
+                    {atualizandoEndereco ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                    {atualizandoEndereco ? "Buscando…" : "Buscar na Receita"}
+                  </Button>
+                </div>
+              )}
 
               {/* Botões — só no modo edição */}
               {!isViewing && (
