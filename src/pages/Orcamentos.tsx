@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { apiFetch } from "@/lib/apiFetch";
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 import ReactDOM from "react-dom/client";
@@ -916,7 +917,7 @@ export default function Orcamentos() {
       }
 
       toast.info("Enviando e-mail...");
-      const response = await fetch("/api/enviar-email-orcamento", {
+      const response = await apiFetch("/api/enviar-email-orcamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

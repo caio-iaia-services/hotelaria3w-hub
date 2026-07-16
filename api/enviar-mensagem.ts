@@ -3,17 +3,31 @@
  * Elimina CORS e dependência de webhook n8n.
  */
 
+import { usuarioAutenticado, segredoInternoValido, respostaNaoAutorizado } from "./_auth";
+
 export const config = { runtime: "edge" };
 
 // Evolution 2.4.0 (serviço "evolution2" no Easypanel, banco isolado) — migrado em
 // 02/07/2026: a 2.3.7 não enviava por número em sessões recém-pareadas (regime lid).
 const EVOLUTION_BASE = "https://n8n-evolution2.3sq8ua.easypanel.host";
 const EVOLUTION_INSTANCE = "3W-Hotelaria";
-const EVOLUTION_APIKEY = "E7C31A54B9D24F80A6E2C15D8B7F4A93";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  // Usuário logado no hub OU segredo interno (n8n/automação)
+  if (!segredoInternoValido(req) && !(await usuarioAutenticado(req))) {
+    return respostaNaoAutorizado();
+  }
+
+  const EVOLUTION_APIKEY = process.env.EVOLUTION_APIKEY;
+  if (!EVOLUTION_APIKEY) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "EVOLUTION_APIKEY não configurada no servidor" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   try {

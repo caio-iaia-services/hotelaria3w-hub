@@ -4,6 +4,8 @@
  * Variável de ambiente necessária: ANTHROPIC_API_KEY
  */
 
+import { usuarioAutenticado, respostaNaoAutorizado } from "./_auth";
+
 export const config = { runtime: "edge" };
 
 const SYSTEM_PROMPT = `Você é o Agente de Inteligência da 3W Hotelaria — uma empresa de representação comercial especializada em hotelaria e gastronomia.
@@ -23,6 +25,10 @@ Os dados do negócio são fornecidos no contexto de cada mensagem.`;
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  if (!(await usuarioAutenticado(req))) {
+    return respostaNaoAutorizado();
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

@@ -3,6 +3,8 @@
  * Elimina problemas de CORS/rede do browser — a chamada ao n8n ocorre no servidor.
  */
 
+import { usuarioAutenticado, respostaNaoAutorizado } from "./_auth";
+
 export const config = { runtime: "edge" };
 
 const N8N_WEBHOOK =
@@ -11,6 +13,10 @@ const N8N_WEBHOOK =
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  if (!(await usuarioAutenticado(req))) {
+    return respostaNaoAutorizado();
   }
 
   try {

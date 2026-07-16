@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { apiFetch } from "@/lib/apiFetch";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -621,7 +622,7 @@ function ChatView({
     const tel = chat.contato?.telefone ?? "";
     const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
     try {
-      const res = await fetch("/api/enviar-mensagem", {
+      const res = await apiFetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, mensagem: msg }),
@@ -756,7 +757,7 @@ function ChatView({
       const tel = chat.contato?.telefone ?? "";
       const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
       try {
-        const res = await fetch("/api/enviar-mensagem", {
+        const res = await apiFetch("/api/enviar-mensagem", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1284,7 +1285,7 @@ function ModalNovaConversa({
     // 4. Envia via Evolution API (mensagem livre, sem template)
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
-      const res = await fetch("/api/enviar-mensagem", {
+      const res = await apiFetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

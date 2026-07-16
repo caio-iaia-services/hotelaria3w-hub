@@ -1,4 +1,5 @@
 import { useState, useEffect, Component } from "react"
+import { apiFetch } from "@/lib/apiFetch";
 import type { ErrorInfo, ReactNode } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
@@ -528,7 +529,7 @@ export default function EmailMarketing() {
         }
         if (destinatarios.length === 0) throw new Error("Nenhum destinatário encontrado. Verifique os filtros ou informe e-mails diretamente.")
 
-        const res = await fetch("/api/enviar-campanha-email", {
+        const res = await apiFetch("/api/enviar-campanha-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { apiFetch } from "@/lib/apiFetch";
 import { supabase } from "@/lib/supabase";
 import {
   Brain, TrendingUp, BarChart3, Target, Zap, Send, RefreshCw,
@@ -460,7 +461,7 @@ export default function Inteligencia() {
       .map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch("/api/agente-inteligencia", {
+      const res = await apiFetch("/api/agente-inteligencia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: histAntropico, context: buildContexto() }),
@@ -494,7 +495,7 @@ Estruture a análise em:
 8. **Recomendações Táticas** — 3 ações prioritárias para os próximos 30 dias`;
 
     try {
-      const res = await fetch("/api/agente-inteligencia", {
+      const res = await apiFetch("/api/agente-inteligencia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
