@@ -1,41 +1,55 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Clientes from "./pages/Clientes";
-import Planejamento from "./pages/Planejamento";
-import Oportunidades from "./pages/Oportunidades";
-import CrmGestao from "./pages/CrmGestao";
-import AcoesComerciais from "./pages/AcoesComerciais";
-import PlaceholderPage from "./pages/PlaceholderPage";
-import Fornecedores from "./pages/Fornecedores";
-import Orcamentos from "./pages/Orcamentos";
-import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
-import AdminUsuarios from "./pages/AdminUsuarios";
-import Atendimento from "./pages/Atendimento";
-import Marketing from "./pages/Marketing";
-import AdminMarketing from "./pages/AdminMarketing";
-import Financeiro from "./pages/Financeiro";
-import RH from "./pages/RH";
-import Inteligencia from "./pages/Inteligencia";
-import Contatos from "./pages/Contatos";
-import BuscarEmpresas from "./pages/BuscarEmpresas";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
+// Páginas em lazy: cada rota vira um chunk próprio (bundle inicial menor)
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Planejamento = lazy(() => import("./pages/Planejamento"));
+const Oportunidades = lazy(() => import("./pages/Oportunidades"));
+const CrmGestao = lazy(() => import("./pages/CrmGestao"));
+const AcoesComerciais = lazy(() => import("./pages/AcoesComerciais"));
+const PlaceholderPage = lazy(() => import("./pages/PlaceholderPage"));
+const Fornecedores = lazy(() => import("./pages/Fornecedores"));
+const Orcamentos = lazy(() => import("./pages/Orcamentos"));
+const ConfiguracoesEmail = lazy(() => import("./pages/ConfiguracoesEmail"));
+const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios"));
+const Atendimento = lazy(() => import("./pages/Atendimento"));
+const Marketing = lazy(() => import("./pages/Marketing"));
+const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const RH = lazy(() => import("./pages/RH"));
+const Inteligencia = lazy(() => import("./pages/Inteligencia"));
+const Contatos = lazy(() => import("./pages/Contatos"));
+const BuscarEmpresas = lazy(() => import("./pages/BuscarEmpresas"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+
 const queryClient = new QueryClient();
+
+function CarregandoPagina() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 function Protected({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
-      <AppLayout>{children}</AppLayout>
+      <AppLayout>
+        <Suspense fallback={<CarregandoPagina />}>{children}</Suspense>
+      </AppLayout>
     </ProtectedRoute>
   );
 }
@@ -49,7 +63,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/privacy" element={<Suspense fallback={<CarregandoPagina />}><PrivacyPolicy /></Suspense>} />
               <Route path="/" element={<Login />} />
               <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
               <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
