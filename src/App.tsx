@@ -26,6 +26,7 @@ import Financeiro from "./pages/Financeiro";
 import RH from "./pages/RH";
 import Inteligencia from "./pages/Inteligencia";
 import Contatos from "./pages/Contatos";
+import BuscarEmpresas from "./pages/BuscarEmpresas";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
@@ -67,9 +68,10 @@ const App = () => (
               <Route path="/financeiro" element={<Protected><Financeiro /></Protected>} />
               <Route path="/rh" element={<Protected><RH /></Protected>} />
               <Route path="/inteligencia" element={<Protected><Inteligencia /></Protected>} />
+              <Route path="/buscar" element={<Protected><BuscarEmpresas /></Protected>} />
               {[
                 "/crm", "/clientes/hotelaria", "/clientes/gastronomia",
-                "/clientes/hospitalar", "/buscar", "/admin", "/planejamento",
+                "/clientes/hospitalar", "/admin",
               ].map((path) => (
                 <Route key={path} path={path} element={<Protected><PlaceholderPage /></Protected>} />
               ))}
