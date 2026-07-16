@@ -1849,7 +1849,7 @@ export default function Atendimento() {
             <BarChart3 size={11} />
             Dashboard
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={carregarChats} disabled={loading}>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => carregarChats()} disabled={loading}>
             <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             Atualizar
           </Button>

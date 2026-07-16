@@ -211,7 +211,7 @@ export default function Clientes() {
     if (error) {
       toast({ title: "Erro ao buscar clientes", description: error.message, variant: "destructive" });
     } else {
-      setClientes(data || []);
+      setClientes((data || []) as unknown as Cliente[]);
       setTotal(count || 0);
     }
     setLoading(false);
@@ -232,8 +232,11 @@ export default function Clientes() {
   const [contandoExport, setContandoExport] = useState(false);
   const [exportando, setExportando] = useState(false);
 
-  function buildExportQuery(base: ReturnType<typeof supabase.from>) {
-    let q = base;
+  // Genérico: os métodos de filtro devolvem o próprio builder; o tipo completo
+  // do PostgrestFilterBuilder não é expressável aqui sem repetir o schema.
+  function buildExportQuery<Q>(base: Q): Q {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = base as any;
     if (exportFiltros.status.length > 0)   q = q.in("status", exportFiltros.status);
     if (exportFiltros.tipo.length > 0)     q = q.in("tipo", exportFiltros.tipo);
     if (exportFiltros.segmento.length > 0) q = q.overlaps("segmento", exportFiltros.segmento);

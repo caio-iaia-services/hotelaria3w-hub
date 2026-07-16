@@ -189,29 +189,29 @@ export default function AdminUsuarios() {
     }
     setCriando(true);
     try {
-      // Cria o usuário no Supabase Auth
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: novoUsuario.email,
-        password: novoUsuario.senha,
-        email_confirm: true,
+      // Cria usuário (Auth + perfil) via edge function com service role —
+      // a chave anon do client não tem permissão para auth.admin.createUser
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          email: novoUsuario.email,
+          password: novoUsuario.senha,
+          nome: novoUsuario.nome,
+          role: novoUsuario.role,
+          gestao: novoUsuario.gestao,
+          modulos: novoUsuario.modulos,
+        },
       });
 
-      if (error) throw error;
-      const userId = data.user?.id;
-      if (!userId) throw new Error("Usuário criado mas ID não retornado");
-
-      // Cria o perfil
-      const { error: perfilError } = await supabase.from("user_profiles").insert({
-        id: userId,
-        email: novoUsuario.email,
-        nome: novoUsuario.nome,
-        role: novoUsuario.role,
-        gestao: novoUsuario.gestao,
-        modulos: novoUsuario.modulos,
-        ativo: true,
-      });
-
-      if (perfilError) throw perfilError;
+      if (error) {
+        // FunctionsHttpError: o corpo da resposta traz a mensagem real
+        let msg = error.message;
+        try {
+          const body = await (error as { context?: Response }).context?.json();
+          if (body?.error) msg = body.error;
+        } catch { /* mantém msg padrão */ }
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
 
       toast.success(`Usuário ${novoUsuario.nome} criado com sucesso!`);
       setModalNovoAberto(false);

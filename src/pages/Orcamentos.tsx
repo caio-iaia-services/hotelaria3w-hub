@@ -291,7 +291,7 @@ export default function Orcamentos() {
     if (orcamento.status === novoStatus) return;
     const statusAnterior = orcamento.status;
     // Atualização otimista
-    setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: novoStatus } : o));
+    setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: novoStatus as Orcamento["status"] } : o));
     const updates: Record<string, unknown> = { status: novoStatus };
     if (novoStatus === "enviado" && !orcamento.enviado_em) {
       updates.enviado_em = new Date().toISOString();
@@ -439,7 +439,7 @@ export default function Orcamentos() {
     async function abrirDireto() {
       const { data } = await supabase.from("orcamentos").select("*").eq("id", viewId).maybeSingle();
       if (!data) return;
-      const orc = data as Orcamento;
+      const orc = data as unknown as Orcamento;
       if (send === "email") {
         enviarPorEmail(orc);
       } else if (send === "whatsapp") {

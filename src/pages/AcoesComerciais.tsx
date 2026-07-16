@@ -248,7 +248,7 @@ function AreaTrabalho({ card, documentos, onAcao }: AreaProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => navigate("/orcamentos", `/orcamentos?viewId=${orcamentoExistente.id}&send=email`, "_blank")}>
+                  <DropdownMenuItem onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}&send=email`, "_blank")}>
                     <Mail className="h-4 w-4 mr-2" /> Enviar por E-mail
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.open(`/orcamentos?viewId=${orcamentoExistente.id}&send=whatsapp`, "_blank")}>

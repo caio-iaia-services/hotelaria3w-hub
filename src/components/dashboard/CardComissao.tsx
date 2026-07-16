@@ -40,15 +40,15 @@ export function CardComissao() {
       .eq("status", "aprovado")
       .eq("gestao", gestaoFiltro);
 
-    const todos = (orcamentos || []) as { total: string; created_at: string }[];
+    const todos = (orcamentos || []) as { total: number | string; created_at: string }[];
 
     const agora = new Date();
     const primeiroDiaMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString();
 
-    const totalGeral = todos.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const totalGeral = todos.reduce((s, o) => s + (parseFloat(String(o.total)) || 0), 0);
     const totalMes = todos
       .filter(o => o.created_at >= primeiroDiaMes)
-      .reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+      .reduce((s, o) => s + (parseFloat(String(o.total)) || 0), 0);
 
     setFaturTotal(totalGeral);
     setFaturMes(totalMes);

@@ -63,7 +63,7 @@ async function carregarOrcamento(id: string): Promise<{ orcamento: Orcamento; it
     subtotal: parseNum(orc.subtotal) || parseNum(orc.valor_produtos) || 0,
     frete: parseNum(orc.frete) || parseNum(orc.valor_frete) || 0,
     desconto: parseNum(orc.desconto) || parseNum(orc.valor_desconto) || 0,
-  } as Orcamento;
+  } as unknown as Orcamento;
 
   if (cliente) {
     const c = cliente as any;

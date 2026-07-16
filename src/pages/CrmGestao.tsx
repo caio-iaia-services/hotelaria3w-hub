@@ -78,7 +78,7 @@ export default function CrmGestao() {
       .order("ordem", { ascending: true });
 
     if (!error && data) {
-      setCards(data);
+      setCards(data as unknown as CRMCard[]);
     }
     setLoading(false);
   }, [baseConfig, selectedOps]);

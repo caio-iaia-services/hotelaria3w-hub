@@ -344,7 +344,7 @@ export default function EmailMarketing() {
   // filtros. Campanhas falam com Contatos, nunca com o e-mail da Receita
   // Federal em clientes.email — clientes sem nenhum contato vinculado são
   // simplesmente excluídos da audiência.
-  async function buscarContatosPorFiltro(f: FiltrosAudiencia): Promise<{ email: string; nome: string }[]> {
+  async function buscarContatosPorFiltro(f: Partial<FiltrosAudiencia>): Promise<{ email: string; nome: string }[]> {
     let queryClientes = supabase.from("clientes").select("id")
     if (f.segmento) queryClientes = queryClientes.overlaps("segmento", [f.segmento])
     if (f.status)   queryClientes = queryClientes.eq("status", f.status)
@@ -516,8 +516,9 @@ export default function EmailMarketing() {
         updated_at: new Date().toISOString(),
       }).select("id").single()
       if (error) throw error
+      const campanhaNovaId = campanhaNova ? (campanhaNova as unknown as { id: string }).id : null
 
-      if (form.tipo_envio === "imediato" && campanhaNova) {
+      if (form.tipo_envio === "imediato" && campanhaNovaId) {
         toast.info("Preparando envio...")
         let destinatarios: { email: string; nome: string }[] = []
         if (form.emails_teste.trim()) {
@@ -531,7 +532,7 @@ export default function EmailMarketing() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            campanha_id: campanhaNova.id,
+            campanha_id: campanhaNovaId,
             assunto: form.assunto,
             pre_header: form.pre_header || "",
             conteudo_html: form.conteudo_html,
@@ -552,7 +553,7 @@ export default function EmailMarketing() {
             total_enviados: destinatarios.length,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", campanhaNova.id)
+          .eq("id", campanhaNovaId)
         toast.success(`Campanha disparada para ${destinatarios.length} contato${destinatarios.length !== 1 ? "s" : ""}!`)
       } else {
         toast.success(status === "rascunho" ? "Rascunho salvo!" : "Campanha agendada com sucesso!")

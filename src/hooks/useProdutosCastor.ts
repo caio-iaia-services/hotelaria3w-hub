@@ -55,7 +55,7 @@ export function useProdutosCastorBusca(termo: string, campo: 'codigo' | 'descric
           console.warn('Erro busca produtos_castor_view:', error)
           setResultados([])
         } else {
-          setResultados((data || []) as ProdutoCastor[])
+          setResultados((data || []) as unknown as ProdutoCastor[])
         }
       } catch (err) {
         console.warn('Erro busca produtos:', err)

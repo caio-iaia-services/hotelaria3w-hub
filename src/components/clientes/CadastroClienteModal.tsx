@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { useCidadesIBGE } from "@/hooks/useCidadesIBGE";
 import ContatosClienteSection from "@/components/contatos/ContatosClienteSection";
 import type { Cliente } from "@/lib/types";
@@ -422,7 +423,7 @@ export default function CadastroClienteModal({
     } else {
       const { data, error } = await supabase
         .from("clientes")
-        .insert({ ...payload, status: "revisao", tipo: "regular", segmento: f.segmento.length ? f.segmento : null })
+        .insert({ ...payload, status: "revisao", tipo: "regular", segmento: f.segmento.length ? f.segmento : null } as TablesInsert<"clientes">)
         .select("id")
         .single();
       if (error) throw error;
