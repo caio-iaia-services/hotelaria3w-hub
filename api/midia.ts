@@ -1,13 +1,17 @@
 /**
- * Descriptografa e serve mídia recebida do WhatsApp.
+ * Serve mídia recebida do WhatsApp — dois provedores possíveis:
  *
- * As URLs de mídia do WhatsApp (mmg.whatsapp.net/...enc) são criptografadas
- * (AES-256-CBC com chave derivada via HKDF do mediaKey). A Evolution API não
- * consegue recuperá-las depois (armazena message=null para mensagens LID),
- * então o n8n salva url+mediaKey+mimetype no momento do webhook e este
- * endpoint descriptografa sob demanda.
+ * 1. Evolution/Baileys (legado): URLs mmg.whatsapp.net/...enc são criptografadas
+ *    (AES-256-CBC com chave derivada via HKDF do mediaKey). O n8n salva
+ *    url+mediaKey+mimetype no momento do webhook e este endpoint descriptografa
+ *    sob demanda. Sentinela: k = mediaKey real (base64 ou lista de bytes).
  *
- * Uso: GET /api/midia?u=<url .enc>&k=<mediaKey base64>&t=<tipoMensagem>&m=<mimetype>
+ * 2. Meta Cloud API (atual): mídia não é criptografada client-side — só existe
+ *    media_id, que precisa ser resolvido via Graph API (GET /{media_id} com
+ *    Bearer → url temporária → baixar com o mesmo Bearer). Sentinela: k = "META"
+ *    e u = media_id.
+ *
+ * Uso: GET /api/midia?u=<url .enc | media_id>&k=<mediaKey | "META">&t=<tipoMensagem>&m=<mimetype>
  * Com &fmt=b64 devolve JSON { base64, mimetype } — usado pelo n8n
  * (nó Converter Imagem/Áudio espera a propriedade base64).
  */
@@ -50,6 +54,11 @@ export default async function handler(req: Request): Promise<Response> {
       JSON.stringify({ error: "Parâmetros 'u' (url) e 'k' (mediaKey) obrigatórios" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
+  }
+
+  // Mídia da Meta Cloud API: "u" é o media_id, não uma URL — resolve e baixa via Graph API.
+  if (mediaKeyB64 === "META") {
+    return servirMidiaMeta(encUrl, mimetype, url.searchParams.get("fmt") === "b64");
   }
 
   if (!/^https:\/\/[^/]*\.whatsapp\.net\//i.test(encUrl)) {
@@ -126,6 +135,64 @@ export default async function handler(req: Request): Promise<Response> {
     });
   } catch (err) {
     console.error("[midia] erro:", err);
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+// Mídia da Meta Cloud API não é criptografada client-side: media_id → GET /{id}
+// (Graph API) devolve uma URL temporária, que é baixada com o mesmo Bearer token.
+async function servirMidiaMeta(mediaId: string, mimetypeFallback: string, fmtB64: boolean): Promise<Response> {
+  const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
+  if (!META_ACCESS_TOKEN) {
+    return new Response(
+      JSON.stringify({ error: "META_ACCESS_TOKEN não configurada no servidor" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const metaRes = await fetch(`https://graph.facebook.com/v23.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${META_ACCESS_TOKEN}` },
+    });
+    if (!metaRes.ok) {
+      return new Response(
+        JSON.stringify({ error: `Falha ao resolver media_id (${metaRes.status}) — pode ter expirado (mídia da Meta expira em ~30 dias)` }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const { url: tempUrl, mime_type } = await metaRes.json();
+    const mimetype = mime_type || mimetypeFallback;
+
+    const fileRes = await fetch(tempUrl, { headers: { Authorization: `Bearer ${META_ACCESS_TOKEN}` } });
+    if (!fileRes.ok) {
+      return new Response(
+        JSON.stringify({ error: `Falha ao baixar mídia (${fileRes.status})` }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (fmtB64) {
+      const bytes = new Uint8Array(await fileRes.arrayBuffer());
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      return new Response(JSON.stringify({ base64: btoa(bin), mimetype }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=31536000, immutable" },
+      });
+    }
+
+    return new Response(fileRes.body, {
+      status: 200,
+      headers: { "Content-Type": mimetype, "Cache-Control": "public, max-age=31536000, immutable" },
+    });
+  } catch (err) {
+    console.error("[midia] erro (Meta):", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

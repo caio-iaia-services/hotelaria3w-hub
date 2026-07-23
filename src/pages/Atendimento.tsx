@@ -8,7 +8,7 @@ import {
   User, Users, Phone, Search, ChevronRight, ChevronLeft,
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
-  Paperclip, FileText, Image, Zap, Tag as TagIcon, BarChart3,
+  Paperclip, FileText, Image, Zap, Tag as TagIcon, BarChart3, MessageSquareText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,13 @@ interface ClienteBusca {
   telefone: string | null;
 }
 
+interface TemplateMeta {
+  name: string;
+  language: string;
+  category: string;
+  texto: string;
+}
+
 interface MensagemRapida {
   id: string;
   atalho: string;
@@ -97,6 +104,13 @@ const CANAIS = [
   { key: "G4",  label: "Alex (G4)",     cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
   { key: "ADM", label: "Celso (Adm)",   cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 ];
+
+// Telefones dos gestores — mesmos números configurados no n8n (EVOLUTION_CONFIG.gestores)
+const GESTORES_TELEFONE: Record<string, { telefone: string; nome: string }> = {
+  G1:  { telefone: "554196873344",  nome: "Fabiano" },
+  G4:  { telefone: "5511944939004", nome: "Alex" },
+  ADM: { telefone: "5511934512879", nome: "Celso" },
+};
 
 function formatHora(iso: string) {
   const d = new Date(iso);
@@ -309,6 +323,181 @@ const LABEL_CANAL: Record<string, string> = {
   G4:  "Alex (G4)",
   ADM: "Celso (Adm)",
 };
+
+// ─── DropdownTemplatesMeta ──────────────────────────────────────────────────────
+// Botão que lista os templates de mensagem aprovados pela Meta (WhatsApp Cloud
+// API). Fora da janela de 24h, mensagem livre é rejeitada — só um template
+// aprovado consegue iniciar/reabrir a conversa.
+function DropdownTemplatesMeta({ onSelecionar, disabled }: { onSelecionar: (t: TemplateMeta) => void; disabled?: boolean }) {
+  const [aberto, setAberto] = useState(false);
+  const [templates, setTemplates] = useState<TemplateMeta[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [jaCarregou, setJaCarregou] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const abrir = async () => {
+    const novoEstado = !aberto;
+    setAberto(novoEstado);
+    if (novoEstado && !jaCarregou && !carregando) {
+      setCarregando(true);
+      setErro(null);
+      try {
+        const res = await apiFetch("/api/templates");
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
+        setTemplates(json.templates ?? []);
+        setJaCarregou(true);
+      } catch (err) {
+        console.error("[DropdownTemplatesMeta] erro ao carregar:", err);
+        setErro("Não foi possível carregar os templates agora.");
+      } finally {
+        setCarregando(false);
+      }
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={abrir}
+        disabled={disabled}
+        className={cn("transition-colors", aberto ? "text-[#164B6E]" : "text-muted-foreground hover:text-[#164B6E]")}
+        title="Templates Meta — iniciar ou reabrir conversa após 24h"
+      >
+        <MessageSquareText size={18} />
+      </button>
+      {aberto && (
+        <div className="absolute bottom-full mb-2 left-0 w-72 bg-popover border border-border rounded-lg shadow-xl z-40 overflow-hidden">
+          <p className="text-[11px] font-semibold px-3 py-2 border-b border-border/50 text-muted-foreground">
+            Templates aprovados (Meta)
+          </p>
+          <div className="max-h-64 overflow-y-auto">
+            {carregando && <p className="text-xs text-muted-foreground text-center py-6">Carregando...</p>}
+            {erro && <p className="text-xs text-red-500 px-3 py-3">{erro}</p>}
+            {!carregando && !erro && templates.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6 px-3">Nenhum template aprovado ainda.</p>
+            )}
+            {templates.map(t => (
+              <button
+                key={t.name}
+                onClick={() => { setAberto(false); onSelecionar(t); }}
+                className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b border-border/20 last:border-0"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold">{t.name}</span>
+                  <span className="text-[9px] text-muted-foreground ml-auto">{t.language}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{t.texto}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PainelJanelasGestores ──────────────────────────────────────────────────────
+// Mostra quanto falta pra fechar a janela de 24h de cada gestor (Cloud API só
+// permite mensagem livre pro gestor se ELE escreveu pra 3W nas últimas 24h).
+// Evita depender de template (categoria Marketing = mais caro + limite de envio)
+// pra avisar o gestor de um handoff — o ideal é ele mandar uma msg de vez em
+// quando pro número da 3W, e esse painel mostra quando isso está ficando urgente.
+interface StatusJanela {
+  canal: string;
+  nome: string;
+  ultimaMsg: string | null; // ISO
+}
+
+async function buscarStatusJanela(canal: string): Promise<StatusJanela> {
+  const g = GESTORES_TELEFONE[canal];
+  const { data: contato } = await supabase
+    .from("contatos_whatsapp")
+    .select("id")
+    .like("telefone", `%${g.telefone.slice(-8)}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (!contato) return { canal, nome: g.nome, ultimaMsg: null };
+
+  const { data: chatsGestor } = await supabase.from("chats").select("id").eq("contato_id", contato.id);
+  const chatIds = (chatsGestor ?? []).map(c => c.id);
+  if (chatIds.length === 0) return { canal, nome: g.nome, ultimaMsg: null };
+
+  const { data: ultimas } = await supabase
+    .from("mensagens")
+    .select("criado_em")
+    .in("chat_id", chatIds)
+    .eq("origem", "cliente")
+    .order("criado_em", { ascending: false })
+    .limit(1);
+
+  return { canal, nome: g.nome, ultimaMsg: ultimas?.[0]?.criado_em ?? null };
+}
+
+function ChipJanelaGestor({ status }: { status: StatusJanela }) {
+  if (!status.ultimaMsg) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+        <span className="text-[10px] text-muted-foreground">{status.nome}: nunca escreveu pra 3W</span>
+      </div>
+    );
+  }
+  const horasDesde = (Date.now() - new Date(status.ultimaMsg).getTime()) / 3_600_000;
+  const horasRestantes = 24 - horasDesde;
+  const fechada = horasRestantes <= 0;
+  const urgente = !fechada && horasRestantes <= 4;
+  const cor = fechada ? "bg-red-500" : urgente ? "bg-amber-500" : "bg-emerald-500";
+  const texto = fechada
+    ? `${status.nome}: janela fechada`
+    : `${status.nome}: fecha em ${horasRestantes < 1 ? `${Math.round(horasRestantes * 60)}min` : `${Math.floor(horasRestantes)}h`}`;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 px-2 py-1 rounded-md border",
+        fechada || urgente ? "bg-amber-50 border-amber-200" : "bg-muted/50 border-border/50"
+      )}
+      title={`Última mensagem de ${status.nome} pro WhatsApp da 3W: ${formatDataHora(status.ultimaMsg)}`}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cor)} />
+      <span className="text-[10px] text-muted-foreground">{texto}</span>
+    </div>
+  );
+}
+
+function PainelJanelasGestores({ canais }: { canais: string[] }) {
+  const [status, setStatus] = useState<StatusJanela[]>([]);
+
+  const carregar = useCallback(async () => {
+    const resultados = await Promise.all(canais.map(buscarStatusJanela));
+    setStatus(resultados);
+  }, [canais.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    carregar();
+    const interval = setInterval(carregar, 5 * 60 * 1000); // atualiza a cada 5 min
+    return () => clearInterval(interval);
+  }, [carregar]);
+
+  if (canais.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {status.map(s => <ChipJanelaGestor key={s.canal} status={s} />)}
+    </div>
+  );
+}
 
 // ─── ModalMensagensRapidas (CRUD) ──────────────────────────────────────────────
 function ModalMensagensRapidas({ isOpen, onClose, onSaved }: { isOpen: boolean; onClose: () => void; onSaved: () => void }) {
@@ -635,6 +824,42 @@ function ChatView({
     } catch (err) {
       console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
       toast.error("Mensagem salva, mas falha ao enviar no WhatsApp", { description: String(err) });
+    }
+    setEnviando(false);
+  };
+
+  const enviarTemplate = async (t: TemplateMeta) => {
+    setEnviando(true);
+    const { error } = await supabase.from("mensagens").insert({
+      chat_id: chat.id,
+      origem: "humano",
+      conteudo: `[Template: ${t.name}] ${t.texto}`,
+      tipo: "texto",
+    });
+    if (error) {
+      toast.error("Erro ao registrar template");
+      setEnviando(false);
+      return;
+    }
+    await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
+    const tel = chat.contato?.telefone ?? "";
+    const telefoneCliente = tel.startsWith("55") ? tel : "55" + tel;
+    try {
+      const res = await apiFetch("/api/enviar-mensagem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chat.id, telefone_cliente: telefoneCliente, template: { name: t.name, language: t.language } }),
+      });
+      const json = await res.json().catch(() => ({}));
+      console.log("[enviarTemplate] response:", res.status, json);
+      if (!res.ok) {
+        toast.error("Falha ao enviar template", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
+      } else {
+        toast.success(`Template "${t.name}" enviado`);
+      }
+    } catch (err) {
+      console.error("[enviarTemplate] erro:", err);
+      toast.error("Falha ao enviar template", { description: String(err) });
     }
     setEnviando(false);
   };
@@ -1020,6 +1245,9 @@ function ChatView({
 
             {/* Linha de input + botões */}
             <div className="flex gap-2 items-center">
+              {/* Templates Meta — iniciar/reabrir conversa fora da janela de 24h */}
+              <DropdownTemplatesMeta onSelecionar={enviarTemplate} disabled={enviando} />
+
               {/* Mensagens rápidas */}
               <div ref={rapidasRef} className="relative shrink-0">
                 <button
@@ -1202,10 +1430,10 @@ function ModalNovaConversa({
 
   const handleClose = () => { limpar(); onClose(); };
 
-  const enviarNovaConversa = async () => {
+  const enviarNovaConversa = async (templateSelecionado?: TemplateMeta) => {
     const telLimpo = telefone.replace(/\D/g, "");
-    if (!telLimpo || !mensagem.trim()) {
-      toast.error("Preencha o telefone e a mensagem");
+    if (!telLimpo || (!templateSelecionado && !mensagem.trim())) {
+      toast.error(templateSelecionado ? "Preencha o telefone" : "Preencha o telefone e a mensagem");
       return;
     }
     setEnviando(true);
@@ -1269,10 +1497,13 @@ function ModalNovaConversa({
     }
 
     // 3. Salva mensagem no histórico
+    const conteudoHistorico = templateSelecionado
+      ? `[Template: ${templateSelecionado.name}] ${templateSelecionado.texto}`
+      : mensagem.trim();
     const { error: errMsg } = await supabase.from("mensagens").insert({
       chat_id: chatId,
       origem: "humano",
-      conteudo: mensagem.trim(),
+      conteudo: conteudoHistorico,
       tipo: "texto",
     });
     if (errMsg) {
@@ -1282,20 +1513,20 @@ function ModalNovaConversa({
     }
     await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chatId);
 
-    // 4. Envia via Evolution API (mensagem livre, sem template)
+    // 4. Envia via WhatsApp Cloud API (Meta) — mensagem livre ou template explícito
     const telWA = telLimpo.startsWith("55") ? telLimpo : "55" + telLimpo;
     try {
       const res = await apiFetch("/api/enviar-mensagem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          telefone_cliente: telWA,
-          mensagem: mensagem.trim(),
-        }),
+        body: JSON.stringify(
+          templateSelecionado
+            ? { chat_id: chatId, telefone_cliente: telWA, template: { name: templateSelecionado.name, language: templateSelecionado.language } }
+            : { chat_id: chatId, telefone_cliente: telWA, mensagem: mensagem.trim() }
+        ),
       });
       const json = await res.json().catch(() => ({}));
-      console.log("[enviarNovaConversa] n8n response:", res.status, json);
+      console.log("[enviarNovaConversa] response:", res.status, json);
       if (!res.ok) {
         toast.warning(`Conversa criada, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
       }
@@ -1433,6 +1664,14 @@ function ModalNovaConversa({
             />
             <p className="text-[11px] text-muted-foreground mt-1">Enter envia · Shift+Enter para quebra de linha</p>
           </div>
+
+          {/* Template Meta — obrigatório pra iniciar contato frio (janela de 24h fechada) */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+            <p className="text-[11px] text-muted-foreground">
+              Contato nunca falou com a 3W? Inicie com um template:
+            </p>
+            <DropdownTemplatesMeta onSelecionar={enviarNovaConversa} disabled={enviando || !telefone.trim()} />
+          </div>
         </div>
 
         {/* Footer */}
@@ -1443,7 +1682,7 @@ function ModalNovaConversa({
           <Button
             size="sm"
             className="flex-1 h-9 text-sm gap-1.5 bg-[#164B6E] hover:bg-[#164B6E]/90"
-            onClick={enviarNovaConversa}
+            onClick={() => enviarNovaConversa()}
             disabled={enviando || !telefone.trim() || !mensagem.trim()}
           >
             {enviando
@@ -1840,6 +2079,7 @@ export default function Atendimento() {
             <h1 className="font-heading text-base font-semibold">Atendimento</h1>
             <p className="text-[11px] text-muted-foreground">WhatsApp · Central de conversas</p>
           </div>
+          <PainelJanelasGestores canais={canaisVisiveis.map(c => c.key).filter(k => k !== "IA")} />
         </div>
         <div className="flex items-center gap-3">
           <div className={cn("flex items-center gap-1.5 text-[11px]", online ? "text-emerald-600" : "text-red-500")}>

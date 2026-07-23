@@ -1,16 +1,25 @@
 /**
- * Proxy server-side — chama a Evolution API diretamente (sem n8n).
- * Elimina CORS e dependência de webhook n8n.
+ * Proxy server-side — chama a WhatsApp Cloud API (Meta) diretamente.
+ * Substitui a Evolution API (migração concluída em 2026-07). Mantém o mesmo
+ * contrato de entrada ({telefone_cliente, mensagem, arquivo_url, tipo_midia})
+ * para que os nós de envio do n8n não precisem mudar.
+ *
+ * Janela de 24h: a Cloud API só permite mensagem livre se o destinatário
+ * escreveu pra 3W nas últimas 24h (Meta responde erro 131047 fora da janela).
+ * Fora da janela, cai automaticamente num template aprovado só pra reabrir a
+ * conversa — o conteúdo real (resumo de handoff, resposta da IA etc.) não é
+ * entregue nesse envio; precisa ser reenviado como mensagem livre depois que
+ * o destinatário responder ao template.
  */
 
 import { usuarioAutenticado, segredoInternoValido, respostaNaoAutorizado } from "./_auth";
 
 export const config = { runtime: "edge" };
 
-// Evolution 2.4.0 (serviço "evolution2" no Easypanel, banco isolado) — migrado em
-// 02/07/2026: a 2.3.7 não enviava por número em sessões recém-pareadas (regime lid).
-const EVOLUTION_BASE = "https://n8n-evolution2.3sq8ua.easypanel.host";
-const EVOLUTION_INSTANCE = "3W-Hotelaria";
+const META_API_VERSION = "v23.0";
+const RE_ENGAGEMENT_ERROR_CODE = 131047;
+const FALLBACK_TEMPLATE_NAME = process.env.META_FALLBACK_TEMPLATE || "tudo_bem";
+const FALLBACK_TEMPLATE_LANG = process.env.META_FALLBACK_TEMPLATE_LANG || "pt_BR";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
@@ -22,10 +31,11 @@ export default async function handler(req: Request): Promise<Response> {
     return respostaNaoAutorizado();
   }
 
-  const EVOLUTION_APIKEY = process.env.EVOLUTION_APIKEY;
-  if (!EVOLUTION_APIKEY) {
+  const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
+  const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID;
+  if (!META_ACCESS_TOKEN || !META_PHONE_NUMBER_ID) {
     return new Response(
-      JSON.stringify({ ok: false, error: "EVOLUTION_APIKEY não configurada no servidor" }),
+      JSON.stringify({ ok: false, error: "META_ACCESS_TOKEN/META_PHONE_NUMBER_ID não configuradas no servidor" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
@@ -34,9 +44,9 @@ export default async function handler(req: Request): Promise<Response> {
     const body = await req.json();
     console.log("[enviar-mensagem] payload →", JSON.stringify(body));
 
-    const { telefone_cliente, mensagem, arquivo_url, tipo_midia } = body;
+    const { telefone_cliente, mensagem, arquivo_url, tipo_midia, template } = body;
 
-    // Sanitiza: remove tudo que não é dígito, garante DDI 55
+    // Sanitiza: remove tudo que não é dígito, garante DDI 55 (Meta exige código do país, sem "+")
     const telRaw = String(telefone_cliente || "").replace(/\D/g, "");
     const telDigits = telRaw.startsWith("55") ? telRaw : "55" + telRaw;
 
@@ -49,75 +59,114 @@ export default async function handler(req: Request): Promise<Response> {
       );
     }
 
-    // Passa o JID completo para bypassar a validação de existência da Evolution API
-    // (evita falso "exists: false" em números VoIP, linhas com 8 dígitos, etc.)
-    const telFinal = `${telDigits}@s.whatsapp.net`;
-
     const temMidia = !!(arquivo_url && arquivo_url.length > 0);
 
-    let endpoint: string;
     let payload: Record<string, unknown>;
 
-    if (temMidia) {
+    if (template?.name) {
+      // Envio explícito de template (botão no hub) — usado pra iniciar ou
+      // reabrir conversa fora da janela de 24h, sem depender do fallback automático.
+      payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: telDigits,
+        type: "template",
+        template: { name: template.name, language: { code: template.language || FALLBACK_TEMPLATE_LANG } },
+      };
+    } else if (temMidia) {
       const tipoMap: Record<string, string> = {
         imagem: "image",
         documento: "document",
         audio: "audio",
         video: "video",
       };
-      const mediatype = tipoMap[tipo_midia] ?? "document";
+      const mediaType = tipoMap[tipo_midia] ?? "document";
       const fileName = (arquivo_url as string).split("/").pop()?.split("?")[0] ?? "arquivo";
-      endpoint = "sendMedia";
+
+      const mediaObj: Record<string, unknown> = { link: arquivo_url };
+      if (mediaType === "document") mediaObj.filename = fileName;
+      if (mediaType === "image" || mediaType === "video" || mediaType === "document") {
+        mediaObj.caption = mensagem || "";
+      }
+
       payload = {
-        number: telFinal,
-        mediatype,
-        media: arquivo_url,
-        caption: mensagem || "",
-        fileName,
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: telDigits,
+        type: mediaType,
+        [mediaType]: mediaObj,
       };
     } else {
-      endpoint = "sendText";
       payload = {
-        number: telFinal,
-        text: mensagem,
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: telDigits,
+        type: "text",
+        text: { preview_url: false, body: mensagem },
       };
     }
 
-    const url = `${EVOLUTION_BASE}/message/${endpoint}/${EVOLUTION_INSTANCE}`;
-    console.log(`[enviar-mensagem] → ${url}`, JSON.stringify(payload));
+    const graphUrl = `https://graph.facebook.com/${META_API_VERSION}/${META_PHONE_NUMBER_ID}/messages`;
+    const enviar = (p: Record<string, unknown>) =>
+      fetch(graphUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${META_ACCESS_TOKEN}` },
+        body: JSON.stringify(p),
+      });
 
-    const evoRes = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: EVOLUTION_APIKEY,
-      },
-      body: JSON.stringify(payload),
-    });
+    console.log(`[enviar-mensagem] → ${graphUrl}`, JSON.stringify(payload));
+    let metaRes = await enviar(payload);
+    let text = await metaRes.text();
+    console.log(`[enviar-mensagem] Meta status=${metaRes.status} body=${text}`);
 
-    const text = await evoRes.text();
-    console.log(`[enviar-mensagem] Evolution status=${evoRes.status} body=${text}`);
-
-    // Evolution retorna 400 com exists:false quando número não está no WhatsApp
-    if (!evoRes.ok) {
-      let errorMsg = `Erro ${evoRes.status}`;
+    if (!metaRes.ok) {
+      let errorCode: number | undefined;
+      let errorMsg = `Erro ${metaRes.status}`;
       try {
         const parsed = JSON.parse(text);
-        const msgs = parsed?.response?.message;
-        if (Array.isArray(msgs) && msgs[0]?.exists === false) {
-          errorMsg = `Número ${telFinal} não encontrado no WhatsApp`;
-        } else if (parsed?.message) {
-          errorMsg = parsed.message;
-        }
+        errorCode = parsed?.error?.code;
+        if (parsed?.error?.message) errorMsg = parsed.error.error_user_msg || parsed.error.message;
       } catch {}
+
+      // Fora da janela de 24h: tenta reabrir a conversa com um template aprovado
+      // (só cobre mensagem de texto — mídia fora da janela ainda falha, sem template com mídia hoje).
+      if (errorCode === RE_ENGAGEMENT_ERROR_CODE && payload.type !== "template") {
+        const templatePayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: telDigits,
+          type: "template",
+          template: { name: FALLBACK_TEMPLATE_NAME, language: { code: FALLBACK_TEMPLATE_LANG } },
+        };
+        console.log(`[enviar-mensagem] fora da janela de 24h → tentando template "${FALLBACK_TEMPLATE_NAME}"`);
+        metaRes = await enviar(templatePayload);
+        text = await metaRes.text();
+        console.log(`[enviar-mensagem] Meta (template) status=${metaRes.status} body=${text}`);
+
+        if (metaRes.ok) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              status: metaRes.status,
+              body: text,
+              viaTemplate: true,
+              aviso: "Fora da janela de 24h — enviado template de reengajamento, não a mensagem original. Reenvie o conteúdo real após o destinatário responder.",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        // Template também falhou (ex.: não aprovado ainda) — cai pro erro abaixo com info do template
+        errorMsg = `Fora da janela de 24h e template "${FALLBACK_TEMPLATE_NAME}" falhou: ${errorMsg}`;
+      }
+
       return new Response(
-        JSON.stringify({ ok: false, status: evoRes.status, error: errorMsg, raw: text }),
-        { status: evoRes.status, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ ok: false, status: metaRes.status, error: errorMsg, raw: text }),
+        { status: metaRes.status, headers: { "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ ok: true, status: evoRes.status, body: text }),
+      JSON.stringify({ ok: true, status: metaRes.status, body: text }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
