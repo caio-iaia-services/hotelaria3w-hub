@@ -2137,6 +2137,10 @@ export default function Atendimento() {
       .update({ status: "encerrado" })
       .eq("id", chat.id);
     if (error) { toast.error("Erro ao encerrar conversa"); return; }
+    // Reseta a "sessão" da IA pra esse contato — sem isso, a memória da IA (que é
+    // vinculada só ao telefone) continuaria carregando o histórico da conversa
+    // encerrada na próxima mensagem, mesmo com o chat sendo outro no hub.
+    await supabase.from("contatos_whatsapp").update({ sessao_ia: crypto.randomUUID() }).eq("id", chat.contato_id);
     setChats(prev => prev.filter(c => c.id !== chat.id));
     if (chatSelecionado?.id === chat.id) setChatSelecionado(null);
     toast.success("Conversa encerrada");
