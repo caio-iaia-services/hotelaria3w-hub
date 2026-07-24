@@ -9,6 +9,7 @@ import {
   Wifi, WifiOff, Plus, X, Building2,
   ArrowRightLeft, ChevronDown, Trash2, Check,
   Paperclip, FileText, Image, Zap, Tag as TagIcon, BarChart3, MessageSquareText,
+  Check, CheckCheck, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,8 @@ interface Mensagem {
   duracao_segundos?: number | null;
   lida: boolean;
   criado_em: string;
+  wamid?: string | null; // ID da mensagem na Meta — usado pra rastrear entrega/leitura
+  status_entrega?: string | null; // enviada | entregue | lida | falhou (só mensagens nossas, via webhook de status da Meta)
 }
 
 interface ClienteBusca {
@@ -171,6 +174,28 @@ function resolverMediaUrl(msg: Mensagem): string {
   }
   if (/^https?:\/\//i.test(raw)) return raw;
   return "";
+}
+
+// Salva o wamid (ID da mensagem na Meta) na mensagem recém-inserida, pra depois
+// o webhook de status (sent/delivered/read) conseguir achar e atualizar via wamid.
+async function salvarWamid(mensagemId: string, apiJson: unknown) {
+  try {
+    const j = apiJson as { body?: string };
+    const body = typeof j?.body === "string" ? JSON.parse(j.body) : j?.body;
+    const wamid = (body as { messages?: { id?: string }[] })?.messages?.[0]?.id;
+    if (wamid) {
+      await supabase.from("mensagens").update({ wamid, status_entrega: "enviada" }).eq("id", mensagemId);
+    }
+  } catch { /* não crítico — mensagem já foi enviada, só o tique fica sem status */ }
+}
+
+// Tiquinhos de entrega estilo WhatsApp — só pra mensagens nossas (IA/humano),
+// alimentado pelo webhook de status da Meta (sent/delivered/read/failed).
+function TiquesEntrega({ status }: { status?: string | null }) {
+  if (!status || status === "enviada") return <Check size={12} className="opacity-70" />;
+  if (status === "falhou") return <AlertCircle size={12} className="text-red-400" />;
+  if (status === "lida") return <CheckCheck size={12} className="text-sky-300" />;
+  return <CheckCheck size={12} className="opacity-70" />; // entregue
 }
 
 function BolhaMsg({ msg }: { msg: Mensagem }) {
@@ -306,11 +331,12 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
         >
           {renderConteudo()}
         </div>
-        <span className="text-[10px] text-muted-foreground mt-1 px-1">
+        <span className="text-[10px] text-muted-foreground mt-1 px-1 flex items-center gap-1">
           {formatHora(msg.criado_em)}
           {!isCliente && (
-            <span className="ml-1 opacity-70">{isIA ? "• IA" : "• Humano"}</span>
+            <span className="opacity-70">• {isIA ? "IA" : "Humano"}</span>
           )}
+          {!isCliente && <TiquesEntrega status={msg.status_entrega} />}
         </span>
       </div>
     </div>
@@ -445,34 +471,61 @@ async function buscarStatusJanela(canal: string): Promise<StatusJanela> {
   return { canal, nome: g.nome, ultimaMsg: ultimas?.[0]?.criado_em ?? null };
 }
 
-function ChipJanelaGestor({ status }: { status: StatusJanela }) {
-  if (!status.ultimaMsg) {
-    return (
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-        <span className="text-[10px] text-muted-foreground">{status.nome}: nunca escreveu pra 3W</span>
-      </div>
-    );
+// Cálculo compartilhado da janela de 24h — usado tanto no painel de gestores
+// quanto no badge de janela por conversa aberta.
+function calcularJanela(ultimaMsg: string | null): { cor: string; texto: string; fechada: boolean; urgente: boolean } {
+  if (!ultimaMsg) {
+    return { cor: "bg-red-500", texto: "nunca escreveu pra 3W", fechada: true, urgente: false };
   }
-  const horasDesde = (Date.now() - new Date(status.ultimaMsg).getTime()) / 3_600_000;
+  const horasDesde = (Date.now() - new Date(ultimaMsg).getTime()) / 3_600_000;
   const horasRestantes = 24 - horasDesde;
   const fechada = horasRestantes <= 0;
   const urgente = !fechada && horasRestantes <= 4;
   const cor = fechada ? "bg-red-500" : urgente ? "bg-amber-500" : "bg-emerald-500";
   const texto = fechada
-    ? `${status.nome}: janela fechada`
-    : `${status.nome}: fecha em ${horasRestantes < 1 ? `${Math.round(horasRestantes * 60)}min` : `${Math.floor(horasRestantes)}h`}`;
+    ? "janela fechada"
+    : `fecha em ${horasRestantes < 1 ? `${Math.round(horasRestantes * 60)}min` : `${Math.floor(horasRestantes)}h`}`;
+  return { cor, texto, fechada, urgente };
+}
 
+function ChipJanelaGestor({ status }: { status: StatusJanela }) {
+  const { cor, texto, fechada, urgente } = calcularJanela(status.ultimaMsg);
   return (
     <div
       className={cn(
         "flex items-center gap-1.5 px-2 py-1 rounded-md border",
         fechada || urgente ? "bg-amber-50 border-amber-200" : "bg-muted/50 border-border/50"
       )}
-      title={`Última mensagem de ${status.nome} pro WhatsApp da 3W: ${formatDataHora(status.ultimaMsg)}`}
+      title={status.ultimaMsg ? `Última mensagem de ${status.nome} pro WhatsApp da 3W: ${formatDataHora(status.ultimaMsg)}` : undefined}
     >
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cor)} />
-      <span className="text-[10px] text-muted-foreground">{texto}</span>
+      <span className="text-[10px] text-muted-foreground">{status.nome}: {texto}</span>
+    </div>
+  );
+}
+
+// Badge de janela de 24h da CONVERSA aberta com o cliente — calcula a partir
+// das mensagens já carregadas no chat (não precisa de consulta extra).
+function BadgeJanelaCliente({ mensagens }: { mensagens: Mensagem[] }) {
+  const ultimaMsgCliente = useMemo(() => {
+    for (let i = mensagens.length - 1; i >= 0; i--) {
+      if (mensagens[i].origem === "cliente") return mensagens[i].criado_em;
+    }
+    return null;
+  }, [mensagens]);
+
+  const { cor, texto, fechada, urgente } = calcularJanela(ultimaMsgCliente);
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 px-2 py-1 rounded-md border shrink-0",
+        fechada || urgente ? "bg-amber-50 border-amber-200" : "bg-muted/50 border-border/50"
+      )}
+      title={ultimaMsgCliente ? `Última mensagem do cliente: ${formatDataHora(ultimaMsgCliente)}` : "Cliente ainda não mandou mensagem nessa conversa"}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cor)} />
+      <span className="text-[10px] text-muted-foreground whitespace-nowrap">Janela: {texto}</span>
     </div>
   );
 }
@@ -786,6 +839,15 @@ function ChatView({
           }
         }
       )
+      // Status de entrega/leitura chegando via webhook da Meta (UPDATE em status_entrega)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "mensagens", filter: `chat_id=eq.${chat.id}` },
+        (payload) => {
+          const atualizada = payload.new as Mensagem;
+          setMensagens(prev => prev.map(m => m.id === atualizada.id ? atualizada : m));
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(sub); };
@@ -800,12 +862,11 @@ function ChatView({
     setEnviando(true);
     const msg = texto.trim();
     setTexto("");
-    const { error } = await supabase.from("mensagens").insert({
-      chat_id: chat.id,
-      origem: "humano",
-      conteudo: msg,
-      tipo: "texto",
-    });
+    const { data: inserida, error } = await supabase
+      .from("mensagens")
+      .insert({ chat_id: chat.id, origem: "humano", conteudo: msg, tipo: "texto" })
+      .select("id")
+      .single();
     if (error) {
       toast.error("Erro ao enviar mensagem");
       setTexto(msg);
@@ -826,6 +887,8 @@ function ChatView({
       console.log("[enviar] response:", res.status, json);
       if (!res.ok) {
         toast.error("Mensagem salva, mas falha ao enviar no WhatsApp", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
+      } else {
+        await salvarWamid(inserida.id, json);
       }
     } catch (err) {
       console.error("[enviar] Erro ao chamar webhook WhatsApp:", err);
@@ -836,12 +899,11 @@ function ChatView({
 
   const enviarTemplate = async (t: TemplateMeta) => {
     setEnviando(true);
-    const { error } = await supabase.from("mensagens").insert({
-      chat_id: chat.id,
-      origem: "humano",
-      conteudo: `[Template: ${t.name}] ${t.texto}`,
-      tipo: "texto",
-    });
+    const { data: inserida, error } = await supabase
+      .from("mensagens")
+      .insert({ chat_id: chat.id, origem: "humano", conteudo: `[Template: ${t.name}] ${t.texto}`, tipo: "texto" })
+      .select("id")
+      .single();
     if (error) {
       toast.error("Erro ao registrar template");
       setEnviando(false);
@@ -862,6 +924,7 @@ function ChatView({
         toast.error("Falha ao enviar template", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
       } else {
         toast.success(`Template "${t.name}" enviado`);
+        await salvarWamid(inserida.id, json);
       }
     } catch (err) {
       console.error("[enviarTemplate] erro:", err);
@@ -973,13 +1036,17 @@ function ChatView({
       const publicUrl = urlData.publicUrl;
 
       const legenda = texto.trim() || arquivo.name;
-      const { error: errMsg } = await supabase.from("mensagens").insert({
-        chat_id: chat.id,
-        origem: "humano",
-        conteudo: publicUrl,   // URL em conteudo (fallback p/ cache antigo do PostgREST)
-        tipo,
-        media_url: publicUrl, // URL no campo dedicado (quando schema cache estiver atual)
-      });
+      const { data: inserida, error: errMsg } = await supabase
+        .from("mensagens")
+        .insert({
+          chat_id: chat.id,
+          origem: "humano",
+          conteudo: publicUrl,   // URL em conteudo (fallback p/ cache antigo do PostgREST)
+          tipo,
+          media_url: publicUrl, // URL no campo dedicado (quando schema cache estiver atual)
+        })
+        .select("id")
+        .single();
       if (errMsg) throw errMsg;
 
       await supabase.from("chats").update({ ultima_mensagem_em: new Date().toISOString() }).eq("id", chat.id);
@@ -1003,6 +1070,8 @@ function ChatView({
         console.log("[enviarArquivo] response:", res.status, json);
         if (!res.ok) {
           toast.error("Arquivo salvo, mas falha ao enviar no WhatsApp", { description: json?.error ?? json?.body ?? `Erro ${res.status}` });
+        } else {
+          await salvarWamid(inserida.id, json);
         }
       } catch (err) {
         console.error("[enviarArquivo] erro:", err);
@@ -1145,6 +1214,7 @@ function ChatView({
           >
             {canalInfo.label}
           </Badge>
+          <BadgeJanelaCliente mensagens={mensagens} />
           {chat.canal === "IA" && (
             <Button
               size="sm"
@@ -1506,12 +1576,11 @@ function ModalNovaConversa({
     const conteudoHistorico = templateSelecionado
       ? `[Template: ${templateSelecionado.name}] ${templateSelecionado.texto}`
       : mensagem.trim();
-    const { error: errMsg } = await supabase.from("mensagens").insert({
-      chat_id: chatId,
-      origem: "humano",
-      conteudo: conteudoHistorico,
-      tipo: "texto",
-    });
+    const { data: inserida, error: errMsg } = await supabase
+      .from("mensagens")
+      .insert({ chat_id: chatId, origem: "humano", conteudo: conteudoHistorico, tipo: "texto" })
+      .select("id")
+      .single();
     if (errMsg) {
       toast.error("Erro ao salvar mensagem");
       setEnviando(false);
@@ -1535,6 +1604,8 @@ function ModalNovaConversa({
       console.log("[enviarNovaConversa] response:", res.status, json);
       if (!res.ok) {
         toast.warning(`Conversa criada, mas falha ao enviar no WhatsApp (${res.status})`, { description: json?.body ?? json?.error ?? "Erro desconhecido" });
+      } else {
+        await salvarWamid(inserida.id, json);
       }
     } catch (err) {
       console.error("[enviarNovaConversa] erro:", err);
