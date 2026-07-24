@@ -476,7 +476,7 @@ function ChipJanelaGestor({ status }: { status: StatusJanela }) {
   );
 }
 
-function PainelJanelasGestores({ canais }: { canais: string[] }) {
+function PainelJanelasGestores({ canais, refreshKey }: { canais: string[]; refreshKey?: number }) {
   const [status, setStatus] = useState<StatusJanela[]>([]);
 
   const carregar = useCallback(async () => {
@@ -486,9 +486,14 @@ function PainelJanelasGestores({ canais }: { canais: string[] }) {
 
   useEffect(() => {
     carregar();
-    const interval = setInterval(carregar, 5 * 60 * 1000); // atualiza a cada 5 min
+    const interval = setInterval(carregar, 60 * 1000); // atualiza sozinho a cada 1 min
     return () => clearInterval(interval);
   }, [carregar]);
+
+  // Também atualiza na hora quando o usuário clica em "Atualizar" no topo da tela
+  useEffect(() => {
+    if (refreshKey !== undefined) carregar();
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (canais.length === 0) return null;
 
@@ -1863,6 +1868,7 @@ export default function Atendimento() {
   const [modalOportunidade, setModalOportunidade] = useState(false);
   const [clienteParaOportunidade, setClienteParaOportunidade] = useState<Cliente | null>(null);
   const [modalDashboard, setModalDashboard] = useState(false);
+  const [refreshGestores, setRefreshGestores] = useState(0);
 
   // Zera o badge de não lidas localmente quando um chat é aberto
   const marcarLidas = useCallback((chatId: string) => {
@@ -2079,7 +2085,7 @@ export default function Atendimento() {
             <h1 className="font-heading text-base font-semibold">Atendimento</h1>
             <p className="text-[11px] text-muted-foreground">WhatsApp · Central de conversas</p>
           </div>
-          <PainelJanelasGestores canais={canaisVisiveis.map(c => c.key).filter(k => k !== "IA")} />
+          <PainelJanelasGestores canais={canaisVisiveis.map(c => c.key).filter(k => k !== "IA")} refreshKey={refreshGestores} />
         </div>
         <div className="flex items-center gap-3">
           <div className={cn("flex items-center gap-1.5 text-[11px]", online ? "text-emerald-600" : "text-red-500")}>
@@ -2090,7 +2096,7 @@ export default function Atendimento() {
             <BarChart3 size={11} />
             Dashboard
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => carregarChats()} disabled={loading}>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => { carregarChats(); setRefreshGestores(v => v + 1); }} disabled={loading}>
             <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             Atualizar
           </Button>
