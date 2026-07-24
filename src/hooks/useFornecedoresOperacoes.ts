@@ -23,7 +23,7 @@ export function useFornecedoresOperacoes(enabled = true) {
       .select("nome_fantasia, gestao")
       .not("gestao", "is", null)
       .neq("gestao", "")
-      .in("status", ["ativo", "prospecção"])
+      .eq("status", "ativo")
       .order("nome_fantasia", { ascending: true })
       .then(({ data }) => {
         setFornecedores(data || []);

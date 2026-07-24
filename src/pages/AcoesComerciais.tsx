@@ -495,6 +495,7 @@ export default function AcoesComerciais() {
       .select("nome_fantasia, gestao")
       .not("gestao", "is", null)
       .neq("gestao", "")
+      .eq("status", "ativo")
       .then(({ data }) => setFornecedoresDb(data || []));
   }, [gestaoFiltro]);
 

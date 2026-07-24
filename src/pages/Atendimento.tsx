@@ -420,16 +420,17 @@ interface StatusJanela {
 
 async function buscarStatusJanela(canal: string): Promise<StatusJanela> {
   const g = GESTORES_TELEFONE[canal];
-  const { data: contato } = await supabase
+  // Pode haver mais de um contato_whatsapp duplicado pro mesmo telefone (formato
+  // com/sem DDI 55 salvo em momentos diferentes) — considera todos, não só um.
+  const { data: contatos } = await supabase
     .from("contatos_whatsapp")
     .select("id")
-    .like("telefone", `%${g.telefone.slice(-8)}`)
-    .limit(1)
-    .maybeSingle();
+    .like("telefone", `%${g.telefone.slice(-8)}`);
 
-  if (!contato) return { canal, nome: g.nome, ultimaMsg: null };
+  const contatoIds = (contatos ?? []).map(c => c.id);
+  if (contatoIds.length === 0) return { canal, nome: g.nome, ultimaMsg: null };
 
-  const { data: chatsGestor } = await supabase.from("chats").select("id").eq("contato_id", contato.id);
+  const { data: chatsGestor } = await supabase.from("chats").select("id").in("contato_id", contatoIds);
   const chatIds = (chatsGestor ?? []).map(c => c.id);
   if (chatIds.length === 0) return { canal, nome: g.nome, ultimaMsg: null };
 
