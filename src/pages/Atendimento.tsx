@@ -793,7 +793,7 @@ function ChatView({
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
       .from("mensagens")
-      .select("id, chat_id, origem, conteudo, tipo, media_url, duracao_segundos, lida, criado_em")
+      .select("id, chat_id, origem, conteudo, tipo, media_url, duracao_segundos, lida, criado_em, wamid, status_entrega")
       .eq("chat_id", chat.id)
       .order("criado_em", { ascending: true })
       .limit(200);
