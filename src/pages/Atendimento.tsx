@@ -853,12 +853,18 @@ function ChatView({
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(sub); };
+    // Polling de segurança: garante que os tiquinhos de entrega/leitura
+    // (status_entrega) se atualizem mesmo se o evento de tempo real falhar
+    const intervalo = setInterval(() => carregar(), 5000);
+
+    return () => { supabase.removeChannel(sub); clearInterval(intervalo); };
   }, [chat.id, carregar, marcarComoLidas, onMarcarLidas]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mensagens]);
+    // Depende só da quantidade — o polling de status_entrega atualiza mensagens
+    // existentes sem adicionar novas, e não deve forçar rolagem pro final.
+  }, [mensagens.length]);
 
   const enviar = async () => {
     if (!texto.trim()) return;
