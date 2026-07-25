@@ -182,7 +182,10 @@ async function salvarWamid(mensagemId: string, apiJson: unknown) {
   try {
     const j = apiJson as { body?: string };
     const body = typeof j?.body === "string" ? JSON.parse(j.body) : j?.body;
-    const wamid = (body as { messages?: { id?: string }[] })?.messages?.[0]?.id;
+    const wamidBruto = (body as { messages?: { id?: string }[] })?.messages?.[0]?.id;
+    // Limpa pra só letras/números — o wamid da Meta tem "=", "+", "/" (base64), que
+    // quebram o filtro de busca do n8n na hora de atualizar o status de entrega/leitura.
+    const wamid = wamidBruto?.replace(/[^a-zA-Z0-9]/g, "") || null;
     if (wamid) {
       await supabase.from("mensagens").update({ wamid, status_entrega: "enviada" }).eq("id", mensagemId);
     }
