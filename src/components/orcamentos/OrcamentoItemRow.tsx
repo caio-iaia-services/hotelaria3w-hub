@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useProdutosCastorBusca, ProdutoCastor, MedidaPreco } from '@/hooks/useProdutosCastor'
+import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -59,10 +60,32 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
 
   const codigoRef = useRef<HTMLDivElement>(null)
   const descricaoRef = useRef<HTMLDivElement>(null)
+  const medidasBackfillFeita = useRef(false)
 
   const isCastor = tipoLayout === 'castor'
   const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
   const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
+
+  // Ao editar um orçamento existente, o item já vem com código/medida salvos mas
+  // sem o produto selecionado (medidas fica vazio) — busca o produto pelo código
+  // uma única vez pra repovoar a lista completa de medidas disponíveis no dropdown.
+  useEffect(() => {
+    if (medidasBackfillFeita.current) return
+    if (!isCastor || !item.codigo || medidas.length > 0) return
+    medidasBackfillFeita.current = true
+
+    supabase
+      .from('produtos_castor_view')
+      .select('*')
+      .eq('codigo', item.codigo)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) return
+        const produto = data as unknown as ProdutoCastor
+        setMedidas(produto.medidas_precos || [])
+        setProdutoSelecionado(produto)
+      })
+  }, [isCastor, item.codigo, medidas.length])
 
   // Close dropdowns on outside click
   useEffect(() => {
