@@ -10,6 +10,7 @@ export interface UserProfile {
 
 export const TODOS_MODULOS = [
   { key: 'dashboard',        label: 'Dashboard' },
+  { key: 'agenda',           label: 'Agenda' },
   { key: 'oportunidades',    label: 'Oportunidades' },
   { key: 'crm',              label: 'CRM' },
   { key: 'orcamentos',       label: 'Orçamentos' },
@@ -27,7 +28,7 @@ export const TODOS_MODULOS = [
 ]
 
 export const MODULOS_COMERCIAL_PADRAO = [
-  'dashboard', 'oportunidades', 'crm', 'orcamentos',
+  'dashboard', 'agenda', 'oportunidades', 'crm', 'orcamentos',
   'acoes_comerciais', 'clientes', 'contatos', 'atendimento', 'fornecedores',
 ]
 

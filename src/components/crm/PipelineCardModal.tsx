@@ -27,6 +27,9 @@ import {
   MessageSquare,
   PlusCircle,
   UserRound,
+  ListTodo,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,9 +38,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import type { CRMCard, Cliente } from "@/lib/types";
+import type { CRMCard, Cliente, Tarefa } from "@/lib/types";
 import { OrcamentoModal } from "@/components/orcamentos/OrcamentoModal";
 import { VisualizarOrcamentoModal } from "@/components/orcamentos/VisualizarOrcamentoModal";
+import { NovaTarefaModal } from "@/components/agenda/NovaTarefaModal";
+import { buscarTarefasDaOportunidade, concluirTarefa } from "@/hooks/useTarefas";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const PRIORIDADE_COR: Record<string, string> = {
@@ -73,8 +78,13 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
   const [interesse, setInteresse] = useState("");
   const [notas, setNotas] = useState("");
   const [prioridade, setPrioridade] = useState("media");
-  const [proximaAcao, setProximaAcao] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  // Tarefas vinculadas à oportunidade deste card (módulo Agenda)
+  const [tarefasLinkadas, setTarefasLinkadas] = useState<Tarefa[]>([]);
+  const [carregandoTarefas, setCarregandoTarefas] = useState(false);
+  const [tarefaModalOpen, setTarefaModalOpen] = useState(false);
+  const [tarefaEditando, setTarefaEditando] = useState<Tarefa | null>(null);
 
   // Modal de orçamento
   const [orcamentoOpen, setOrcamentoOpen] = useState(false);
@@ -98,12 +108,23 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
       setInteresse("");
       setNotas("");
       setPrioridade("media");
-      setProximaAcao("");
       setOrcamentoExistente(null);
       setContatosDoCliente([]);
       setContatoId(null);
+      setTarefasLinkadas([]);
     }
   }, [open, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function carregarTarefasLinkadas(oportunidadeId: string | null) {
+    if (!oportunidadeId) {
+      setTarefasLinkadas([]);
+      return;
+    }
+    setCarregandoTarefas(true);
+    const tarefas = await buscarTarefasDaOportunidade(oportunidadeId);
+    setTarefasLinkadas(tarefas);
+    setCarregandoTarefas(false);
+  }
 
   async function carregarDados(c: CRMCard) {
     setCarregando(true);
@@ -112,7 +133,7 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
     setInteresse(c.interesse_cliente || "");
     setNotas(c.notas_gestor || "");
     setPrioridade(c.prioridade || "media");
-    setProximaAcao(c.proxima_acao || "");
+    carregarTarefasLinkadas(c.oportunidade_id);
 
     // 1. Dados completos do cliente
     const { data: clienteData } = await supabase
@@ -183,7 +204,6 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
         interesse_cliente: interesse || null,
         notas_gestor: notas || null,
         prioridade,
-        proxima_acao: proximaAcao || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", card.id);
@@ -193,6 +213,15 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
       return;
     }
     toast.success("Anotações salvas");
+  }
+
+  async function toggleConcluirTarefa(tarefa: Tarefa) {
+    try {
+      await concluirTarefa(tarefa.id, !tarefa.concluida);
+      carregarTarefasLinkadas(card?.oportunidade_id ?? null);
+    } catch {
+      toast.error("Erro ao atualizar tarefa");
+    }
   }
 
   function irParaAtendimento(iniciarConversa = false) {
@@ -360,15 +389,48 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Próxima Ação
-              </Label>
-              <Input
-                value={proximaAcao}
-                onChange={(e) => setProximaAcao(e.target.value)}
-                placeholder="Ex: Enviar proposta, Ligar amanhã..."
-                className="h-8 text-sm"
-              />
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                  <ListTodo size={11} /> Tarefas
+                </Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[11px] px-2 gap-1 text-[#164B6E]"
+                  onClick={() => { setTarefaEditando(null); setTarefaModalOpen(true); }}
+                >
+                  <PlusCircle size={12} /> Criar Tarefa
+                </Button>
+              </div>
+
+              {carregandoTarefas ? (
+                <p className="text-xs text-muted-foreground">Carregando...</p>
+              ) : tarefasLinkadas.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nenhuma tarefa vinculada a esta oportunidade ainda.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {tarefasLinkadas.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-start gap-1.5 text-xs py-1 px-1.5 rounded hover:bg-muted/50 cursor-pointer"
+                      onClick={() => { setTarefaEditando(t); setTarefaModalOpen(true); }}
+                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleConcluirTarefa(t); }}
+                        className="mt-0.5 shrink-0 text-muted-foreground hover:text-emerald-600"
+                      >
+                        {t.concluida ? <CheckCircle2 size={13} className="text-emerald-600" /> : <Circle size={13} />}
+                      </button>
+                      <span className={t.concluida ? "line-through text-muted-foreground" : ""}>
+                        {t.titulo}
+                        {t.data && <span className="text-muted-foreground"> — {t.data.split("-").reverse().join("/")}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Button
@@ -469,6 +531,17 @@ export function PipelineCardModal({ card, open, onOpenChange }: PipelineCardModa
         orcamentoId={orcamentoExistente?.id ?? null}
         open={visualizarOpen}
         onClose={() => setVisualizarOpen(false)}
+      />
+
+      <NovaTarefaModal
+        open={tarefaModalOpen}
+        onOpenChange={setTarefaModalOpen}
+        onSalvo={() => carregarTarefasLinkadas(card.oportunidade_id)}
+        tarefaExistente={tarefaEditando}
+        oportunidadeIdInicial={card.oportunidade_id}
+        clienteIdInicial={card.cliente_id}
+        clienteNomeInicial={card.cliente_nome}
+        gestaoInicial={card.gestao}
       />
     </>
   );

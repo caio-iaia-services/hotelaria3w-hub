@@ -135,6 +135,25 @@ export interface CRMCard {
   updated_at: string
 }
 
+export interface Tarefa {
+  id: string
+  titulo: string
+  responsavel_id: string
+  criado_por: string
+  oportunidade_id: string | null
+  cliente_id: string | null
+  cliente_nome: string | null
+  data: string | null
+  hora: string | null
+  concluida: boolean
+  concluida_em: string | null
+  created_at: string
+  updated_at: string
+  responsavel?: { id: string; nome: string } | null
+  criador?: { id: string; nome: string } | null
+  oportunidade?: { id: string; numero: string } | null
+}
+
 export interface DocumentoComercial {
   id: string
   card_id: string

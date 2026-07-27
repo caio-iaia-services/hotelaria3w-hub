@@ -20,6 +20,7 @@ import {
   Zap,
   UserCog,
   Brain,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatsAbertos } from "@/hooks/useChatsAbertos";
@@ -80,6 +81,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       label: "",
       items: [
         { title: "Home", url: "/dashboard", icon: BarChart3, modulo: "dashboard" },
+        { title: "Agenda", url: "/agenda", icon: CalendarClock, modulo: "agenda" },
       ],
     },
     {

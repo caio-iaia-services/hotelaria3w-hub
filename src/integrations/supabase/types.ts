@@ -3619,6 +3619,83 @@ export type Database = {
         }
         Relationships: []
       }
+      tarefas: {
+        Row: {
+          cliente_id: string | null
+          cliente_nome: string | null
+          concluida: boolean
+          concluida_em: string | null
+          created_at: string
+          criado_por: string
+          data: string | null
+          hora: string | null
+          id: string
+          oportunidade_id: string | null
+          responsavel_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          concluida?: boolean
+          concluida_em?: string | null
+          created_at?: string
+          criado_por: string
+          data?: string | null
+          hora?: string | null
+          id?: string
+          oportunidade_id?: string | null
+          responsavel_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          concluida?: boolean
+          concluida_em?: string | null
+          created_at?: string
+          criado_por?: string
+          data?: string | null
+          hora?: string | null
+          id?: string
+          oportunidade_id?: string | null
+          responsavel_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           assunto: string

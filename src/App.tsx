@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 
 // Páginas em lazy: cada rota vira um chunk próprio (bundle inicial menor)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Agenda = lazy(() => import("./pages/Agenda"));
 const Clientes = lazy(() => import("./pages/Clientes"));
 const Planejamento = lazy(() => import("./pages/Planejamento"));
 const Oportunidades = lazy(() => import("./pages/Oportunidades"));
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/privacy" element={<Suspense fallback={<CarregandoPagina />}><PrivacyPolicy /></Suspense>} />
               <Route path="/" element={<Login />} />
               <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+              <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
               <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
               <Route path="/contatos" element={<Protected><Contatos /></Protected>} />
               <Route path="/oportunidades" element={<Protected><Oportunidades /></Protected>} />
