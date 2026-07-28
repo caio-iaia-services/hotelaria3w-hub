@@ -41,7 +41,7 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const templates = (json.data ?? [])
-      .filter((t: { status: string }) => t.status === "APPROVED")
+      .filter((t: { status: string; name: string }) => t.status === "APPROVED" && t.name !== "hello_world")
       .map((t: { name: string; language: string; category: string; components?: { type: string; text?: string }[] }) => {
         const body = (t.components ?? []).find(c => c.type === "BODY");
         return { name: t.name, language: t.language, category: t.category, texto: body?.text ?? "" };
