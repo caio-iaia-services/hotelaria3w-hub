@@ -132,14 +132,9 @@ export function ListaTarefas({ tarefas, loading, onNovaTarefa, onEditar, onConcl
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {pendentes.length} pendente{pendentes.length !== 1 ? "s" : ""} · {concluidas.length} concluída{concluidas.length !== 1 ? "s" : ""}
-        </p>
-        <Button size="sm" className="gap-1.5" onClick={onNovaTarefa}>
-          <Plus size={15} /> Nova Tarefa
-        </Button>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {pendentes.length} pendente{pendentes.length !== 1 ? "s" : ""} · {concluidas.length} concluída{concluidas.length !== 1 ? "s" : ""}
+      </p>
 
       {loading ? (
         <div className="flex justify-center py-12 text-muted-foreground">
