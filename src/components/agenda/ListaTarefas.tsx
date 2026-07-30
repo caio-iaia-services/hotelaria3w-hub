@@ -125,7 +125,11 @@ function TarefaCard({
   ) => Promise<void>;
 }) {
   const dataHora = formatarDataHora(tarefa.data, tarefa.hora);
-  const souCriador = tarefa.criado_por === perfilId || isAdmin;
+  // Agir direto (sem pedir aprovação) só vale pra quem criou a tarefa — admin
+  // não é isento disso, mas continua podendo aprovar/negar pedidos de
+  // qualquer tarefa (backstop pra quando o criador está ausente).
+  const podeAgirDireto = tarefa.criado_por === perfilId;
+  const podeAprovar = podeAgirDireto || isAdmin;
 
   const excRecente = solicitacaoRecente(tarefa, "exclusao");
   const concRecente = solicitacaoRecente(tarefa, "conclusao");
@@ -138,13 +142,13 @@ function TarefaCard({
   const [motivoNegar, setMotivoNegar] = useState("");
 
   function handleConcluirClick() {
-    if (souCriador) { onConcluir(tarefa.id, !tarefa.concluida); return; }
+    if (podeAgirDireto) { onConcluir(tarefa.id, !tarefa.concluida); return; }
     if (concPendente) return;
     setDialogTipo("conclusao");
   }
 
   function handleDeletarClick() {
-    if (souCriador) { onDeletar(tarefa); return; }
+    if (podeAgirDireto) { onDeletar(tarefa); return; }
     if (excPendente) return;
     setDialogTipo("exclusao");
   }
@@ -167,11 +171,11 @@ function TarefaCard({
       <div className="flex items-start gap-3">
         <button
           onClick={handleConcluirClick}
-          disabled={concluindo || (!souCriador && concPendente)}
+          disabled={concluindo || (!podeAgirDireto && concPendente)}
           className="mt-0.5 shrink-0 text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={
             tarefa.concluida ? "Reabrir tarefa"
-              : souCriador ? "Concluir tarefa"
+              : podeAgirDireto ? "Concluir tarefa"
                 : concPendente ? "Aguardando aprovação do criador"
                   : "Solicitar conclusão ao criador"
           }
@@ -257,15 +261,15 @@ function TarefaCard({
           <Button
             variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive disabled:opacity-40"
             onClick={handleDeletarClick}
-            disabled={excluindo || (!souCriador && excPendente)}
-            title={!souCriador ? (excPendente ? "Aguardando aprovação do criador" : "Solicitar exclusão ao criador") : "Excluir"}
+            disabled={excluindo || (!podeAgirDireto && excPendente)}
+            title={!podeAgirDireto ? (excPendente ? "Aguardando aprovação do criador" : "Solicitar exclusão ao criador") : "Excluir"}
           >
             {excluindo ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
           </Button>
         </div>
       </div>
 
-      {souCriador && excPendente && excRecente && (
+      {podeAprovar && excPendente && excRecente && (
         <PainelAprovacao
           solicitacao={excRecente}
           tipoLabel="para excluir"
@@ -280,7 +284,7 @@ function TarefaCard({
         />
       )}
 
-      {souCriador && concPendente && concRecente && (
+      {podeAprovar && concPendente && concRecente && (
         <PainelAprovacao
           solicitacao={concRecente}
           tipoLabel="para concluir"
