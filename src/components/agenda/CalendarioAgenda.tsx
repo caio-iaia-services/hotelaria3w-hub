@@ -120,9 +120,6 @@ export function CalendarioAgenda({ tarefas, loading, onNovaTarefa, onEditarTaref
               </button>
             ))}
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => onNovaTarefa()}>
-            <Plus size={15} /> Nova Tarefa
-          </Button>
         </div>
       </div>
 
