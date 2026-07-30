@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import type { UsuarioAtivo } from "@/hooks/useTarefas";
 
-export type FiltroTipo = "todas" | "pessoais" | "delegadas";
+export type FiltroTipo = "todas" | "pessoais" | "delegadas_por_mim" | "delegadas_para_mim";
 
 export interface FiltrosState {
   responsavelId: string; // "todos" ou um id
@@ -63,13 +63,14 @@ export function FiltrosTarefas({ filtros, onChange, usuarios }: FiltrosTarefasPr
           value={filtros.tipo}
           onValueChange={(v) => onChange({ ...filtros, tipo: v as FiltroTipo })}
         >
-          <SelectTrigger className="h-8 text-xs w-[170px]">
+          <SelectTrigger className="h-8 text-xs w-[190px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas</SelectItem>
             <SelectItem value="pessoais">Pessoais (criei pra mim)</SelectItem>
-            <SelectItem value="delegadas">Delegadas por mim</SelectItem>
+            <SelectItem value="delegadas_por_mim">Delegadas por mim</SelectItem>
+            <SelectItem value="delegadas_para_mim">Delegadas para mim</SelectItem>
           </SelectContent>
         </Select>
       </div>

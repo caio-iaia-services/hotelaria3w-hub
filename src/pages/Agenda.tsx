@@ -30,7 +30,9 @@ export default function Agenda() {
       // "Pessoais" = tarefa solo (sem responsáveis adicionais) que a pessoa criou pra si mesma.
       // Qualquer tarefa com responsáveis adicionais conta como "delegada" (envolve outras pessoas).
       if (filtros.tipo === "pessoais" && !(t.criado_por === perfil?.id && t.responsavel_id === perfil?.id && adicionaisIds.length === 0)) return false;
-      if (filtros.tipo === "delegadas" && !(t.criado_por === perfil?.id && (t.responsavel_id !== perfil?.id || adicionaisIds.length > 0))) return false;
+      if (filtros.tipo === "delegadas_por_mim" && !(t.criado_por === perfil?.id && (t.responsavel_id !== perfil?.id || adicionaisIds.length > 0))) return false;
+      // "Delegadas para mim" = tarefas que outra pessoa criou e me atribuiu (como responsável principal ou adicional).
+      if (filtros.tipo === "delegadas_para_mim" && !(t.criado_por !== perfil?.id && ehResponsavel(perfil?.id ?? ""))) return false;
       return true;
     });
   }, [tarefas, filtros, perfil?.id]);
