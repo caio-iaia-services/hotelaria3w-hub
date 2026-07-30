@@ -11,7 +11,7 @@ import { FiltrosTarefas, type FiltrosState } from "@/components/agenda/FiltrosTa
 import type { Tarefa, TarefaSolicitacao } from "@/lib/types";
 
 export default function Agenda() {
-  const { perfil, isAdmin } = useAuth();
+  const { perfil } = useAuth();
   const {
     tarefas, loading, erro, recarregar, concluirTarefa, deletarTarefa,
     solicitarExclusao, solicitarConclusao, resolverSolicitacao,
@@ -108,7 +108,6 @@ export default function Agenda() {
             tarefas={tarefasFiltradas}
             loading={loading}
             perfilId={perfil?.id}
-            isAdmin={isAdmin}
             onNovaTarefa={() => abrirNovaTarefa()}
             onEditar={abrirEditarTarefa}
             onConcluir={concluirTarefa}

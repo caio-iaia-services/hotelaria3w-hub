@@ -21,7 +21,6 @@ interface ListaTarefasProps {
   tarefas: Tarefa[];
   loading: boolean;
   perfilId: string | undefined;
-  isAdmin: boolean;
   onNovaTarefa: () => void;
   onEditar: (tarefa: Tarefa) => void;
   onConcluir: (id: string, concluida: boolean) => Promise<void>;
@@ -104,12 +103,11 @@ function PainelAprovacao({
 }
 
 function TarefaCard({
-  tarefa, perfilId, isAdmin, onEditar, onConcluir, onDeletar, concluindo, excluindo,
+  tarefa, perfilId, onEditar, onConcluir, onDeletar, concluindo, excluindo,
   onSolicitarExclusao, onSolicitarConclusao, onResolverSolicitacao,
 }: {
   tarefa: Tarefa;
   perfilId: string | undefined;
-  isAdmin: boolean;
   onEditar: (t: Tarefa) => void;
   onConcluir: (id: string, concluida: boolean) => void;
   onDeletar: (t: Tarefa) => void;
@@ -125,11 +123,9 @@ function TarefaCard({
   ) => Promise<void>;
 }) {
   const dataHora = formatarDataHora(tarefa.data, tarefa.hora);
-  // Agir direto (sem pedir aprovação) só vale pra quem criou a tarefa — admin
-  // não é isento disso, mas continua podendo aprovar/negar pedidos de
-  // qualquer tarefa (backstop pra quando o criador está ausente).
-  const podeAgirDireto = tarefa.criado_por === perfilId;
-  const podeAprovar = podeAgirDireto || isAdmin;
+  // Agir direto (sem pedir aprovação) e responder pedidos de exclusão/conclusão
+  // só valem pra quem criou a tarefa — sem exceção pra admin.
+  const souCriador = tarefa.criado_por === perfilId;
 
   const excRecente = solicitacaoRecente(tarefa, "exclusao");
   const concRecente = solicitacaoRecente(tarefa, "conclusao");
@@ -142,13 +138,13 @@ function TarefaCard({
   const [motivoNegar, setMotivoNegar] = useState("");
 
   function handleConcluirClick() {
-    if (podeAgirDireto) { onConcluir(tarefa.id, !tarefa.concluida); return; }
+    if (souCriador) { onConcluir(tarefa.id, !tarefa.concluida); return; }
     if (concPendente) return;
     setDialogTipo("conclusao");
   }
 
   function handleDeletarClick() {
-    if (podeAgirDireto) { onDeletar(tarefa); return; }
+    if (souCriador) { onDeletar(tarefa); return; }
     if (excPendente) return;
     setDialogTipo("exclusao");
   }
@@ -171,11 +167,11 @@ function TarefaCard({
       <div className="flex items-start gap-3">
         <button
           onClick={handleConcluirClick}
-          disabled={concluindo || (!podeAgirDireto && concPendente)}
+          disabled={concluindo || (!souCriador && concPendente)}
           className="mt-0.5 shrink-0 text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={
             tarefa.concluida ? "Reabrir tarefa"
-              : podeAgirDireto ? "Concluir tarefa"
+              : souCriador ? "Concluir tarefa"
                 : concPendente ? "Aguardando aprovação do criador"
                   : "Solicitar conclusão ao criador"
           }
@@ -261,15 +257,15 @@ function TarefaCard({
           <Button
             variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive disabled:opacity-40"
             onClick={handleDeletarClick}
-            disabled={excluindo || (!podeAgirDireto && excPendente)}
-            title={!podeAgirDireto ? (excPendente ? "Aguardando aprovação do criador" : "Solicitar exclusão ao criador") : "Excluir"}
+            disabled={excluindo || (!souCriador && excPendente)}
+            title={!souCriador ? (excPendente ? "Aguardando aprovação do criador" : "Solicitar exclusão ao criador") : "Excluir"}
           >
             {excluindo ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
           </Button>
         </div>
       </div>
 
-      {podeAprovar && excPendente && excRecente && (
+      {souCriador && excPendente && excRecente && (
         <PainelAprovacao
           solicitacao={excRecente}
           tipoLabel="para excluir"
@@ -284,7 +280,7 @@ function TarefaCard({
         />
       )}
 
-      {podeAprovar && concPendente && concRecente && (
+      {souCriador && concPendente && concRecente && (
         <PainelAprovacao
           solicitacao={concRecente}
           tipoLabel="para concluir"
@@ -317,7 +313,7 @@ function TarefaCard({
 }
 
 export function ListaTarefas({
-  tarefas, loading, perfilId, isAdmin, onNovaTarefa, onEditar, onConcluir, onDeletar,
+  tarefas, loading, perfilId, onNovaTarefa, onEditar, onConcluir, onDeletar,
   onSolicitarExclusao, onSolicitarConclusao, onResolverSolicitacao,
 }: ListaTarefasProps) {
   const [concluindoId, setConcluindoId] = useState<string | null>(null);
@@ -380,7 +376,6 @@ export function ListaTarefas({
                 key={t.id}
                 tarefa={t}
                 perfilId={perfilId}
-                isAdmin={isAdmin}
                 onEditar={onEditar}
                 onConcluir={handleConcluir}
                 onDeletar={setDeleteTarget}
@@ -406,7 +401,6 @@ export function ListaTarefas({
                   key={t.id}
                   tarefa={t}
                   perfilId={perfilId}
-                  isAdmin={isAdmin}
                   onEditar={onEditar}
                   onConcluir={handleConcluir}
                   onDeletar={setDeleteTarget}
