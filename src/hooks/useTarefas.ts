@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import type { Tarefa } from '@/lib/types'
 
@@ -21,7 +22,8 @@ const SELECT_TAREFA = `
   data, hora, observacoes, concluida, concluida_em, created_at, updated_at,
   responsavel:user_profiles!tarefas_responsavel_id_fkey(id, nome),
   criador:user_profiles!tarefas_criado_por_fkey(id, nome),
-  oportunidade:oportunidades(id, numero)
+  oportunidade:oportunidades(id, numero),
+  responsaveis_adicionais:tarefa_responsaveis(usuario_id, usuario:user_profiles(id, nome))
 `
 
 export interface NovaTarefaPayload {
@@ -34,6 +36,8 @@ export interface NovaTarefaPayload {
   data?: string | null
   hora?: string | null
   observacoes?: string | null
+  /** Responsáveis extras além do principal (ex.: reunião de time) */
+  responsaveisAdicionaisIds?: string[]
 }
 
 export interface EditarTarefaPayload {
@@ -45,22 +49,38 @@ export interface EditarTarefaPayload {
   data?: string | null
   hora?: string | null
   observacoes?: string | null
+  responsaveisAdicionaisIds?: string[]
+}
+
+async function sincronizarResponsaveisAdicionais(tarefaId: string, usuarioIds: string[] | undefined) {
+  if (usuarioIds === undefined) return // não mexe se não foi informado
+  const { error: delError } = await supabase.from('tarefa_responsaveis').delete().eq('tarefa_id', tarefaId)
+  if (delError) throw delError
+  if (usuarioIds.length === 0) return
+  const { error: insError } = await supabase
+    .from('tarefa_responsaveis')
+    .insert(usuarioIds.map((usuario_id) => ({ tarefa_id: tarefaId, usuario_id })))
+  if (insError) throw insError
 }
 
 // Mutações "cruas" — sem estado, usadas tanto pelo hook useTarefas() (que
 // recarrega a lista própria depois) quanto pelo NovaTarefaModal (que só
 // dispara onSalvo pro consumidor recarregar a lista dele).
 export async function criarTarefa(payload: NovaTarefaPayload) {
-  const { error } = await supabase.from('tarefas').insert(payload)
+  const { responsaveisAdicionaisIds, ...tarefaFields } = payload
+  const { data, error } = await supabase.from('tarefas').insert(tarefaFields).select('id').single()
   if (error) throw error
+  await sincronizarResponsaveisAdicionais(data.id, responsaveisAdicionaisIds)
 }
 
 export async function atualizarTarefa(id: string, payload: EditarTarefaPayload) {
+  const { responsaveisAdicionaisIds, ...tarefaFields } = payload
   const { error } = await supabase
     .from('tarefas')
-    .update({ ...payload, updated_at: new Date().toISOString() })
+    .update({ ...tarefaFields, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
+  await sincronizarResponsaveisAdicionais(id, responsaveisAdicionaisIds)
 }
 
 export async function concluirTarefa(id: string, concluida: boolean) {
@@ -83,6 +103,7 @@ export async function deletarTarefa(id: string) {
 export function useTarefas() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
 
   const buscar = useCallback(async () => {
     setLoading(true)
@@ -94,8 +115,12 @@ export function useTarefas() {
 
     if (error) {
       console.warn('Erro ao buscar tarefas:', error)
-      setTarefas([])
+      setErro(error.message)
+      toast.error('Não foi possível carregar as tarefas', { description: error.message })
+      // Mantém a lista anterior — não esvazia a tela por causa de um erro de busca
+      // (evita a falsa impressão de que as tarefas foram apagadas).
     } else {
+      setErro(null)
       setTarefas((data || []) as unknown as Tarefa[])
     }
     setLoading(false)
@@ -108,6 +133,7 @@ export function useTarefas() {
   return {
     tarefas,
     loading,
+    erro,
     recarregar: buscar,
     criarTarefa: async (payload: NovaTarefaPayload) => { await criarTarefa(payload); await buscar() },
     atualizarTarefa: async (id: string, payload: EditarTarefaPayload) => { await atualizarTarefa(id, payload); await buscar() },

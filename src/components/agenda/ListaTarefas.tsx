@@ -7,7 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, CheckCircle2, Circle, Pencil, Trash2, CalendarClock, User, Loader2, ListTodo,
+  Plus, CheckCircle2, Circle, Pencil, Trash2, CalendarClock, User, Users, Loader2, ListTodo,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Tarefa } from "@/lib/types";
@@ -65,6 +65,15 @@ function TarefaCard({
           {tarefa.responsavel?.nome && (
             <Badge variant="outline" className="text-[10px] gap-1 font-normal">
               <User size={10} /> {tarefa.responsavel.nome}
+            </Badge>
+          )}
+          {(tarefa.responsaveis_adicionais?.length ?? 0) > 0 && (
+            <Badge
+              variant="outline"
+              className="text-[10px] gap-1 font-normal"
+              title={tarefa.responsaveis_adicionais!.map((r) => r.usuario?.nome).filter(Boolean).join(", ")}
+            >
+              <Users size={10} /> +{tarefa.responsaveis_adicionais!.length}
             </Badge>
           )}
           {dataHora && (

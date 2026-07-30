@@ -153,6 +153,7 @@ export interface Tarefa {
   responsavel?: { id: string; nome: string } | null
   criador?: { id: string; nome: string } | null
   oportunidade?: { id: string; numero: string } | null
+  responsaveis_adicionais?: { usuario_id: string; usuario: { id: string; nome: string } | null }[]
 }
 
 export interface DocumentoComercial {

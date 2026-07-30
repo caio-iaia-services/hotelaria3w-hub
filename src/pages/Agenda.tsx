@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, ListTodo, CalendarClock } from "lucide-react";
+import { Plus, ListTodo, CalendarClock, AlertTriangle } from "lucide-react";
 import { useTarefas, useUsuariosAtivos } from "@/hooks/useTarefas";
 import { useAuth } from "@/components/AuthProvider";
 import { NovaTarefaModal } from "@/components/agenda/NovaTarefaModal";
@@ -12,7 +12,7 @@ import type { Tarefa } from "@/lib/types";
 
 export default function Agenda() {
   const { perfil } = useAuth();
-  const { tarefas, loading, recarregar, concluirTarefa, deletarTarefa } = useTarefas();
+  const { tarefas, loading, erro, recarregar, concluirTarefa, deletarTarefa } = useTarefas();
   const usuarios = useUsuariosAtivos();
   const [aba, setAba] = useState("tarefas");
   const [modalOpen, setModalOpen] = useState(false);
@@ -22,10 +22,15 @@ export default function Agenda() {
 
   const tarefasFiltradas = useMemo(() => {
     return tarefas.filter((t) => {
-      if (filtros.responsavelId !== "todos" && t.responsavel_id !== filtros.responsavelId) return false;
+      const adicionaisIds = (t.responsaveis_adicionais || []).map((r) => r.usuario_id);
+      const ehResponsavel = (uid: string) => t.responsavel_id === uid || adicionaisIds.includes(uid);
+
+      if (filtros.responsavelId !== "todos" && !ehResponsavel(filtros.responsavelId)) return false;
       if (filtros.data && t.data !== filtros.data) return false;
-      if (filtros.tipo === "pessoais" && !(t.criado_por === perfil?.id && t.responsavel_id === perfil?.id)) return false;
-      if (filtros.tipo === "delegadas" && !(t.criado_por === perfil?.id && t.responsavel_id !== perfil?.id)) return false;
+      // "Pessoais" = tarefa solo (sem responsáveis adicionais) que a pessoa criou pra si mesma.
+      // Qualquer tarefa com responsáveis adicionais conta como "delegada" (envolve outras pessoas).
+      if (filtros.tipo === "pessoais" && !(t.criado_por === perfil?.id && t.responsavel_id === perfil?.id && adicionaisIds.length === 0)) return false;
+      if (filtros.tipo === "delegadas" && !(t.criado_por === perfil?.id && (t.responsavel_id !== perfil?.id || adicionaisIds.length > 0))) return false;
       return true;
     });
   }, [tarefas, filtros, perfil?.id]);
@@ -53,6 +58,13 @@ export default function Agenda() {
           <Plus className="h-4 w-4" />Nova Tarefa
         </Button>
       </div>
+
+      {erro && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>Não foi possível carregar as tarefas ({erro}). A lista abaixo pode estar desatualizada — as tarefas não foram apagadas.</span>
+        </div>
+      )}
 
       <FiltrosTarefas filtros={filtros} onChange={setFiltros} usuarios={usuarios} />
 

@@ -61,6 +61,7 @@ export function NovaTarefaModal({
   const [dataTarefa, setDataTarefa] = useState("");
   const [horaTarefa, setHoraTarefa] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [responsaveisAdicionaisIds, setResponsaveisAdicionaisIds] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   const [oportunidadesAbertas, setOportunidadesAbertas] = useState<OportunidadeAberta[]>([]);
@@ -84,6 +85,7 @@ export function NovaTarefaModal({
       setDataTarefa(tarefaExistente.data || "");
       setHoraTarefa(tarefaExistente.hora ? tarefaExistente.hora.slice(0, 5) : "");
       setObservacoes(tarefaExistente.observacoes || "");
+      setResponsaveisAdicionaisIds((tarefaExistente.responsaveis_adicionais || []).map((r) => r.usuario_id));
     } else {
       setTitulo("");
       setResponsavelId("");
@@ -93,6 +95,7 @@ export function NovaTarefaModal({
       setDataTarefa(dataInicial || "");
       setHoraTarefa("");
       setObservacoes("");
+      setResponsaveisAdicionaisIds([]);
     }
   }, [open, tarefaExistente, oportunidadeIdInicial, clienteIdInicial, clienteNomeInicial, dataInicial]);
 
@@ -138,6 +141,14 @@ export function NovaTarefaModal({
     setOportunidadeId(null);
     setClienteId(null);
     setClienteNome(null);
+    // evita duplicar o principal na lista de adicionais
+    setResponsaveisAdicionaisIds((prev) => prev.filter((uid) => uid !== id));
+  }
+
+  function toggleResponsavelAdicional(id: string) {
+    setResponsaveisAdicionaisIds((prev) =>
+      prev.includes(id) ? prev.filter((uid) => uid !== id) : [...prev, id]
+    );
   }
 
   function handleOportunidadeChange(id: string) {
@@ -174,6 +185,7 @@ export function NovaTarefaModal({
         data: dataTarefa || null,
         hora: horaTarefa || null,
         observacoes: observacoes.trim() || null,
+        responsaveisAdicionaisIds,
       };
 
       if (editando && tarefaExistente) {
@@ -226,6 +238,37 @@ export function NovaTarefaModal({
               </SelectContent>
             </Select>
           </div>
+
+          {usuarios.length > 1 && (
+            <div className="space-y-1.5">
+              <Label>Responsáveis adicionais (opcional)</Label>
+              <p className="text-xs text-muted-foreground -mt-1">
+                Pra tarefas com mais de um responsável (ex.: reunião de time). O
+                principal acima continua controlando a oportunidade disponível.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {usuarios
+                  .filter((u) => u.id !== responsavelId)
+                  .map((u) => {
+                    const selecionado = responsaveisAdicionaisIds.includes(u.id);
+                    return (
+                      <button
+                        type="button"
+                        key={u.id}
+                        onClick={() => toggleResponsavelAdicional(u.id)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                          selecionado
+                            ? "bg-[#1a4168] text-white border-[#1a4168]"
+                            : "bg-background text-muted-foreground border-input hover:border-foreground/30"
+                        }`}
+                      >
+                        {u.nome}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label>Oportunidade (opcional)</Label>

@@ -3619,6 +3619,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tarefa_responsaveis: {
+        Row: {
+          criado_em: string
+          tarefa_id: string
+          usuario_id: string
+        }
+        Insert: {
+          criado_em?: string
+          tarefa_id: string
+          usuario_id: string
+        }
+        Update: {
+          criado_em?: string
+          tarefa_id?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_responsaveis_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefa_responsaveis_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tarefas: {
         Row: {
           cliente_id: string | null
