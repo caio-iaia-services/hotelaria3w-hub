@@ -3652,6 +3652,67 @@ export type Database = {
           },
         ]
       }
+      tarefa_solicitacoes: {
+        Row: {
+          created_at: string
+          id: string
+          motivo: string
+          motivo_resposta: string | null
+          respondido_em: string | null
+          respondido_por: string | null
+          solicitante_id: string
+          status: string
+          tarefa_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          motivo: string
+          motivo_resposta?: string | null
+          respondido_em?: string | null
+          respondido_por?: string | null
+          solicitante_id: string
+          status?: string
+          tarefa_id: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          motivo?: string
+          motivo_resposta?: string | null
+          respondido_em?: string | null
+          respondido_por?: string | null
+          solicitante_id?: string
+          status?: string
+          tarefa_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_solicitacoes_respondido_por_fkey"
+            columns: ["respondido_por"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefa_solicitacoes_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefa_solicitacoes_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tarefas: {
         Row: {
           cliente_id: string | null

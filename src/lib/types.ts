@@ -135,6 +135,19 @@ export interface CRMCard {
   updated_at: string
 }
 
+export interface TarefaSolicitacao {
+  id: string
+  tarefa_id: string
+  tipo: 'exclusao' | 'conclusao'
+  status: 'pendente' | 'aprovada' | 'negada' | 'aguardando_verificacao'
+  motivo: string
+  motivo_resposta: string | null
+  created_at: string
+  respondido_em: string | null
+  solicitante: { id: string; nome: string } | null
+  respondedor: { id: string; nome: string } | null
+}
+
 export interface Tarefa {
   id: string
   titulo: string
@@ -154,6 +167,7 @@ export interface Tarefa {
   criador?: { id: string; nome: string } | null
   oportunidade?: { id: string; numero: string } | null
   responsaveis_adicionais?: { usuario_id: string; usuario: { id: string; nome: string } | null }[]
+  solicitacoes?: TarefaSolicitacao[]
 }
 
 export interface DocumentoComercial {

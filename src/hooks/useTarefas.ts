@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import type { Tarefa } from '@/lib/types'
+import type { Tarefa, TarefaSolicitacao } from '@/lib/types'
 
 export interface UsuarioAtivo {
   id: string
@@ -23,8 +23,20 @@ const SELECT_TAREFA = `
   responsavel:user_profiles!tarefas_responsavel_id_fkey(id, nome),
   criador:user_profiles!tarefas_criado_por_fkey(id, nome),
   oportunidade:oportunidades(id, numero),
-  responsaveis_adicionais:tarefa_responsaveis(usuario_id, usuario:user_profiles(id, nome))
+  responsaveis_adicionais:tarefa_responsaveis(usuario_id, usuario:user_profiles(id, nome)),
+  solicitacoes:tarefa_solicitacoes(
+    id, tipo, status, motivo, motivo_resposta, created_at, respondido_em,
+    solicitante:user_profiles!tarefa_solicitacoes_solicitante_id_fkey(id, nome),
+    respondedor:user_profiles!tarefa_solicitacoes_respondido_por_fkey(id, nome)
+  )
 `
+
+/** Solicitação mais recente de um tipo (exclusão/conclusão) numa tarefa, se houver. */
+export function solicitacaoRecente(tarefa: Tarefa, tipo: 'exclusao' | 'conclusao'): TarefaSolicitacao | undefined {
+  return (tarefa.solicitacoes || [])
+    .filter((s) => s.tipo === tipo)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+}
 
 export interface NovaTarefaPayload {
   titulo: string
@@ -100,6 +112,48 @@ export async function deletarTarefa(id: string) {
   if (error) throw error
 }
 
+// Quem não é o criador da tarefa só deleta/conclui com o consentimento dele —
+// abre uma solicitação em vez de agir direto (a RLS também bloqueia a ação
+// direta nesses casos, ver 20260730140000_tarefa_solicitacoes.sql).
+export async function solicitarExclusao(tarefaId: string, solicitanteId: string, motivo: string) {
+  const { error } = await supabase
+    .from('tarefa_solicitacoes')
+    .insert({ tarefa_id: tarefaId, tipo: 'exclusao', solicitante_id: solicitanteId, motivo })
+  if (error) throw error
+}
+
+export async function solicitarConclusao(tarefaId: string, solicitanteId: string, motivo: string) {
+  const { error } = await supabase
+    .from('tarefa_solicitacoes')
+    .insert({ tarefa_id: tarefaId, tipo: 'conclusao', solicitante_id: solicitanteId, motivo })
+  if (error) throw error
+}
+
+export async function resolverSolicitacao(
+  solicitacaoId: string,
+  tarefaId: string,
+  tipo: 'exclusao' | 'conclusao',
+  decisao: 'aprovada' | 'negada' | 'aguardando_verificacao',
+  respondidoPor: string,
+  motivoResposta?: string,
+) {
+  const { error } = await supabase
+    .from('tarefa_solicitacoes')
+    .update({
+      status: decisao,
+      respondido_por: respondidoPor,
+      respondido_em: new Date().toISOString(),
+      motivo_resposta: motivoResposta || null,
+    })
+    .eq('id', solicitacaoId)
+  if (error) throw error
+
+  if (decisao === 'aprovada') {
+    if (tipo === 'exclusao') await deletarTarefa(tarefaId)
+    else await concluirTarefa(tarefaId, true)
+  }
+}
+
 export function useTarefas() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [loading, setLoading] = useState(true)
@@ -139,6 +193,23 @@ export function useTarefas() {
     atualizarTarefa: async (id: string, payload: EditarTarefaPayload) => { await atualizarTarefa(id, payload); await buscar() },
     concluirTarefa: async (id: string, concluida: boolean) => { await concluirTarefa(id, concluida); await buscar() },
     deletarTarefa: async (id: string) => { await deletarTarefa(id); await buscar() },
+    solicitarExclusao: async (tarefaId: string, solicitanteId: string, motivo: string) => {
+      await solicitarExclusao(tarefaId, solicitanteId, motivo); await buscar()
+    },
+    solicitarConclusao: async (tarefaId: string, solicitanteId: string, motivo: string) => {
+      await solicitarConclusao(tarefaId, solicitanteId, motivo); await buscar()
+    },
+    resolverSolicitacao: async (
+      solicitacaoId: string,
+      tarefaId: string,
+      tipo: 'exclusao' | 'conclusao',
+      decisao: 'aprovada' | 'negada' | 'aguardando_verificacao',
+      respondidoPor: string,
+      motivoResposta?: string,
+    ) => {
+      await resolverSolicitacao(solicitacaoId, tarefaId, tipo, decisao, respondidoPor, motivoResposta)
+      await buscar()
+    },
   }
 }
 

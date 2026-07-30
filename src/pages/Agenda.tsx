@@ -8,11 +8,14 @@ import { NovaTarefaModal } from "@/components/agenda/NovaTarefaModal";
 import { ListaTarefas } from "@/components/agenda/ListaTarefas";
 import { CalendarioAgenda } from "@/components/agenda/CalendarioAgenda";
 import { FiltrosTarefas, type FiltrosState } from "@/components/agenda/FiltrosTarefas";
-import type { Tarefa } from "@/lib/types";
+import type { Tarefa, TarefaSolicitacao } from "@/lib/types";
 
 export default function Agenda() {
-  const { perfil } = useAuth();
-  const { tarefas, loading, erro, recarregar, concluirTarefa, deletarTarefa } = useTarefas();
+  const { perfil, isAdmin } = useAuth();
+  const {
+    tarefas, loading, erro, recarregar, concluirTarefa, deletarTarefa,
+    solicitarExclusao, solicitarConclusao, resolverSolicitacao,
+  } = useTarefas();
   const usuarios = useUsuariosAtivos();
   const [aba, setAba] = useState("tarefas");
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,6 +50,26 @@ export default function Agenda() {
     setTarefaEditando(tarefa);
     setDataPrefill(null);
     setModalOpen(true);
+  }
+
+  function handleSolicitarExclusao(tarefaId: string, motivo: string) {
+    if (!perfil) return Promise.resolve();
+    return solicitarExclusao(tarefaId, perfil.id, motivo);
+  }
+
+  function handleSolicitarConclusao(tarefaId: string, motivo: string) {
+    if (!perfil) return Promise.resolve();
+    return solicitarConclusao(tarefaId, perfil.id, motivo);
+  }
+
+  function handleResolverSolicitacao(
+    solicitacao: TarefaSolicitacao,
+    tarefaId: string,
+    decisao: "aprovada" | "negada" | "aguardando_verificacao",
+    motivoResposta?: string,
+  ) {
+    if (!perfil) return Promise.resolve();
+    return resolverSolicitacao(solicitacao.id, tarefaId, solicitacao.tipo, decisao, perfil.id, motivoResposta);
   }
 
   return (
@@ -84,10 +107,15 @@ export default function Agenda() {
           <ListaTarefas
             tarefas={tarefasFiltradas}
             loading={loading}
+            perfilId={perfil?.id}
+            isAdmin={isAdmin}
             onNovaTarefa={() => abrirNovaTarefa()}
             onEditar={abrirEditarTarefa}
             onConcluir={concluirTarefa}
             onDeletar={deletarTarefa}
+            onSolicitarExclusao={handleSolicitarExclusao}
+            onSolicitarConclusao={handleSolicitarConclusao}
+            onResolverSolicitacao={handleResolverSolicitacao}
           />
         </TabsContent>
 

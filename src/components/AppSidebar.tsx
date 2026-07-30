@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatsAbertos } from "@/hooks/useChatsAbertos";
+import { useSolicitacoesPendentes } from "@/hooks/useSolicitacoesPendentes";
 
 const WhatsAppIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -68,6 +69,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
   const { signOut, perfil, isAdmin, gestaoFiltro, temModulo } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const chatsAbertos = useChatsAbertos();
+  const solicitacoesPendentes = useSolicitacoesPendentes(perfil?.id);
 
   // Submenu do CRM: admin vê todas as gestões, comercial só a sua
   const crmSubmenu: SubItem[] = isAdmin
@@ -206,6 +208,12 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
                 <span className="text-[10px] font-bold text-red-400 leading-none">{chatsAbertos}</span>
+              </span>
+            )}
+            {item.modulo === "agenda" && solicitacoesPendentes.total > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                <span className="text-[10px] font-bold text-red-400 leading-none">{solicitacoesPendentes.total}</span>
               </span>
             )}
           </Link>
