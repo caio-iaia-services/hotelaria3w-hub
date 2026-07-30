@@ -5,6 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -59,6 +60,7 @@ export function NovaTarefaModal({
   const [clienteNome, setClienteNome] = useState<string | null>(null);
   const [dataTarefa, setDataTarefa] = useState("");
   const [horaTarefa, setHoraTarefa] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const [oportunidadesAbertas, setOportunidadesAbertas] = useState<OportunidadeAberta[]>([]);
@@ -81,6 +83,7 @@ export function NovaTarefaModal({
       setClienteNome(tarefaExistente.cliente_nome);
       setDataTarefa(tarefaExistente.data || "");
       setHoraTarefa(tarefaExistente.hora ? tarefaExistente.hora.slice(0, 5) : "");
+      setObservacoes(tarefaExistente.observacoes || "");
     } else {
       setTitulo("");
       setResponsavelId("");
@@ -89,6 +92,7 @@ export function NovaTarefaModal({
       setClienteNome(clienteNomeInicial ?? null);
       setDataTarefa(dataInicial || "");
       setHoraTarefa("");
+      setObservacoes("");
     }
   }, [open, tarefaExistente, oportunidadeIdInicial, clienteIdInicial, clienteNomeInicial, dataInicial]);
 
@@ -169,6 +173,7 @@ export function NovaTarefaModal({
         cliente_nome: clienteNome,
         data: dataTarefa || null,
         hora: horaTarefa || null,
+        observacoes: observacoes.trim() || null,
       };
 
       if (editando && tarefaExistente) {
@@ -272,6 +277,16 @@ export function NovaTarefaModal({
               <Label>Horário (opcional)</Label>
               <Input type="time" value={horaTarefa} onChange={(e) => setHoraTarefa(e.target.value)} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Observações (opcional)</Label>
+            <Textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Detalhes, contexto ou combinados sobre a tarefa..."
+              rows={3}
+            />
           </div>
         </div>
 

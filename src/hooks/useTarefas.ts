@@ -18,7 +18,7 @@ export interface OportunidadeAberta {
 
 const SELECT_TAREFA = `
   id, titulo, responsavel_id, criado_por, oportunidade_id, cliente_id, cliente_nome,
-  data, hora, concluida, concluida_em, created_at, updated_at,
+  data, hora, observacoes, concluida, concluida_em, created_at, updated_at,
   responsavel:user_profiles!tarefas_responsavel_id_fkey(id, nome),
   criador:user_profiles!tarefas_criado_por_fkey(id, nome),
   oportunidade:oportunidades(id, numero)
@@ -33,6 +33,7 @@ export interface NovaTarefaPayload {
   cliente_nome?: string | null
   data?: string | null
   hora?: string | null
+  observacoes?: string | null
 }
 
 export interface EditarTarefaPayload {
@@ -43,6 +44,7 @@ export interface EditarTarefaPayload {
   cliente_nome?: string | null
   data?: string | null
   hora?: string | null
+  observacoes?: string | null
 }
 
 // Mutações "cruas" — sem estado, usadas tanto pelo hook useTarefas() (que

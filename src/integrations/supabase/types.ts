@@ -3630,6 +3630,7 @@ export type Database = {
           data: string | null
           hora: string | null
           id: string
+          observacoes: string | null
           oportunidade_id: string | null
           responsavel_id: string
           titulo: string
@@ -3645,6 +3646,7 @@ export type Database = {
           data?: string | null
           hora?: string | null
           id?: string
+          observacoes?: string | null
           oportunidade_id?: string | null
           responsavel_id: string
           titulo: string
@@ -3660,6 +3662,7 @@ export type Database = {
           data?: string | null
           hora?: string | null
           id?: string
+          observacoes?: string | null
           oportunidade_id?: string | null
           responsavel_id?: string
           titulo?: string

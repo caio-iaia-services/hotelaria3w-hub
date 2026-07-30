@@ -1,19 +1,34 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, ListTodo, CalendarClock } from "lucide-react";
-import { useTarefas } from "@/hooks/useTarefas";
+import { useTarefas, useUsuariosAtivos } from "@/hooks/useTarefas";
+import { useAuth } from "@/components/AuthProvider";
 import { NovaTarefaModal } from "@/components/agenda/NovaTarefaModal";
 import { ListaTarefas } from "@/components/agenda/ListaTarefas";
 import { CalendarioAgenda } from "@/components/agenda/CalendarioAgenda";
+import { FiltrosTarefas, type FiltrosState } from "@/components/agenda/FiltrosTarefas";
 import type { Tarefa } from "@/lib/types";
 
 export default function Agenda() {
+  const { perfil } = useAuth();
   const { tarefas, loading, recarregar, concluirTarefa, deletarTarefa } = useTarefas();
+  const usuarios = useUsuariosAtivos();
   const [aba, setAba] = useState("tarefas");
   const [modalOpen, setModalOpen] = useState(false);
   const [tarefaEditando, setTarefaEditando] = useState<Tarefa | null>(null);
   const [dataPrefill, setDataPrefill] = useState<string | null>(null);
+  const [filtros, setFiltros] = useState<FiltrosState>({ responsavelId: "todos", data: "", tipo: "todas" });
+
+  const tarefasFiltradas = useMemo(() => {
+    return tarefas.filter((t) => {
+      if (filtros.responsavelId !== "todos" && t.responsavel_id !== filtros.responsavelId) return false;
+      if (filtros.data && t.data !== filtros.data) return false;
+      if (filtros.tipo === "pessoais" && !(t.criado_por === perfil?.id && t.responsavel_id === perfil?.id)) return false;
+      if (filtros.tipo === "delegadas" && !(t.criado_por === perfil?.id && t.responsavel_id !== perfil?.id)) return false;
+      return true;
+    });
+  }, [tarefas, filtros, perfil?.id]);
 
   function abrirNovaTarefa(data?: string) {
     setTarefaEditando(null);
@@ -39,6 +54,8 @@ export default function Agenda() {
         </Button>
       </div>
 
+      <FiltrosTarefas filtros={filtros} onChange={setFiltros} usuarios={usuarios} />
+
       <Tabs value={aba} onValueChange={setAba}>
         <TabsList>
           <TabsTrigger value="tarefas" className="gap-1.5">
@@ -51,7 +68,7 @@ export default function Agenda() {
 
         <TabsContent value="tarefas" className="mt-4">
           <ListaTarefas
-            tarefas={tarefas}
+            tarefas={tarefasFiltradas}
             loading={loading}
             onNovaTarefa={() => abrirNovaTarefa()}
             onEditar={abrirEditarTarefa}
@@ -62,7 +79,7 @@ export default function Agenda() {
 
         <TabsContent value="agenda" className="mt-4">
           <CalendarioAgenda
-            tarefas={tarefas}
+            tarefas={tarefasFiltradas}
             loading={loading}
             onNovaTarefa={abrirNovaTarefa}
             onEditarTarefa={abrirEditarTarefa}

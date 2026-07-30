@@ -145,6 +145,7 @@ export interface Tarefa {
   cliente_nome: string | null
   data: string | null
   hora: string | null
+  observacoes: string | null
   concluida: boolean
   concluida_em: string | null
   created_at: string

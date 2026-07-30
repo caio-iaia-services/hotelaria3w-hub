@@ -79,6 +79,11 @@ function TarefaCard({
             </Badge>
           )}
         </div>
+        {tarefa.observacoes && (
+          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2" title={tarefa.observacoes}>
+            {tarefa.observacoes}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
