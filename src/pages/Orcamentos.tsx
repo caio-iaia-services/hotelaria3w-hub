@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Loader2,
   Upload,
+  Copy,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -55,7 +56,7 @@ import { OrcamentoTemplate } from "@/components/OrcamentoTemplate";
 import { OrcamentoTemplatePDF } from "@/components/OrcamentoTemplatePDF";
 import { EditarOrcamentoModal } from "@/components/orcamentos/EditarOrcamentoModal";
 import { extrairTextoCondicoesPagamento } from "@/lib/condicoesPagamento";
-import { formatDateBR } from "@/lib/date";
+import { formatDateBR, getLocalDateString, addDaysToLocalDateString } from "@/lib/date";
 import {
   resolverCondicoesPagamentoMidea,
   resolverImagemMarketing,
@@ -216,6 +217,7 @@ export default function Orcamentos() {
   const [totaisItensFallback, setTotaisItensFallback] = useState<Record<string, number>>({});
   const [modalEditar, setModalEditar] = useState(false);
   const [orcamentoEditarId, setOrcamentoEditarId] = useState<string | null>(null);
+  const [duplicandoId, setDuplicandoId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modalEnviar, setModalEnviar] = useState(false);
   const [orcamentoEnviar, setOrcamentoEnviar] = useState<Orcamento | null>(null);
@@ -989,6 +991,85 @@ export default function Orcamentos() {
     }
   }
 
+  // Duplica um orçamento existente (ex.: pedidos recorrentes do mesmo cliente) —
+  // copia cabeçalho e itens, gera um número novo, zera status/assinatura/PDF e
+  // atualiza as datas de emissão/validade pra hoje. Abre em seguida no modal de
+  // edição pra ajustar datas ou qualquer outro dado antes de enviar.
+  async function duplicarOrcamento(o: Orcamento) {
+    setDuplicandoId(o.id);
+    try {
+      const [{ data: original, error: erroOriginal }, { data: itensOriginais, error: erroItens }] =
+        await Promise.all([
+          supabase.from("orcamentos").select("*").eq("id", o.id).maybeSingle(),
+          supabase.from("orcamento_itens").select("*").eq("orcamento_id", o.id).order("ordem"),
+        ]);
+      if (erroOriginal) throw erroOriginal;
+      if (!original) throw new Error("Orçamento original não encontrado");
+      if (erroItens) throw erroItens;
+
+      const { data: nextNumData, error: nextNumError } = await supabase.rpc("get_next_orcamento_numero");
+      if (nextNumError) throw new Error("Erro ao gerar número do orçamento: " + nextNumError.message);
+      const numero = String(nextNumData);
+
+      const camposParaRemover = [
+        "id",
+        "created_at",
+        "updated_at",
+        "enviado_em",
+        "aprovado_em",
+        "assinatura_cliente",
+        "assinado_em",
+        "pdf_url",
+        "html_content",
+        "arquivo_pdf",
+      ];
+      const novoPayload = { ...(original as Record<string, unknown>) };
+      for (const campo of camposParaRemover) delete novoPayload[campo];
+      novoPayload.numero = numero;
+      novoPayload.status = "rascunho";
+      novoPayload.data_emissao = getLocalDateString();
+      const validadeDias = Number((original as Record<string, unknown>).validade_dias) || 15;
+      novoPayload.data_validade = addDaysToLocalDateString(validadeDias);
+
+      const { data: novoOrcamento, error: erroInsert } = await supabase
+        .from("orcamentos")
+        .insert(novoPayload)
+        .select()
+        .single();
+      if (erroInsert) throw erroInsert;
+
+      const itensParaInserir = (itensOriginais || []).map((item: Record<string, unknown>) => ({
+        orcamento_id: novoOrcamento.id,
+        codigo: item.codigo,
+        descricao: item.descricao,
+        medidas: item.medidas,
+        especificacoes: item.especificacoes,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        total: item.total,
+        ordem: item.ordem,
+      }));
+      if (itensParaInserir.length > 0) {
+        const { error: erroItensInsert } = await supabase.from("orcamento_itens").insert(itensParaInserir);
+        if (erroItensInsert) throw erroItensInsert;
+      }
+
+      toast.success(`Orçamento ${numero} criado a partir da cópia`);
+      buscarOrcamentos();
+      buscarContadores();
+      editarOrcamento(novoOrcamento as Orcamento);
+    } catch (error) {
+      console.error(error);
+      const mensagem =
+        typeof error === "object" && error && "message" in error
+          ? String((error as { message?: string }).message)
+          : "Erro ao duplicar orçamento";
+      toast.error(mensagem);
+    } finally {
+      setDuplicandoId(null);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Helpers para import/export
   // ─────────────────────────────────────────────────────────────
@@ -1628,6 +1709,20 @@ export default function Orcamentos() {
                         onClick={() => editarOrcamento(orcamento)}
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Duplicar orçamento"
+                        disabled={duplicandoId === orcamento.id}
+                        onClick={() => duplicarOrcamento(orcamento)}
+                      >
+                        {duplicandoId === orcamento.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
