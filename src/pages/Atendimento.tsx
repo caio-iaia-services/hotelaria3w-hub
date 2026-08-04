@@ -854,8 +854,13 @@ function ChatView({
       .subscribe();
 
     // Polling de segurança: garante que os tiquinhos de entrega/leitura
-    // (status_entrega) se atualizem mesmo se o evento de tempo real falhar
-    const intervalo = setInterval(() => carregar(), 5000);
+    // (status_entrega) se atualizem mesmo se o evento de tempo real falhar.
+    // 30s (não 5s) — recarrega até 200 mensagens inteiras a cada disparo, e o
+    // realtime (INSERT/UPDATE acima) já cobre o caso comum; isso é só rede de
+    // segurança. Reduzido de 5s em 2026-08-04 por causa de estouro de egress
+    // no Supabase (free tier) coincidindo com o início do tráfego real do
+    // WhatsApp — ver [[incidente_egress_supabase_2026-08-04]].
+    const intervalo = setInterval(() => carregar(), 30_000);
 
     return () => { supabase.removeChannel(sub); clearInterval(intervalo); };
   }, [chat.id, carregar, marcarComoLidas, onMarcarLidas]);
@@ -2076,8 +2081,12 @@ export default function Atendimento() {
         setOnline(status === "SUBSCRIBED");
       });
 
-    // Polling de segurança a cada 30s caso o realtime falhe
-    const intervalo = setInterval(() => carregarChatsRef.current(true), 30_000);
+    // Polling de segurança caso o realtime falhe. 3min (não 30s) — cada
+    // disparo custa até 200 chats x 2 queries (~400 queries); o realtime
+    // (INSERT/UPDATE acima) já cobre o caso comum, isso é só rede de
+    // segurança. Reduzido em 2026-08-04 por causa de estouro de egress no
+    // Supabase (free tier) — ver [[incidente_egress_supabase_2026-08-04]].
+    const intervalo = setInterval(() => carregarChatsRef.current(true), 180_000);
 
     return () => {
       supabase.removeChannel(sub);
