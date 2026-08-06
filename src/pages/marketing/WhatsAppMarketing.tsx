@@ -596,6 +596,13 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                   <div>
                     <Label className="text-xs">Região</Label>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer font-medium">
+                        <Checkbox
+                          checked={REGIOES.every((r) => filtros.regiao.has(r))}
+                          onCheckedChange={(v) => setFiltros((f) => ({ ...f, regiao: v ? new Set(REGIOES) : new Set() }))}
+                        />
+                        Todas
+                      </label>
                       {REGIOES.map((r) => (
                         <label key={r} className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox checked={filtros.regiao.has(r)} onCheckedChange={() => toggleFiltroSet("regiao", r)} />
@@ -605,29 +612,28 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {opcoesEstado.length > 0 && (
-                      <div>
-                        <Label className="text-xs">Estado (UF) {filtros.regiao.size > 0 && <span className="text-muted-foreground font-normal">(além da região)</span>}</Label>
-                        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-h-24 overflow-y-auto">
-                          {opcoesEstado.map((uf) => (
-                            <label key={uf} className="flex items-center gap-1 text-xs cursor-pointer">
-                              <Checkbox checked={filtros.estado.has(uf)} onCheckedChange={() => toggleFiltroSet("estado", uf)} />
-                              {uf}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  {opcoesEstado.length > 0 && (
                     <div>
-                      <Label className="text-xs">Cidade</Label>
-                      <Input
-                        className="h-8 text-sm"
-                        value={filtros.cidade}
-                        onChange={(e) => setFiltros((f) => ({ ...f, cidade: e.target.value }))}
-                        placeholder="Ex.: São Paulo"
-                      />
+                      <Label className="text-xs">Estado (UF) {filtros.regiao.size > 0 && <span className="text-muted-foreground font-normal">(além da região)</span>}</Label>
+                      <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1">
+                        {opcoesEstado.map((uf) => (
+                          <label key={uf} className="flex items-center gap-1 text-xs cursor-pointer">
+                            <Checkbox checked={filtros.estado.has(uf)} onCheckedChange={() => toggleFiltroSet("estado", uf)} />
+                            {uf}
+                          </label>
+                        ))}
+                      </div>
                     </div>
+                  )}
+
+                  <div>
+                    <Label className="text-xs">Cidade</Label>
+                    <Input
+                      className="h-8 text-sm"
+                      value={filtros.cidade}
+                      onChange={(e) => setFiltros((f) => ({ ...f, cidade: e.target.value }))}
+                      placeholder="Ex.: São Paulo"
+                    />
                   </div>
 
                   <p className="text-[11px] text-muted-foreground">
