@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
   Plus, Send, ShieldCheck, ShieldX, ChevronDown, ChevronRight,
-  Loader2, AlertCircle, Megaphone,
+  Loader2, AlertCircle, Megaphone, FileText, Clock, X as XIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,10 +46,14 @@ interface OptIn {
   registrado_em: string
 }
 
+type StatusTemplate = "APPROVED" | "PENDING" | "REJECTED" | string
+
 interface Template {
   name: string
   language: string
   category: string
+  status: StatusTemplate
+  motivoRejeicao?: string
   texto: string
 }
 
@@ -107,6 +111,24 @@ function extrairTelefones(raw: string): string[] {
   return Array.from(new Set(brutos.map(normalizarTelefone)))
 }
 
+/** Transforma texto livre no formato de nome que a Meta exige pra template. */
+function slugifyNomeTemplate(raw: string): string {
+  const semAcento = Array.from(raw.normalize("NFD"))
+    .filter((ch) => { const c = ch.codePointAt(0) || 0; return c < 0x300 || c > 0x36f })
+    .join("")
+  return semAcento
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 200)
+}
+
+/** Detecta {{1}}, {{2}}... no corpo do template, em ordem crescente e sem repetir. */
+function detectarVariaveis(texto: string): number[] {
+  const nums = [...texto.matchAll(/\{\{(\d+)\}\}/g)].map((m) => parseInt(m[1], 10))
+  return Array.from(new Set(nums)).sort((a, b) => a - b)
+}
+
 const DELAY_ENTRE_ENVIOS_MS = 350 // pacing conservador — bem abaixo do throughput padrão da Meta (80 msg/s)
 
 export default function WhatsAppMarketing() {
@@ -133,19 +155,24 @@ export default function WhatsAppMarketing() {
   useEffect(() => {
     carregar()
     ;(async () => {
-      try {
-        const res = await apiFetch("/api/templates")
-        const json = await res.json()
-        if (json.ok) setTemplates(json.templates || [])
-        else setErroTemplates(json.error || "Falha ao carregar templates")
-      } catch (e) {
-        setErroTemplates(String(e))
-      }
+      await recarregarTemplates()
     })()
   }, [carregar])
 
+  async function recarregarTemplates() {
+    try {
+      const res = await apiFetch("/api/templates?todos=1")
+      const json = await res.json()
+      if (json.ok) { setTemplates(json.templates || []); setErroTemplates(null) }
+      else setErroTemplates(json.error || "Falha ao carregar templates")
+    } catch (e) {
+      setErroTemplates(String(e))
+    }
+  }
+
   const optinsAtivos = optins.filter((o) => o.status === "opt_in").length
   const optinsOut = optins.filter((o) => o.status === "opt_out").length
+  const templatesAprovados = templates.filter((t) => t.status === "APPROVED")
 
   return (
     <div className="p-5 space-y-5">
@@ -172,6 +199,7 @@ export default function WhatsAppMarketing() {
       <Tabs value={aba} onValueChange={setAba}>
         <TabsList>
           <TabsTrigger value="optin" className="gap-1.5"><ShieldCheck size={14} /> Consentimento</TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1.5"><FileText size={14} /> Templates</TabsTrigger>
           <TabsTrigger value="campanhas" className="gap-1.5"><Megaphone size={14} /> Campanhas</TabsTrigger>
         </TabsList>
 
@@ -179,11 +207,14 @@ export default function WhatsAppMarketing() {
           <AbaOptIn optins={optins} loading={loading} perfilId={perfil?.id} onRecarregar={carregar} />
         </TabsContent>
 
+        <TabsContent value="templates" className="mt-4">
+          <AbaTemplates templates={templates} erroTemplates={erroTemplates} onRecarregar={recarregarTemplates} />
+        </TabsContent>
+
         <TabsContent value="campanhas" className="mt-4">
           <AbaCampanhas
             campanhas={campanhas}
-            templates={templates}
-            erroTemplates={erroTemplates}
+            templates={templatesAprovados}
             loading={loading}
             perfilId={perfil?.id}
             onRecarregar={carregar}
@@ -387,8 +418,8 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
 // ─── Aba Campanhas ──────────────────────────────────────────────────────────
 // Sem etapa de "lista": a campanha define quem recebe escolhendo categorias
 // de opt-in — o sistema busca os contatos elegíveis sozinho na hora de criar.
-function AbaCampanhas({ campanhas, templates, erroTemplates, loading, perfilId, onRecarregar }: {
-  campanhas: Campanha[]; templates: Template[]; erroTemplates: string | null
+function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }: {
+  campanhas: Campanha[]; templates: Template[]
   loading: boolean; perfilId?: string; onRecarregar: () => void
 }) {
   const [dialogAberto, setDialogAberto] = useState(false)
@@ -533,9 +564,9 @@ function AbaCampanhas({ campanhas, templates, erroTemplates, loading, perfilId, 
         <Button size="sm" className="gap-1.5" onClick={() => setDialogAberto(true)}><Plus size={14} /> Nova campanha</Button>
       </div>
 
-      {erroTemplates && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          <AlertCircle size={14} /> Não foi possível carregar os templates da Meta: {erroTemplates}
+      {templates.length === 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <AlertCircle size={14} className="shrink-0" /> Nenhum template aprovado ainda — crie um na aba <strong className="mx-1">Templates</strong> antes de montar uma campanha.
         </div>
       )}
 
@@ -692,5 +723,191 @@ function CampanhaDetalhe({ campanhaId }: { campanhaId: string }) {
         </div>
       </TableCell>
     </TableRow>
+  )
+}
+
+// ─── Aba Templates ──────────────────────────────────────────────────────────
+// Cria template direto na WABA via api/criar-template.ts — ninguém precisa
+// entrar no Business Manager da Meta pra isso. Nome é auto-formatado
+// enquanto a pessoa digita (letras minúsculas, números e _); variáveis
+// {{1}}, {{2}}... detectadas no corpo pedem um exemplo cada, porque a Meta
+// exige isso pra aprovar.
+const STATUS_TEMPLATE_INFO: Record<string, { label: string; tone: "default" | "secondary" | "destructive" | "outline" }> = {
+  APPROVED: { label: "Aprovado", tone: "default" },
+  PENDING: { label: "Em análise", tone: "secondary" },
+  REJECTED: { label: "Rejeitado", tone: "destructive" },
+}
+
+function AbaTemplates({ templates, erroTemplates, onRecarregar }: {
+  templates: Template[]; erroTemplates: string | null; onRecarregar: () => Promise<void> | void
+}) {
+  const [dialogAberto, setDialogAberto] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [nomeDigitado, setNomeDigitado] = useState("")
+  const [form, setForm] = useState({
+    language: "pt_BR", category: "MARKETING" as "MARKETING" | "UTILITY",
+    corpo: "", rodape: "",
+  })
+  const [exemplos, setExemplos] = useState<Record<number, string>>({})
+
+  const nomeFinal = slugifyNomeTemplate(nomeDigitado)
+  const variaveis = detectarVariaveis(form.corpo)
+
+  async function criar() {
+    if (!nomeFinal) return toast.error("Dê um nome pro template")
+    if (!form.corpo.trim()) return toast.error("Escreva o corpo da mensagem")
+    if (variaveis.some((v) => !exemplos[v]?.trim())) return toast.error("Preencha um exemplo pra cada variável — a Meta exige isso pra aprovar")
+
+    setEnviando(true)
+    try {
+      const res = await apiFetch("/api/criar-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nomeFinal, language: form.language, category: form.category,
+          corpo: form.corpo, rodape: form.rodape || undefined,
+          exemplos: variaveis.map((v) => exemplos[v]),
+        }),
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        toast.error(json.error || "Erro ao enviar template pra aprovação")
+      } else {
+        toast.success('Template enviado! Vai aparecer como "Em análise" até a Meta revisar.')
+        setDialogAberto(false)
+        setNomeDigitado(""); setForm({ language: "pt_BR", category: "MARKETING", corpo: "", rodape: "" }); setExemplos({})
+        await onRecarregar()
+      }
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">Templates precisam de aprovação da Meta antes de poder ser usados numa campanha.</p>
+        <Button size="sm" className="gap-1.5" onClick={() => setDialogAberto(true)}><Plus size={14} /> Novo template</Button>
+      </div>
+
+      {erroTemplates && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertCircle size={14} /> Não foi possível carregar os templates da Meta: {erroTemplates}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Idioma</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Texto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {templates.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
+            ) : templates.map((t) => {
+              const info = STATUS_TEMPLATE_INFO[t.status] || { label: t.status, tone: "outline" as const }
+              return (
+                <TableRow key={t.name}>
+                  <TableCell className="font-mono text-xs">{t.name}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{t.language}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{t.category}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant={info.tone} className="gap-1">
+                      {t.status === "PENDING" && <Clock size={11} />}
+                      {t.status === "REJECTED" && <XIcon size={11} />}
+                      {info.label}
+                    </Badge>
+                    {t.status === "REJECTED" && t.motivoRejeicao && (
+                      <p className="text-[11px] text-destructive mt-1 max-w-[220px]">{t.motivoRejeicao}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{t.texto}</TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Novo template</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Nome</Label>
+              <Input value={nomeDigitado} onChange={(e) => setNomeDigitado(e.target.value)} placeholder="Ex.: Promoção de verão" />
+              {nomeFinal && <p className="text-[11px] text-muted-foreground mt-1">Vai ser salvo como <code className="bg-muted px-1 rounded">{nomeFinal}</code></p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Idioma</Label>
+                <Select value={form.language} onValueChange={(v) => setForm((f) => ({ ...f, language: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pt_BR">Português (Brasil)</SelectItem>
+                    <SelectItem value="en_US">Inglês (EUA)</SelectItem>
+                    <SelectItem value="es_ES">Espanhol</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Categoria</Label>
+                <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v as "MARKETING" | "UTILITY" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MARKETING">Marketing</SelectItem>
+                    <SelectItem value="UTILITY">Utility</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Corpo da mensagem</Label>
+              <Textarea
+                rows={4}
+                value={form.corpo}
+                onChange={(e) => setForm((f) => ({ ...f, corpo: e.target.value }))}
+                placeholder={"Ex.: Olá {{1}}! Temos uma condição especial pra você esse mês."}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Use <code className="bg-muted px-1 rounded">{"{{1}}"}</code>, <code className="bg-muted px-1 rounded">{"{{2}}"}</code>... pra variáveis (ex.: nome do cliente).</p>
+            </div>
+            {variaveis.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <p className="text-xs font-semibold">Exemplo de cada variável (obrigatório pra Meta aprovar)</p>
+                {variaveis.map((v) => (
+                  <div key={v}>
+                    <Label className="text-xs text-muted-foreground">Exemplo pra {"{{"}{v}{"}}"}</Label>
+                    <Input
+                      value={exemplos[v] || ""}
+                      onChange={(e) => setExemplos((prev) => ({ ...prev, [v]: e.target.value }))}
+                      placeholder={v === 1 ? "Ex.: Maria" : "Ex.: valor de exemplo"}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">Rodapé (opcional)</Label>
+              <Input value={form.rodape} onChange={(e) => setForm((f) => ({ ...f, rodape: e.target.value }))} placeholder="Ex.: 3W Hotelaria" />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              A Meta revisa o conteúdo antes de aprovar (minutos a ~24h) e pode reclassificar a categoria com base no texto.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
+            <Button onClick={criar} disabled={enviando}>{enviando ? "Enviando…" : "Enviar pra aprovação"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

@@ -1,7 +1,10 @@
 /**
- * Lista os templates de mensagem aprovados pela Meta pra essa WABA — usado
- * pelo hub pra oferecer botões de "iniciar/reabrir conversa" fora da janela
- * de 24h (só template aprovado pode iniciar conversa nesse caso).
+ * Lista os templates de mensagem da Meta pra essa WABA — por padrão só os
+ * APROVADOS (usado pelo hub pra oferecer botões de "iniciar/reabrir
+ * conversa" fora da janela de 24h e pra popular o seletor de campanhas).
+ * Com ?todos=1 devolve TODOS os status (aprovado/em análise/rejeitado) —
+ * usado pela aba Templates do módulo Marketing, que precisa mostrar o que
+ * está pendente de aprovação também.
  */
 
 import { usuarioAutenticado, segredoInternoValido, respostaNaoAutorizado } from "./_auth";
@@ -28,8 +31,10 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  const incluirTodos = new URL(req.url).searchParams.get("todos") === "1";
+
   try {
-    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_WABA_ID}/message_templates?fields=name,status,language,category,components&limit=100`;
+    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_WABA_ID}/message_templates?fields=name,status,language,category,components,rejected_reason&limit=100`;
     const metaRes = await fetch(url, { headers: { Authorization: `Bearer ${META_ACCESS_TOKEN}` } });
     const json = await metaRes.json();
 
@@ -41,10 +46,10 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const templates = (json.data ?? [])
-      .filter((t: { status: string; name: string }) => t.status === "APPROVED" && t.name !== "hello_world")
-      .map((t: { name: string; language: string; category: string; components?: { type: string; text?: string }[] }) => {
+      .filter((t: { status: string; name: string }) => t.name !== "hello_world" && (incluirTodos || t.status === "APPROVED"))
+      .map((t: { name: string; language: string; category: string; status: string; rejected_reason?: string; components?: { type: string; text?: string }[] }) => {
         const body = (t.components ?? []).find(c => c.type === "BODY");
-        return { name: t.name, language: t.language, category: t.category, texto: body?.text ?? "" };
+        return { name: t.name, language: t.language, category: t.category, status: t.status, motivoRejeicao: t.rejected_reason, texto: body?.text ?? "" };
       });
 
     return new Response(JSON.stringify({ ok: true, templates }), {
