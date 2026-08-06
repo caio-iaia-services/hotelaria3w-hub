@@ -40,8 +40,8 @@ export default async function handler(req: Request): Promise<Response> {
 
   try {
     const body = await req.json();
-    const { name, language, category, corpo, rodape, exemplos } = body as {
-      name?: string; language?: string; category?: string; corpo?: string; rodape?: string; exemplos?: string[];
+    const { name, language, category, corpo, rodape, exemplos, headerHandle } = body as {
+      name?: string; language?: string; category?: string; corpo?: string; rodape?: string; exemplos?: string[]; headerHandle?: string;
     };
 
     if (!name || !NOME_VALIDO.test(name)) {
@@ -67,6 +67,9 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const components: Record<string, unknown>[] = [bodyComponent];
+    if (headerHandle) {
+      components.push({ type: "HEADER", format: "IMAGE", example: { header_handle: [headerHandle] } });
+    }
     if (rodape && rodape.trim()) {
       components.push({ type: "FOOTER", text: rodape.trim() });
     }

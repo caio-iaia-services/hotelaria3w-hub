@@ -1,6 +1,6 @@
 /**
- * Edita o conteúdo de um template já existente (categoria/corpo/rodapé) —
- * usado pela tela Admin › Templates WhatsApp.
+ * Edita o conteúdo de um template já existente (categoria/corpo/rodapé/
+ * imagem de cabeçalho) — usado pela tela Admin › Templates WhatsApp.
  *
  * Limitações da própria Meta, não nossas: não dá pra mudar nome nem idioma
  * de um template (teria que apagar e criar outro); editar o CONTEÚDO de um
@@ -8,6 +8,13 @@
  * campanha/atendimento até aprovar de novo) e a Meta limita quantas edições
  * são permitidas por template num período — se vier erro de limite, a
  * mensagem da própria Meta é repassada tal como chegou.
+ *
+ * IMPORTANTE sobre imagem: se o template já tinha cabeçalho de imagem e
+ * esta edição não manda um headerHandle novo, o cabeçalho de imagem NÃO é
+ * reenviado — o comportamento exato da Meta nesse caso (mantém a imagem
+ * antiga ou remove) não foi testado nesta sessão. Pra garantir que a
+ * imagem continue lá, sempre envie um headerHandle (pode ser o mesmo
+ * arquivo reenviado) quando o template já tiver uma.
  */
 
 import { usuarioAutenticado, respostaNaoAutorizado } from "./_auth";
@@ -35,8 +42,8 @@ export default async function handler(req: Request): Promise<Response> {
 
   try {
     const body = await req.json();
-    const { id, category, corpo, rodape, exemplos } = body as {
-      id?: string; category?: string; corpo?: string; rodape?: string; exemplos?: string[];
+    const { id, category, corpo, rodape, exemplos, headerHandle } = body as {
+      id?: string; category?: string; corpo?: string; rodape?: string; exemplos?: string[]; headerHandle?: string;
     };
 
     if (!id) {
@@ -57,6 +64,9 @@ export default async function handler(req: Request): Promise<Response> {
       bodyComponent.example = { body_text: [exemplos] };
     }
     const components: Record<string, unknown>[] = [bodyComponent];
+    if (headerHandle) {
+      components.push({ type: "HEADER", format: "IMAGE", example: { header_handle: [headerHandle] } });
+    }
     if (rodape && rodape.trim()) {
       components.push({ type: "FOOTER", text: rodape.trim() });
     }

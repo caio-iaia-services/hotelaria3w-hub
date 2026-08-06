@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react"
+import type { ChangeEvent } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { apiFetch } from "@/lib/apiFetch"
 import { toast } from "sonner"
 import { slugifyNomeTemplate, detectarVariaveis } from "@/lib/whatsappTemplates"
-import { FileText, Plus, AlertCircle, Clock, X as XIcon, Eye, Pencil, Trash2, Loader2 } from "lucide-react"
+import { FileText, Plus, AlertCircle, Clock, X as XIcon, Eye, Pencil, Trash2, Loader2, Paperclip } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -60,6 +61,48 @@ const STATUS_TEMPLATE_INFO: Record<string, { label: string; tone: "default" | "s
   REJECTED: { label: "Rejeitado", tone: "destructive" },
 }
 
+const TIPOS_IMAGEM_ACEITOS = ["image/jpeg", "image/png"]
+const TAMANHO_MAXIMO_IMAGEM = 4 * 1024 * 1024 // 4MB
+
+/** Botão de anexo + prévia — usado no formulário de criar e no de editar. */
+function SeletorImagemHeader({ arquivo, onChange }: { arquivo: File | null; onChange: (f: File | null) => void }) {
+  const [preview, setPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!arquivo) { setPreview(null); return }
+    const url = URL.createObjectURL(arquivo)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [arquivo])
+
+  function selecionar(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    e.target.value = ""
+    if (!f) return
+    if (!TIPOS_IMAGEM_ACEITOS.includes(f.type)) return toast.error("Use uma imagem JPEG ou PNG")
+    if (f.size > TAMANHO_MAXIMO_IMAGEM) return toast.error("Imagem grande demais (máx. 4MB)")
+    onChange(f)
+  }
+
+  return (
+    <div>
+      <Label className="text-xs">Imagem de cabeçalho (opcional)</Label>
+      {preview ? (
+        <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-border p-2">
+          <img src={preview} alt="Prévia do cabeçalho" className="w-14 h-14 object-cover rounded-md shrink-0" />
+          <span className="flex-1 text-xs text-muted-foreground truncate">{arquivo?.name}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onChange(null)}><XIcon size={14} /></Button>
+        </div>
+      ) : (
+        <label className="mt-1.5 flex items-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-xs text-muted-foreground cursor-pointer hover:border-[#164B6E]/50 hover:text-foreground transition-colors">
+          <Paperclip size={14} className="shrink-0" /> Anexar imagem (JPEG/PNG, até 4MB)
+          <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={selecionar} />
+        </label>
+      )}
+    </div>
+  )
+}
+
 export default function AdminTemplatesWhatsApp() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [finalidades, setFinalidades] = useState<Record<string, Finalidade[]>>({})
@@ -74,6 +117,18 @@ export default function AdminTemplatesWhatsApp() {
     corpo: "", rodape: "", finalidades: new Set<Finalidade>(),
   })
   const [exemplos, setExemplos] = useState<Record<number, string>>({})
+  const [imagemCriacao, setImagemCriacao] = useState<File | null>(null)
+
+  /** Sobe a imagem (se houver) e devolve o handle pra incluir no payload de criar/editar. */
+  async function subirImagemSeHouver(arquivo: File | null): Promise<string | undefined> {
+    if (!arquivo) return undefined
+    const fd = new FormData()
+    fd.append("file", arquivo)
+    const res = await apiFetch("/api/upload-template-media", { method: "POST", body: fd })
+    const json = await res.json()
+    if (!json.ok) throw new Error(json.error || "Erro ao enviar imagem")
+    return json.handle as string
+  }
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -128,13 +183,14 @@ export default function AdminTemplatesWhatsApp() {
 
     setEnviando(true)
     try {
+      const headerHandle = await subirImagemSeHouver(imagemCriacao)
       const res = await apiFetch("/api/criar-template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: nomeFinal, language: form.language, category: form.category,
           corpo: form.corpo, rodape: form.rodape || undefined,
-          exemplos: variaveis.map((v) => exemplos[v]),
+          exemplos: variaveis.map((v) => exemplos[v]), headerHandle,
         }),
       })
       const json = await res.json()
@@ -145,7 +201,7 @@ export default function AdminTemplatesWhatsApp() {
           .upsert({ template_nome: nomeFinal, finalidades: Array.from(form.finalidades) }, { onConflict: "template_nome" })
         toast.success('Template enviado! Vai aparecer como "Em análise" até a Meta revisar.')
         setDialogAberto(false)
-        setNomeDigitado(""); setForm({ language: "pt_BR", category: "MARKETING", corpo: "", rodape: "", finalidades: new Set() }); setExemplos({})
+        setNomeDigitado(""); setForm({ language: "pt_BR", category: "MARKETING", corpo: "", rodape: "", finalidades: new Set() }); setExemplos({}); setImagemCriacao(null)
         await carregar()
       }
     } catch (e) {
@@ -163,12 +219,14 @@ export default function AdminTemplatesWhatsApp() {
   const [formEdicao, setFormEdicao] = useState({ category: "MARKETING" as "MARKETING" | "UTILITY", corpo: "", rodape: "" })
   const [exemplosEdicao, setExemplosEdicao] = useState<Record<number, string>>({})
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+  const [imagemEdicao, setImagemEdicao] = useState<File | null>(null)
   const variaveisEdicao = detectarVariaveis(formEdicao.corpo)
 
   function abrirEdicao(t: Template) {
     setTemplateEditando(t)
     setFormEdicao({ category: (t.category === "UTILITY" ? "UTILITY" : "MARKETING"), corpo: t.texto, rodape: t.rodape || "" })
     setExemplosEdicao({})
+    setImagemEdicao(null)
   }
 
   async function salvarEdicao() {
@@ -178,13 +236,14 @@ export default function AdminTemplatesWhatsApp() {
 
     setSalvandoEdicao(true)
     try {
+      const headerHandle = await subirImagemSeHouver(imagemEdicao)
       const res = await apiFetch("/api/editar-template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: templateEditando.id, category: formEdicao.category,
           corpo: formEdicao.corpo, rodape: formEdicao.rodape || undefined,
-          exemplos: variaveisEdicao.map((v) => exemplosEdicao[v]),
+          exemplos: variaveisEdicao.map((v) => exemplosEdicao[v]), headerHandle,
         }),
       })
       const json = await res.json()
@@ -371,6 +430,7 @@ export default function AdminTemplatesWhatsApp() {
                 </Select>
               </div>
             </div>
+            <SeletorImagemHeader arquivo={imagemCriacao} onChange={setImagemCriacao} />
             <div>
               <Label className="text-xs">Corpo da mensagem</Label>
               <Textarea
@@ -470,6 +530,10 @@ export default function AdminTemplatesWhatsApp() {
                 </SelectContent>
               </Select>
             </div>
+            <SeletorImagemHeader arquivo={imagemEdicao} onChange={setImagemEdicao} />
+            <p className="text-[11px] text-muted-foreground -mt-2">
+              Se este template já tinha imagem, anexe ela de novo aqui pra garantir que continue — deixar em branco pode remover o cabeçalho.
+            </p>
             <div>
               <Label className="text-xs">Corpo da mensagem</Label>
               <Textarea rows={4} value={formEdicao.corpo} onChange={(e) => setFormEdicao((f) => ({ ...f, corpo: e.target.value }))} />
