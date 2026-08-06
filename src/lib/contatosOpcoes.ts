@@ -12,6 +12,19 @@ export const STATUS_CONTATO_LABEL: Record<StatusContato, string> = {
   ativo: "Ativo", inativo: "Inativo",
 }
 
+// Região não é uma coluna do banco — é calculada a partir do Estado (UF) da
+// empresa. Mesmo mapeamento usado em Clientes.tsx/BuscarEmpresas.tsx, pra
+// ficar consistente com o resto do sistema.
+export const ESTADOS_POR_REGIAO: Record<string, string[]> = {
+  Norte: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
+  Nordeste: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
+  "Centro-Oeste": ["GO", "MT", "MS", "DF"],
+  Sudeste: ["SP", "RJ", "MG", "ES"],
+  Sul: ["RS", "SC", "PR"],
+}
+
+export const REGIOES = Object.keys(ESTADOS_POR_REGIAO)
+
 export const QUALIFICACAO_OPTIONS: { value: string; label: string }[] = [
   { value: "cadastrado", label: "Cadastrado" },
   { value: "higienizado", label: "Higienizado" },

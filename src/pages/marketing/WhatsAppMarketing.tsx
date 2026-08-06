@@ -8,7 +8,7 @@ import {
   CATEGORIAS_CONSENTIMENTO, CATEGORIA_CONSENTIMENTO_LABEL, normalizarTelefone,
   type CategoriaConsentimento,
 } from "@/lib/whatsappConsentimento"
-import { STATUS_CONTATO_LABEL, QUALIFICACAO_OPTIONS, type StatusContato } from "@/lib/contatosOpcoes"
+import { STATUS_CONTATO_LABEL, QUALIFICACAO_OPTIONS, REGIOES, ESTADOS_POR_REGIAO, type StatusContato } from "@/lib/contatosOpcoes"
 import {
   Plus, Send, Users, ChevronDown, ChevronRight,
   Loader2, AlertCircle, Megaphone, SlidersHorizontal,
@@ -91,12 +91,13 @@ export interface FiltrosCampanha {
   status: Set<StatusContato>
   qualificacao: Set<string>
   segmento: Set<string>
+  regiao: Set<string>
   estado: Set<string>
   cidade: string
 }
 
 export function filtrosVazios(): FiltrosCampanha {
-  return { status: new Set(), qualificacao: new Set(), segmento: new Set(), estado: new Set(), cidade: "" }
+  return { status: new Set(), qualificacao: new Set(), segmento: new Set(), regiao: new Set(), estado: new Set(), cidade: "" }
 }
 
 /**
@@ -119,13 +120,20 @@ async function buscarContatosElegiveis(
   const idsConsentidos = Array.from(new Set((consentData as unknown as { contato_id: string }[] || []).map((r) => r.contato_id)))
   if (idsConsentidos.length === 0) return []
 
-  const temFiltroEmpresa = filtros.segmento.size > 0 || filtros.estado.size > 0 || !!filtros.cidade.trim()
+  // Região não é coluna do banco — expande pra UFs (mesmo mapeamento de
+  // Clientes.tsx/BuscarEmpresas.tsx) e junta com os estados marcados direto.
+  const estadosEfetivos = new Set([
+    ...filtros.estado,
+    ...Array.from(filtros.regiao).flatMap((r) => ESTADOS_POR_REGIAO[r] || []),
+  ])
+
+  const temFiltroEmpresa = filtros.segmento.size > 0 || estadosEfetivos.size > 0 || !!filtros.cidade.trim()
   let idsFinais = idsConsentidos
 
   if (temFiltroEmpresa) {
     let q = supabase.from("contato_cliente").select("contato_id, clientes!inner(segmento, estado, cidade)")
     if (filtros.segmento.size > 0) q = q.overlaps("clientes.segmento", Array.from(filtros.segmento))
-    if (filtros.estado.size > 0) q = q.in("clientes.estado", Array.from(filtros.estado))
+    if (estadosEfetivos.size > 0) q = q.in("clientes.estado", Array.from(estadosEfetivos))
     if (filtros.cidade.trim()) q = q.ilike("clientes.cidade", `%${filtros.cidade.trim()}%`)
     const { data: viaEmpresa } = await q
     const idsViaEmpresa = new Set((viaEmpresa as unknown as { contato_id: string }[] || []).map((r) => r.contato_id))
@@ -306,7 +314,7 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
     })
   }
 
-  function toggleFiltroSet<K extends "status" | "qualificacao" | "segmento" | "estado">(chave: K, valor: string) {
+  function toggleFiltroSet<K extends "status" | "qualificacao" | "segmento" | "regiao" | "estado">(chave: K, valor: string) {
     setFiltros((f) => {
       const next = new Set(f[chave] as Set<string>)
       if (next.has(valor)) next.delete(valor); else next.add(valor)
@@ -585,10 +593,22 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                     </div>
                   )}
 
+                  <div>
+                    <Label className="text-xs">Região</Label>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                      {REGIOES.map((r) => (
+                        <label key={r} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                          <Checkbox checked={filtros.regiao.has(r)} onCheckedChange={() => toggleFiltroSet("regiao", r)} />
+                          {r}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     {opcoesEstado.length > 0 && (
                       <div>
-                        <Label className="text-xs">Estado (UF)</Label>
+                        <Label className="text-xs">Estado (UF) {filtros.regiao.size > 0 && <span className="text-muted-foreground font-normal">(além da região)</span>}</Label>
                         <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-h-24 overflow-y-auto">
                           {opcoesEstado.map((uf) => (
                             <label key={uf} className="flex items-center gap-1 text-xs cursor-pointer">
@@ -611,7 +631,7 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                   </div>
 
                   <p className="text-[11px] text-muted-foreground">
-                    Segmento/Estado/Cidade vêm da empresa vinculada ao contato — um contato ligado a mais de uma empresa entra se qualquer uma delas bater com o filtro. Contatos com status "Bloqueado" nunca entram, mesmo sem marcar nada aqui.
+                    Segmento/Região/Estado/Cidade vêm da empresa vinculada ao contato — um contato ligado a mais de uma empresa entra se qualquer uma delas bater com o filtro. Contatos com status "Bloqueado" nunca entram, mesmo sem marcar nada aqui.
                   </p>
                 </div>
               )}
