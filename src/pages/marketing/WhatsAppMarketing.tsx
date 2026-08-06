@@ -5,13 +5,16 @@ import { useAuth } from "@/components/AuthProvider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
-  Plus, Send, ShieldCheck, ShieldX, ChevronDown, ChevronRight,
+  CATEGORIAS_CONSENTIMENTO, CATEGORIA_CONSENTIMENTO_LABEL, normalizarTelefone,
+  type CategoriaConsentimento,
+} from "@/lib/whatsappConsentimento"
+import {
+  Plus, Send, Users, ChevronDown, ChevronRight,
   Loader2, AlertCircle, Megaphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,27 +27,19 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import {
-  Tabs, TabsList, TabsTrigger, TabsContent,
-} from "@/components/ui/tabs"
+
+/**
+ * Módulo Marketing → WhatsApp — só campanhas. Consentimento não vive mais
+ * aqui: é um campo do cadastro de Contato (ContatoModal.tsx), disponível
+ * pra QUALQUER contato do sistema, não só quem passou pelo Atendimento.
+ * Pra alguém ficar elegível a uma campanha, precisa existir em `contatos`
+ * com uma linha ativa em `contato_whatsapp_consentimento` na categoria
+ * escolhida. Ver [[modulo-marketing-whatsapp]].
+ */
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-type Categoria = "promocoes" | "novidades" | "avisos"
-type StatusOptIn = "opt_in" | "opt_out"
-type Origem = "formulario_site" | "confirmacao_atendimento" | "importacao_manual_confirmada" | "anuncio_click_to_whatsapp" | "outro"
 type StatusCampanha = "rascunho" | "pronta" | "enviando" | "concluida" | "pausada" | "cancelada"
 type StatusEnvio = "pendente" | "enviado" | "entregue" | "lido" | "falhou" | "bloqueado_optout"
-
-interface OptIn {
-  id: string
-  telefone: string
-  nome: string | null
-  categoria: Categoria
-  status: StatusOptIn
-  origem: Origem
-  observacao: string | null
-  registrado_em: string
-}
 
 type StatusTemplate = "APPROVED" | "PENDING" | "REJECTED" | string
 
@@ -63,7 +58,7 @@ interface Campanha {
   template_nome: string
   template_idioma: string
   categoria: "marketing" | "utility"
-  categorias_alvo: Categoria[]
+  categorias_alvo: CategoriaConsentimento[]
   status: StatusCampanha
   total_destinatarios: number
   total_enviados: number
@@ -76,6 +71,7 @@ interface Campanha {
 interface Envio {
   id: string
   campanha_id: string
+  contato_id: string | null
   telefone: string
   nome: string | null
   status: StatusEnvio
@@ -83,63 +79,48 @@ interface Envio {
   enviado_em: string | null
 }
 
-const CATEGORIAS: Categoria[] = ["promocoes", "novidades", "avisos"]
-const CATEGORIA_LABEL: Record<Categoria, string> = {
-  promocoes: "Promoções", novidades: "Novidades", avisos: "Avisos",
-}
-const ORIGEM_LABEL: Record<Origem, string> = {
-  formulario_site: "Formulário do site",
-  confirmacao_atendimento: "Confirmado no Atendimento",
-  importacao_manual_confirmada: "Importação (consentimento verificado)",
-  anuncio_click_to_whatsapp: "Anúncio click-to-WhatsApp",
-  outro: "Outro",
-}
 const STATUS_CAMPANHA_LABEL: Record<StatusCampanha, string> = {
   rascunho: "Rascunho", pronta: "Pronta pra disparar", enviando: "Enviando…",
   concluida: "Concluída", pausada: "Pausada", cancelada: "Cancelada",
-}
-
-/** Normaliza telefone: só dígitos, garante DDI 55 (mesma regra de api/enviar-mensagem.ts). */
-function normalizarTelefone(raw: string): string {
-  const digits = raw.replace(/\D/g, "")
-  return digits.startsWith("55") ? digits : `55${digits}`
-}
-
-/** Aceita telefones separados por linha ou vírgula, normaliza e remove duplicados/vazios. */
-function extrairTelefones(raw: string): string[] {
-  const brutos = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
-  return Array.from(new Set(brutos.map(normalizarTelefone)))
 }
 
 const DELAY_ENTRE_ENVIOS_MS = 350 // pacing conservador — bem abaixo do throughput padrão da Meta (80 msg/s)
 
 export default function WhatsAppMarketing() {
   const { perfil } = useAuth()
-  const [aba, setAba] = useState("optin")
 
-  const [optins, setOptins] = useState<OptIn[]>([])
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
   // nome do template → finalidades marcadas em Admin › Templates WhatsApp
   // ("campanha" precisa estar explicitamente marcada pra aparecer aqui —
   // diferente do Atendimento, que mostra por padrão quem não tem tag nenhuma).
   const [templateFinalidades, setTemplateFinalidades] = useState<Record<string, string[]>>({})
+  const [contagensPorCategoria, setContagensPorCategoria] = useState<Record<CategoriaConsentimento, number>>({
+    promocoes: 0, novidades: 0, avisos: 0,
+  })
   const [loading, setLoading] = useState(true)
 
   const carregar = useCallback(async () => {
     setLoading(true)
-    const [{ data: optinData }, { data: campanhaData }, { data: tagsData }] = await Promise.all([
-      supabase.from("whatsapp_opt_in" as any).select("*").order("registrado_em", { ascending: false }),
+    const [{ data: campanhaData }, { data: tagsData }, { data: consentData }] = await Promise.all([
       supabase.from("whatsapp_campanhas" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("whatsapp_template_tags" as any).select("template_nome, finalidades"),
+      supabase.from("contato_whatsapp_consentimento" as any).select("categoria").eq("status", "opt_in"),
     ])
-    setOptins((optinData as unknown as OptIn[]) || [])
     setCampanhas((campanhaData as unknown as Campanha[]) || [])
-    const mapa: Record<string, string[]> = {}
+
+    const mapaTags: Record<string, string[]> = {}
     for (const t of (tagsData as unknown as { template_nome: string; finalidades: string[] }[]) || []) {
-      mapa[t.template_nome] = t.finalidades || []
+      mapaTags[t.template_nome] = t.finalidades || []
     }
-    setTemplateFinalidades(mapa)
+    setTemplateFinalidades(mapaTags)
+
+    const contagens: Record<CategoriaConsentimento, number> = { promocoes: 0, novidades: 0, avisos: 0 }
+    for (const c of (consentData as unknown as { categoria: CategoriaConsentimento }[]) || []) {
+      contagens[c.categoria] = (contagens[c.categoria] || 0) + 1
+    }
+    setContagensPorCategoria(contagens)
+
     setLoading(false)
   }, [])
 
@@ -154,52 +135,39 @@ export default function WhatsAppMarketing() {
     })()
   }, [carregar])
 
-  const optinsAtivos = optins.filter((o) => o.status === "opt_in").length
-  const optinsOut = optins.filter((o) => o.status === "opt_out").length
   const templatesAprovados = templates.filter((t) => (templateFinalidades[t.name] || []).includes("campanha"))
+  const totalAptos = contagensPorCategoria.promocoes + contagensPorCategoria.novidades + contagensPorCategoria.avisos
 
   return (
     <div className="p-5 space-y-5">
-      {/* ── Stats + aviso de fundação ─────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={ShieldCheck} label="Opt-in ativos" value={optinsAtivos} tone="good" />
-        <StatCard icon={ShieldX} label="Opt-out" value={optinsOut} tone="muted" />
+      {/* ── Stats ────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-3">
         <StatCard icon={Megaphone} label="Campanhas" value={campanhas.length} tone="muted" />
+        {CATEGORIAS_CONSENTIMENTO.map((c) => (
+          <StatCard key={c} icon={Users} label={`Aptos — ${CATEGORIA_CONSENTIMENTO_LABEL[c]}`} value={contagensPorCategoria[c]} tone="good" />
+        ))}
       </div>
 
-      {optinsAtivos === 0 && (
+      {totalAptos === 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Nenhum contato com consentimento registrado ainda.</p>
+            <p className="font-semibold">Nenhum contato com consentimento de marketing ainda.</p>
             <p className="text-xs mt-0.5 opacity-90">
-              Por política da Meta, ninguém pode entrar numa campanha sem opt-in explícito.
-              Registre consentimento abaixo antes de criar uma campanha.
+              O consentimento é marcado no cadastro de cada contato, em <strong>Contatos</strong> — abra um contato, marque "Consentimento de marketing (WhatsApp)" e salve.
+              Só contatos marcados assim ficam disponíveis pra campanha.
             </p>
           </div>
         </div>
       )}
 
-      <Tabs value={aba} onValueChange={setAba}>
-        <TabsList>
-          <TabsTrigger value="optin" className="gap-1.5"><ShieldCheck size={14} /> Consentimento</TabsTrigger>
-          <TabsTrigger value="campanhas" className="gap-1.5"><Megaphone size={14} /> Campanhas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="optin" className="mt-4">
-          <AbaOptIn optins={optins} loading={loading} perfilId={perfil?.id} onRecarregar={carregar} />
-        </TabsContent>
-
-        <TabsContent value="campanhas" className="mt-4">
-          <AbaCampanhas
-            campanhas={campanhas}
-            templates={templatesAprovados}
-            loading={loading}
-            perfilId={perfil?.id}
-            onRecarregar={carregar}
-          />
-        </TabsContent>
-      </Tabs>
+      <AbaCampanhas
+        campanhas={campanhas}
+        templates={templatesAprovados}
+        loading={loading}
+        perfilId={perfil?.id}
+        onRecarregar={carregar}
+      />
     </div>
   )
 }
@@ -222,188 +190,17 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: React.ElementType;
   )
 }
 
-// ─── Aba Consentimento ──────────────────────────────────────────────────────────
-// Formulário único: aceita 1 telefone ou vários colados de uma vez (um por
-// linha ou separados por vírgula) — não existe mais um modo "em lote" à
-// parte, é o mesmo campo pros dois casos.
-function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
-  optins: OptIn[]; loading: boolean; perfilId?: string; onRecarregar: () => void
-}) {
-  const [dialogAberto, setDialogAberto] = useState(false)
-  const [salvando, setSalvando] = useState(false)
-  const [form, setForm] = useState({
-    telefones: "", nome: "", categoria: "promocoes" as Categoria,
-    origem: "confirmacao_atendimento" as Origem, observacao: "", confirmo: false,
-  })
-
-  async function registrar() {
-    const telefones = extrairTelefones(form.telefones)
-    if (telefones.length === 0) return toast.error("Cole ao menos um telefone")
-    if (!form.confirmo) return toast.error("Confirme que o consentimento foi de fato coletado")
-    setSalvando(true)
-
-    const { data: existentesData } = await supabase.from("whatsapp_opt_in" as any)
-      .select("telefone").eq("categoria", form.categoria).in("telefone", telefones)
-    const jaExistem = new Set((existentesData as unknown as { telefone: string }[] || []).map((e) => e.telefone))
-    const novos = telefones.filter((t) => !jaExistem.has(t))
-
-    if (novos.length === 0) {
-      setSalvando(false)
-      toast.info("Todos esses números já tinham opt-in registrado nessa categoria")
-      return
-    }
-
-    const { error } = await supabase.from("whatsapp_opt_in" as any).insert(
-      novos.map((telefone) => ({
-        telefone,
-        nome: telefones.length === 1 ? (form.nome || null) : null,
-        categoria: form.categoria, status: "opt_in", origem: form.origem,
-        observacao: form.observacao || null, registrado_por: perfilId,
-      })),
-    )
-    setSalvando(false)
-    if (error) return toast.error(`Erro ao registrar: ${error.message}`)
-
-    toast.success(
-      jaExistem.size > 0
-        ? `${novos.length} registrado(s), ${jaExistem.size} já existiam nessa categoria`
-        : `${novos.length} registrado(s)`,
-    )
-    setDialogAberto(false)
-    setForm({ telefones: "", nome: "", categoria: "promocoes", origem: "confirmacao_atendimento", observacao: "", confirmo: false })
-    onRecarregar()
-  }
-
-  async function alternarStatus(o: OptIn) {
-    const novo: StatusOptIn = o.status === "opt_in" ? "opt_out" : "opt_in"
-    const { error } = await supabase.from("whatsapp_opt_in" as any).update({ status: novo }).eq("id", o.id)
-    if (error) return toast.error("Erro ao atualizar")
-    toast.success(novo === "opt_out" ? "Marcado como opt-out" : "Reativado como opt-in")
-    onRecarregar()
-  }
-
-  const multiplos = extrairTelefones(form.telefones).length > 1
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Cada linha é um consentimento auditável — telefone + categoria + de onde veio.
-        </p>
-        <Button size="sm" className="gap-1.5" onClick={() => setDialogAberto(true)}>
-          <Plus size={14} /> Registrar consentimento
-        </Button>
-      </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Origem</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
-            ) : optins.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum registro ainda.</TableCell></TableRow>
-            ) : optins.map((o) => (
-              <TableRow key={o.id}>
-                <TableCell className="font-mono text-xs">{o.telefone}</TableCell>
-                <TableCell>{o.nome || "—"}</TableCell>
-                <TableCell>{CATEGORIA_LABEL[o.categoria]}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{ORIGEM_LABEL[o.origem]}</TableCell>
-                <TableCell>
-                  <Badge variant={o.status === "opt_in" ? "default" : "secondary"}>
-                    {o.status === "opt_in" ? "Opt-in" : "Opt-out"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => alternarStatus(o)}>
-                    {o.status === "opt_in" ? "Marcar opt-out" : "Reativar"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Registrar consentimento</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Telefone(s)</Label>
-              <Textarea
-                rows={3}
-                value={form.telefones}
-                onChange={(e) => setForm((f) => ({ ...f, telefones: e.target.value }))}
-                placeholder={"Um por linha ou separados por vírgula\n(11) 99999-9999\n(11) 98888-8888"}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Nome {multiplos && <span className="text-muted-foreground font-normal">(só é salvo se for 1 telefone só)</span>}</Label>
-              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} disabled={multiplos} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Categoria</Label>
-                <Select value={form.categoria} onValueChange={(v) => setForm((f) => ({ ...f, categoria: v as Categoria }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS.map((c) => (
-                      <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Origem</Label>
-                <Select value={form.origem} onValueChange={(v) => setForm((f) => ({ ...f, origem: v as Origem }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(ORIGEM_LABEL) as Origem[]).map((o) => (
-                      <SelectItem key={o} value={o}>{ORIGEM_LABEL[o]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs">Observação (opcional)</Label>
-              <Textarea rows={2} value={form.observacao} onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))} placeholder="Ex.: respondeu ao anúncio de captação em 05/08" />
-            </div>
-            <label className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
-              <Checkbox checked={form.confirmo} onCheckedChange={(v) => setForm((f) => ({ ...f, confirmo: !!v }))} className="mt-0.5" />
-              Confirmo que {multiplos ? "todos esses números deram" : "esta pessoa deu"} consentimento explícito pra receber mensagens de marketing da 3W.
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
-            <Button onClick={registrar} disabled={salvando}>{salvando ? "Salvando…" : "Registrar"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-// ─── Aba Campanhas ──────────────────────────────────────────────────────────
+// ─── Campanhas ──────────────────────────────────────────────────────────────
 // Sem etapa de "lista": a campanha define quem recebe escolhendo categorias
-// de opt-in — o sistema busca os contatos elegíveis sozinho na hora de criar.
+// de consentimento — o sistema busca os contatos elegíveis (em `contatos` +
+// `contato_whatsapp_consentimento`) sozinho na hora de criar.
 function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }: {
   campanhas: Campanha[]; templates: Template[]
   loading: boolean; perfilId?: string; onRecarregar: () => void
 }) {
   const [dialogAberto, setDialogAberto] = useState(false)
   const [criando, setCriando] = useState(false)
-  const [form, setForm] = useState({ nome: "", template: "", categorias: new Set<Categoria>() })
+  const [form, setForm] = useState({ nome: "", template: "", categorias: new Set<CategoriaConsentimento>() })
   const [contagemElegiveis, setContagemElegiveis] = useState<number | null>(null)
   const [expandida, setExpandida] = useState<string | null>(null)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
@@ -411,20 +208,23 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
 
   const templateEscolhido = templates.find((t) => t.name === form.template)
 
-  // Recalcula quantos contatos elegíveis existem toda vez que as categorias mudam.
+  // Recalcula quantos contatos elegíveis existem toda vez que as categorias
+  // mudam — dedupe por contato_id (um contato pode ter opt-in em mais de
+  // uma categoria marcada aqui).
   useEffect(() => {
     if (!dialogAberto || form.categorias.size === 0) { setContagemElegiveis(null); return }
     let cancelado = false
     ;(async () => {
-      const { count } = await supabase.from("whatsapp_opt_in" as any)
-        .select("id", { count: "exact", head: true })
-        .eq("status", "opt_in").in("categoria", Array.from(form.categorias))
-      if (!cancelado) setContagemElegiveis(count ?? 0)
+      const { data } = await supabase.from("contato_whatsapp_consentimento" as any)
+        .select("contato_id").eq("status", "opt_in").in("categoria", Array.from(form.categorias))
+      if (cancelado) return
+      const distintos = new Set((data as unknown as { contato_id: string }[] || []).map((r) => r.contato_id))
+      setContagemElegiveis(distintos.size)
     })()
     return () => { cancelado = true }
   }, [dialogAberto, form.categorias])
 
-  function toggleCategoria(c: Categoria) {
+  function toggleCategoria(c: CategoriaConsentimento) {
     setForm((f) => {
       const next = new Set(f.categorias)
       if (next.has(c)) next.delete(c); else next.add(c)
@@ -450,13 +250,23 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
       return toast.error(`Erro ao criar campanha: ${error?.message}`)
     }
 
-    const { data: elegiveis } = await supabase.from("whatsapp_opt_in" as any)
-      .select("telefone, nome").eq("status", "opt_in").in("categoria", categoriasArr)
-    const lista = (elegiveis as unknown as { telefone: string; nome: string | null }[]) || []
+    const { data: elegiveisRaw } = await supabase.from("contato_whatsapp_consentimento" as any)
+      .select("contato_id, contatos(nome, whatsapp)")
+      .eq("status", "opt_in").in("categoria", categoriasArr)
+
+    const vistos = new Set<string>()
+    const lista: { contato_id: string; telefone: string; nome: string | null }[] = []
+    for (const row of (elegiveisRaw as unknown as { contato_id: string; contatos: { nome: string | null; whatsapp: string | null } | null }[]) || []) {
+      if (vistos.has(row.contato_id)) continue
+      const tel = row.contatos?.whatsapp
+      if (!tel) continue // contato sem WhatsApp cadastrado — não dá pra enviar
+      vistos.add(row.contato_id)
+      lista.push({ contato_id: row.contato_id, telefone: normalizarTelefone(tel), nome: row.contatos?.nome ?? null })
+    }
 
     if (lista.length > 0) {
       await supabase.from("whatsapp_campanha_envios" as any).insert(
-        lista.map((m) => ({ campanha_id: (campanha as any).id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
+        lista.map((m) => ({ campanha_id: (campanha as any).id, contato_id: m.contato_id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
       )
     }
     await supabase.from("whatsapp_campanhas" as any).update({
@@ -485,15 +295,19 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
     // Loop resumível: sempre reconsulta pendentes, então fechar a aba no meio é seguro.
     while (true) {
       const { data: lote } = await supabase.from("whatsapp_campanha_envios" as any)
-        .select("id, telefone").eq("campanha_id", campanha.id).eq("status", "pendente").limit(1)
-      const envio = (lote as unknown as { id: string; telefone: string }[] | null)?.[0]
+        .select("id, telefone, contato_id").eq("campanha_id", campanha.id).eq("status", "pendente").limit(1)
+      const envio = (lote as unknown as { id: string; telefone: string; contato_id: string | null }[] | null)?.[0]
       if (!envio) break
 
-      // Reconfirma opt-in ativo no instante do envio (defesa em profundidade).
-      const { data: aindaOptIn } = await supabase.from("whatsapp_opt_in" as any)
-        .select("id").eq("telefone", envio.telefone).eq("status", "opt_in").limit(1)
+      // Reconfirma consentimento ativo no instante do envio, pelo contato
+      // (defesa em profundidade — se ele revogou entre a criação e o disparo).
+      const aindaConsentido = envio.contato_id
+        ? await supabase.from("contato_whatsapp_consentimento" as any)
+            .select("id").eq("contato_id", envio.contato_id).eq("status", "opt_in")
+            .in("categoria", campanha.categorias_alvo).limit(1)
+        : { data: [] }
 
-      if (!aindaOptIn || aindaOptIn.length === 0) {
+      if (!aindaConsentido.data || aindaConsentido.data.length === 0) {
         await supabase.from("whatsapp_campanha_envios" as any).update({ status: "bloqueado_optout", atualizado_em: new Date().toISOString() }).eq("id", envio.id)
         bloqueados++
       } else {
@@ -585,7 +399,7 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                       <Badge variant="outline" className="ml-1.5 text-[10px]">{c.categoria}</Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {(c.categorias_alvo || []).map((cat) => CATEGORIA_LABEL[cat]).join(", ") || "—"}
+                      {(c.categorias_alvo || []).map((cat) => CATEGORIA_CONSENTIMENTO_LABEL[cat]).join(", ") || "—"}
                     </TableCell>
                     <TableCell><Badge variant={c.status === "concluida" ? "default" : "secondary"}>{STATUS_CAMPANHA_LABEL[c.status]}</Badge></TableCell>
                     <TableCell className="min-w-[140px]">
@@ -636,10 +450,10 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
             <div>
               <Label className="text-xs">Quem deve receber</Label>
               <div className="space-y-1.5 mt-1">
-                {CATEGORIAS.map((c) => (
+                {CATEGORIAS_CONSENTIMENTO.map((c) => (
                   <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
                     <Checkbox checked={form.categorias.has(c)} onCheckedChange={() => toggleCategoria(c)} />
-                    {CATEGORIA_LABEL[c]}
+                    {CATEGORIA_CONSENTIMENTO_LABEL[c]}
                   </label>
                 ))}
               </div>
@@ -648,6 +462,9 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                   {contagemElegiveis === null ? "Calculando…" : `${contagemElegiveis} contato(s) elegível(is) agora`}
                 </p>
               )}
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Consentimento é marcado no cadastro de cada contato, em Contatos — não dá pra adicionar alguém aqui direto.
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -690,7 +507,7 @@ function CampanhaDetalhe({ campanhaId }: { campanhaId: string }) {
             <div className="space-y-1">
               {envios.map((e) => (
                 <div key={e.id} className="flex items-center justify-between text-xs py-0.5">
-                  <span className="font-mono">{e.telefone}</span>
+                  <span>{e.nome || <span className="font-mono">{e.telefone}</span>}</span>
                   <span className="flex items-center gap-2">
                     {e.erro && <span className="text-destructive truncate max-w-[240px]">{e.erro}</span>}
                     <Badge variant={STATUS_TONE[e.status]} className="text-[10px]">{e.status}</Badge>

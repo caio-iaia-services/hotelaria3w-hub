@@ -6,10 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, X, Plus, Search, Building2, Loader2, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Pencil, X, Plus, Search, Building2, Loader2, Trash2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
 import type { Contato } from "@/lib/types";
+import {
+  CATEGORIAS_CONSENTIMENTO, CATEGORIA_CONSENTIMENTO_LABEL, ORIGEM_CONSENTIMENTO_LABEL,
+  type CategoriaConsentimento, type OrigemConsentimento,
+} from "@/lib/whatsappConsentimento";
 
 interface ClienteVinculo {
   id: string;
@@ -53,6 +59,7 @@ function emailValido(email: string) {
 }
 
 export default function ContatoModal({ open, onClose, contato, clientePreVinculado, onSaved }: Props) {
+  const { perfil } = useAuth();
   const editing = !!contato;
   const [form, setForm] = useState<Partial<Contato>>({
     nome: "", email: "", status: "ativo", qualificacao: "cadastrado",
@@ -65,20 +72,55 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
   const [buscando, setBuscando] = useState(false);
   const [mostrarBusca, setMostrarBusca] = useState(false);
 
+  // Consentimento de marketing WhatsApp — um registro por categoria, ver
+  // contato_whatsapp_consentimento. "Originais" guarda o que já estava
+  // opt_in ao abrir, pra só pedir confirmação quando uma categoria NOVA
+  // está sendo concedida (não incomoda quem só edita telefone/cargo etc.).
+  const [consentimentos, setConsentimentos] = useState<Set<CategoriaConsentimento>>(new Set());
+  const [consentimentosOriginais, setConsentimentosOriginais] = useState<Set<CategoriaConsentimento>>(new Set());
+  const [origemConsentimento, setOrigemConsentimento] = useState<OrigemConsentimento>("cadastro_manual");
+  const [confirmoConsentimento, setConfirmoConsentimento] = useState(false);
+
   useEffect(() => {
     if (open) {
       if (contato) {
         setForm({ ...contato });
         carregarClientes(contato.id);
+        carregarConsentimento(contato.id);
       } else {
         setForm({ nome: "", email: "", status: "ativo", qualificacao: "cadastrado" });
         setClientes(clientePreVinculado ? [clientePreVinculado] : []);
+        setConsentimentos(new Set());
+        setConsentimentosOriginais(new Set());
       }
       setBusca("");
       setResultados([]);
       setMostrarBusca(false);
+      setOrigemConsentimento("cadastro_manual");
+      setConfirmoConsentimento(false);
     }
   }, [open, contato, clientePreVinculado]);
+
+  async function carregarConsentimento(contatoId: string) {
+    const { data } = await supabase
+      .from("contato_whatsapp_consentimento" as any)
+      .select("categoria")
+      .eq("contato_id", contatoId)
+      .eq("status", "opt_in");
+    const set = new Set((data as unknown as { categoria: CategoriaConsentimento }[] || []).map((r) => r.categoria));
+    setConsentimentos(set);
+    setConsentimentosOriginais(set);
+  }
+
+  function toggleConsentimento(c: CategoriaConsentimento) {
+    setConsentimentos((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c); else next.add(c);
+      return next;
+    });
+  }
+
+  const concedendoCategoriaNova = [...consentimentos].some((c) => !consentimentosOriginais.has(c));
 
   async function carregarClientes(contatoId: string) {
     const { data } = await supabase
@@ -124,6 +166,14 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
   async function handleSave() {
     if (!form.email?.trim()) { toast({ title: "E-mail é obrigatório", variant: "destructive" }); return; }
     if (!emailValido(form.email)) { toast({ title: "E-mail inválido", description: "Use um formato como nome@dominio.com ou nome@dominio.com.br", variant: "destructive" }); return; }
+    if (consentimentos.size > 0 && !form.whatsapp?.trim()) {
+      toast({ title: "Informe o WhatsApp", description: "Não dá pra marcar consentimento sem um número de WhatsApp cadastrado", variant: "destructive" });
+      return;
+    }
+    if (concedendoCategoriaNova && !confirmoConsentimento) {
+      toast({ title: "Confirme o consentimento", description: "Marque a caixa confirmando que este contato deu consentimento explícito antes de salvar", variant: "destructive" });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -159,6 +209,23 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           await supabase.from("contato_cliente").insert(
             clientes.map(c => ({ contato_id: contatoId, cliente_id: c.id }))
           );
+        }
+
+        // Sincroniza consentimento WhatsApp: só grava o que MUDOU (concedido
+        // ou revogado) em relação ao que já estava — não reescreve categorias
+        // intocadas, preserva o histórico/origem original delas.
+        for (const c of CATEGORIAS_CONSENTIMENTO) {
+          const estavaAtivo = consentimentosOriginais.has(c);
+          const estaAtivo = consentimentos.has(c);
+          if (estaAtivo && !estavaAtivo) {
+            await supabase.from("contato_whatsapp_consentimento" as any).upsert({
+              contato_id: contatoId, categoria: c, status: "opt_in",
+              origem: origemConsentimento, registrado_por: perfil?.id,
+            }, { onConflict: "contato_id,categoria" });
+          } else if (!estaAtivo && estavaAtivo) {
+            await supabase.from("contato_whatsapp_consentimento" as any)
+              .update({ status: "opt_out" }).eq("contato_id", contatoId).eq("categoria", c);
+          }
         }
       }
       toast({ title: editing ? "Contato atualizado" : "Contato criado" });
@@ -277,6 +344,44 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
               <Label>Observações</Label>
               <Textarea rows={2} value={form.observacoes || ""} onChange={e => set("observacoes", e.target.value)} placeholder="Anotações internas..." />
             </div>
+          </div>
+
+          {/* Consentimento de marketing WhatsApp */}
+          <div className="border rounded-lg p-3 space-y-2.5">
+            <p className="text-sm font-medium flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-muted-foreground" />
+              Consentimento de marketing (WhatsApp)
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Só contatos marcados aqui ficam disponíveis pra campanha em Marketing → WhatsApp — é a categoria que a pessoa autorizou receber, não o cadastro em si.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {CATEGORIAS_CONSENTIMENTO.map((c) => (
+                <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={consentimentos.has(c)} onCheckedChange={() => toggleConsentimento(c)} />
+                  {CATEGORIA_CONSENTIMENTO_LABEL[c]}
+                </label>
+              ))}
+            </div>
+            {concedendoCategoriaNova && (
+              <div className="space-y-2 rounded-md bg-muted/40 p-2.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Origem do consentimento</Label>
+                  <Select value={origemConsentimento} onValueChange={(v) => setOrigemConsentimento(v as OrigemConsentimento)}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card z-50">
+                      {(Object.keys(ORIGEM_CONSENTIMENTO_LABEL) as OrigemConsentimento[]).map((o) => (
+                        <SelectItem key={o} value={o}>{ORIGEM_CONSENTIMENTO_LABEL[o]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox checked={confirmoConsentimento} onCheckedChange={(v) => setConfirmoConsentimento(!!v)} className="mt-0.5" />
+                  Confirmo que este contato deu consentimento explícito pra receber mensagens de marketing da 3W por WhatsApp.
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Empresas vinculadas */}
