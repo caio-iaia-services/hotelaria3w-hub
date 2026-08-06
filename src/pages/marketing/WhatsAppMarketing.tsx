@@ -8,9 +8,10 @@ import {
   CATEGORIAS_CONSENTIMENTO, CATEGORIA_CONSENTIMENTO_LABEL, normalizarTelefone,
   type CategoriaConsentimento,
 } from "@/lib/whatsappConsentimento"
+import { STATUS_CONTATO_LABEL, QUALIFICACAO_OPTIONS, type StatusContato } from "@/lib/contatosOpcoes"
 import {
   Plus, Send, Users, ChevronDown, ChevronRight,
-  Loader2, AlertCircle, Megaphone,
+  Loader2, AlertCircle, Megaphone, SlidersHorizontal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,6 +86,65 @@ const STATUS_CAMPANHA_LABEL: Record<StatusCampanha, string> = {
 }
 
 const DELAY_ENTRE_ENVIOS_MS = 350 // pacing conservador — bem abaixo do throughput padrão da Meta (80 msg/s)
+
+export interface FiltrosCampanha {
+  status: Set<StatusContato>
+  qualificacao: Set<string>
+  segmento: Set<string>
+  estado: Set<string>
+  cidade: string
+}
+
+export function filtrosVazios(): FiltrosCampanha {
+  return { status: new Set(), qualificacao: new Set(), segmento: new Set(), estado: new Set(), cidade: "" }
+}
+
+/**
+ * Busca contatos elegíveis pra campanha: consentimento ativo nas categorias
+ * escolhidas + regras fixas (nunca status='bloqueado', precisa ter
+ * WhatsApp) + filtros opcionais de status/qualificação (direto em
+ * `contatos`) e segmento/estado/cidade (via empresa vinculada em
+ * `contato_cliente` → `clientes`). Reaproveitada tanto pra contagem ao
+ * vivo no formulário quanto pra montar a campanha de verdade — mesma
+ * lógica, sem duplicar.
+ */
+async function buscarContatosElegiveis(
+  categorias: CategoriaConsentimento[],
+  filtros: FiltrosCampanha,
+): Promise<{ id: string; nome: string | null; telefone: string }[]> {
+  if (categorias.length === 0) return []
+
+  const { data: consentData } = await supabase.from("contato_whatsapp_consentimento" as any)
+    .select("contato_id").eq("status", "opt_in").in("categoria", categorias)
+  const idsConsentidos = Array.from(new Set((consentData as unknown as { contato_id: string }[] || []).map((r) => r.contato_id)))
+  if (idsConsentidos.length === 0) return []
+
+  const temFiltroEmpresa = filtros.segmento.size > 0 || filtros.estado.size > 0 || !!filtros.cidade.trim()
+  let idsFinais = idsConsentidos
+
+  if (temFiltroEmpresa) {
+    let q = supabase.from("contato_cliente").select("contato_id, clientes!inner(segmento, estado, cidade)")
+    if (filtros.segmento.size > 0) q = q.overlaps("clientes.segmento", Array.from(filtros.segmento))
+    if (filtros.estado.size > 0) q = q.in("clientes.estado", Array.from(filtros.estado))
+    if (filtros.cidade.trim()) q = q.ilike("clientes.cidade", `%${filtros.cidade.trim()}%`)
+    const { data: viaEmpresa } = await q
+    const idsViaEmpresa = new Set((viaEmpresa as unknown as { contato_id: string }[] || []).map((r) => r.contato_id))
+    idsFinais = idsConsentidos.filter((id) => idsViaEmpresa.has(id))
+    if (idsFinais.length === 0) return []
+  }
+
+  let query = supabase.from("contatos").select("id, nome, whatsapp")
+    .in("id", idsFinais)
+    .neq("status", "bloqueado") // regra fixa — nunca selecionável, independente do filtro escolhido
+    .not("whatsapp", "is", null)
+  if (filtros.status.size > 0) query = query.in("status", Array.from(filtros.status))
+  if (filtros.qualificacao.size > 0) query = query.in("qualificacao", Array.from(filtros.qualificacao))
+
+  const { data } = await query
+  return ((data as unknown as { id: string; nome: string | null; whatsapp: string }[]) || [])
+    .filter((c) => c.whatsapp)
+    .map((c) => ({ id: c.id, nome: c.nome, telefone: normalizarTelefone(c.whatsapp) }))
+}
 
 export default function WhatsAppMarketing() {
   const { perfil } = useAuth()
@@ -201,6 +261,10 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
   const [dialogAberto, setDialogAberto] = useState(false)
   const [criando, setCriando] = useState(false)
   const [form, setForm] = useState({ nome: "", template: "", categorias: new Set<CategoriaConsentimento>() })
+  const [filtros, setFiltros] = useState<FiltrosCampanha>(filtrosVazios())
+  const [mostrarFiltros, setMostrarFiltros] = useState(false)
+  const [opcoesSegmento, setOpcoesSegmento] = useState<string[]>([])
+  const [opcoesEstado, setOpcoesEstado] = useState<string[]>([])
   const [contagemElegiveis, setContagemElegiveis] = useState<number | null>(null)
   const [expandida, setExpandida] = useState<string | null>(null)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
@@ -208,27 +272,45 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
 
   const templateEscolhido = templates.find((t) => t.name === form.template)
 
-  // Recalcula quantos contatos elegíveis existem toda vez que as categorias
-  // mudam — dedupe por contato_id (um contato pode ter opt-in em mais de
-  // uma categoria marcada aqui).
+  // Opções de Segmento/Estado vêm de funções no banco (não da tabela
+  // `clientes` direto — ela tem ~236 mil linhas, ver nota na migration).
+  useEffect(() => {
+    if (!dialogAberto) return
+    ;(async () => {
+      const [{ data: segs }, { data: ests }] = await Promise.all([
+        supabase.rpc("listar_segmentos_clientes" as any),
+        supabase.rpc("listar_estados_clientes" as any),
+      ])
+      setOpcoesSegmento((segs as unknown as string[]) || [])
+      setOpcoesEstado((ests as unknown as string[]) || [])
+    })()
+  }, [dialogAberto])
+
+  // Recalcula quantos contatos elegíveis existem toda vez que categoria ou
+  // algum filtro muda — mesma função usada na criação de verdade.
   useEffect(() => {
     if (!dialogAberto || form.categorias.size === 0) { setContagemElegiveis(null); return }
     let cancelado = false
     ;(async () => {
-      const { data } = await supabase.from("contato_whatsapp_consentimento" as any)
-        .select("contato_id").eq("status", "opt_in").in("categoria", Array.from(form.categorias))
-      if (cancelado) return
-      const distintos = new Set((data as unknown as { contato_id: string }[] || []).map((r) => r.contato_id))
-      setContagemElegiveis(distintos.size)
+      const lista = await buscarContatosElegiveis(Array.from(form.categorias), filtros)
+      if (!cancelado) setContagemElegiveis(lista.length)
     })()
     return () => { cancelado = true }
-  }, [dialogAberto, form.categorias])
+  }, [dialogAberto, form.categorias, filtros])
 
   function toggleCategoria(c: CategoriaConsentimento) {
     setForm((f) => {
       const next = new Set(f.categorias)
       if (next.has(c)) next.delete(c); else next.add(c)
       return { ...f, categorias: next }
+    })
+  }
+
+  function toggleFiltroSet<K extends "status" | "qualificacao" | "segmento" | "estado">(chave: K, valor: string) {
+    setFiltros((f) => {
+      const next = new Set(f[chave] as Set<string>)
+      if (next.has(valor)) next.delete(valor); else next.add(valor)
+      return { ...f, [chave]: next }
     })
   }
 
@@ -250,23 +332,11 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
       return toast.error(`Erro ao criar campanha: ${error?.message}`)
     }
 
-    const { data: elegiveisRaw } = await supabase.from("contato_whatsapp_consentimento" as any)
-      .select("contato_id, contatos(nome, whatsapp)")
-      .eq("status", "opt_in").in("categoria", categoriasArr)
-
-    const vistos = new Set<string>()
-    const lista: { contato_id: string; telefone: string; nome: string | null }[] = []
-    for (const row of (elegiveisRaw as unknown as { contato_id: string; contatos: { nome: string | null; whatsapp: string | null } | null }[]) || []) {
-      if (vistos.has(row.contato_id)) continue
-      const tel = row.contatos?.whatsapp
-      if (!tel) continue // contato sem WhatsApp cadastrado — não dá pra enviar
-      vistos.add(row.contato_id)
-      lista.push({ contato_id: row.contato_id, telefone: normalizarTelefone(tel), nome: row.contatos?.nome ?? null })
-    }
+    const lista = await buscarContatosElegiveis(categoriasArr, filtros)
 
     if (lista.length > 0) {
       await supabase.from("whatsapp_campanha_envios" as any).insert(
-        lista.map((m) => ({ campanha_id: (campanha as any).id, contato_id: m.contato_id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
+        lista.map((m) => ({ campanha_id: (campanha as any).id, contato_id: m.id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
       )
     }
     await supabase.from("whatsapp_campanhas" as any).update({
@@ -276,9 +346,11 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
     setCriando(false)
     toast.success(lista.length > 0
       ? `Campanha pronta com ${lista.length} destinatário(s)`
-      : "Campanha criada, mas nenhum contato elegível nessas categorias ainda")
+      : "Campanha criada, mas nenhum contato elegível com esses filtros ainda")
     setDialogAberto(false)
     setForm({ nome: "", template: "", categorias: new Set() })
+    setFiltros(filtrosVazios())
+    setMostrarFiltros(false)
     onRecarregar()
   }
 
@@ -426,7 +498,7 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
       </div>
 
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova campanha</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
@@ -457,14 +529,98 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                   </label>
                 ))}
               </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Consentimento é marcado no cadastro de cada contato, em Contatos — não dá pra adicionar alguém aqui direto.
+              </p>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setMostrarFiltros((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <SlidersHorizontal size={12} />
+                Filtros adicionais (opcional)
+                {mostrarFiltros ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              </button>
+
+              {mostrarFiltros && (
+                <div className="mt-2 space-y-3 rounded-lg border border-border p-3">
+                  <div>
+                    <Label className="text-xs">Status do contato</Label>
+                    <div className="flex gap-4 mt-1">
+                      {(Object.keys(STATUS_CONTATO_LABEL) as StatusContato[]).map((s) => (
+                        <label key={s} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                          <Checkbox checked={filtros.status.has(s)} onCheckedChange={() => toggleFiltroSet("status", s)} />
+                          {STATUS_CONTATO_LABEL[s]}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Qualificação</Label>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">
+                      {QUALIFICACAO_OPTIONS.map((q) => (
+                        <label key={q.value} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                          <Checkbox checked={filtros.qualificacao.has(q.value)} onCheckedChange={() => toggleFiltroSet("qualificacao", q.value)} />
+                          {q.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {opcoesSegmento.length > 0 && (
+                    <div>
+                      <Label className="text-xs">Segmento da empresa</Label>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                        {opcoesSegmento.map((s) => (
+                          <label key={s} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <Checkbox checked={filtros.segmento.has(s)} onCheckedChange={() => toggleFiltroSet("segmento", s)} />
+                            {s}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {opcoesEstado.length > 0 && (
+                      <div>
+                        <Label className="text-xs">Estado (UF)</Label>
+                        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-h-24 overflow-y-auto">
+                          {opcoesEstado.map((uf) => (
+                            <label key={uf} className="flex items-center gap-1 text-xs cursor-pointer">
+                              <Checkbox checked={filtros.estado.has(uf)} onCheckedChange={() => toggleFiltroSet("estado", uf)} />
+                              {uf}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-xs">Cidade</Label>
+                      <Input
+                        className="h-8 text-sm"
+                        value={filtros.cidade}
+                        onChange={(e) => setFiltros((f) => ({ ...f, cidade: e.target.value }))}
+                        placeholder="Ex.: São Paulo"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground">
+                    Segmento/Estado/Cidade vêm da empresa vinculada ao contato — um contato ligado a mais de uma empresa entra se qualquer uma delas bater com o filtro. Contatos com status "Bloqueado" nunca entram, mesmo sem marcar nada aqui.
+                  </p>
+                </div>
+              )}
+
               {form.categorias.size > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">
                   {contagemElegiveis === null ? "Calculando…" : `${contagemElegiveis} contato(s) elegível(is) agora`}
                 </p>
               )}
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Consentimento é marcado no cadastro de cada contato, em Contatos — não dá pra adicionar alguém aqui direto.
-              </p>
             </div>
           </div>
           <DialogFooter>
