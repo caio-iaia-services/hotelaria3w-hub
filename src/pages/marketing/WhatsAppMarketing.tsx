@@ -5,9 +5,8 @@ import { useAuth } from "@/components/AuthProvider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
-  Plus, RefreshCw, Send, Users, ShieldCheck, ShieldX, ListChecks,
-  ChevronDown, ChevronRight, Trash2, UserPlus, UserMinus, Loader2,
-  AlertCircle, Megaphone, PauseCircle,
+  Plus, Send, ShieldCheck, ShieldX, ChevronDown, ChevronRight,
+  Loader2, AlertCircle, Megaphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,14 +46,6 @@ interface OptIn {
   registrado_em: string
 }
 
-interface Lista {
-  id: string
-  nome: string
-  descricao: string | null
-  created_at: string
-  total?: number
-}
-
 interface Template {
   name: string
   language: string
@@ -68,7 +59,7 @@ interface Campanha {
   template_nome: string
   template_idioma: string
   categoria: "marketing" | "utility"
-  lista_id: string | null
+  categorias_alvo: Categoria[]
   status: StatusCampanha
   total_destinatarios: number
   total_enviados: number
@@ -88,6 +79,7 @@ interface Envio {
   enviado_em: string | null
 }
 
+const CATEGORIAS: Categoria[] = ["promocoes", "novidades", "avisos"]
 const CATEGORIA_LABEL: Record<Categoria, string> = {
   promocoes: "Promoções", novidades: "Novidades", avisos: "Avisos",
 }
@@ -109,6 +101,12 @@ function normalizarTelefone(raw: string): string {
   return digits.startsWith("55") ? digits : `55${digits}`
 }
 
+/** Aceita telefones separados por linha ou vírgula, normaliza e remove duplicados/vazios. */
+function extrairTelefones(raw: string): string[] {
+  const brutos = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
+  return Array.from(new Set(brutos.map(normalizarTelefone)))
+}
+
 const DELAY_ENTRE_ENVIOS_MS = 350 // pacing conservador — bem abaixo do throughput padrão da Meta (80 msg/s)
 
 export default function WhatsAppMarketing() {
@@ -116,7 +114,6 @@ export default function WhatsAppMarketing() {
   const [aba, setAba] = useState("optin")
 
   const [optins, setOptins] = useState<OptIn[]>([])
-  const [listas, setListas] = useState<Lista[]>([])
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,18 +121,11 @@ export default function WhatsAppMarketing() {
 
   const carregar = useCallback(async () => {
     setLoading(true)
-    const [{ data: optinData }, { data: listaData }, { data: campanhaData }, { data: itensData }] = await Promise.all([
+    const [{ data: optinData }, { data: campanhaData }] = await Promise.all([
       supabase.from("whatsapp_opt_in" as any).select("*").order("registrado_em", { ascending: false }),
-      supabase.from("whatsapp_listas" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("whatsapp_campanhas" as any).select("*").order("created_at", { ascending: false }),
-      supabase.from("whatsapp_lista_contatos" as any).select("lista_id"),
     ])
     setOptins((optinData as unknown as OptIn[]) || [])
-    const contagem: Record<string, number> = {}
-    for (const i of (itensData as unknown as { lista_id: string }[]) || []) {
-      contagem[i.lista_id] = (contagem[i.lista_id] || 0) + 1
-    }
-    setListas(((listaData as unknown as Lista[]) || []).map((l) => ({ ...l, total: contagem[l.id] || 0 })))
     setCampanhas((campanhaData as unknown as Campanha[]) || [])
     setLoading(false)
   }, [])
@@ -160,10 +150,9 @@ export default function WhatsAppMarketing() {
   return (
     <div className="p-5 space-y-5">
       {/* ── Stats + aviso de fundação ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <StatCard icon={ShieldCheck} label="Opt-in ativos" value={optinsAtivos} tone="good" />
         <StatCard icon={ShieldX} label="Opt-out" value={optinsOut} tone="muted" />
-        <StatCard icon={ListChecks} label="Listas" value={listas.length} tone="muted" />
         <StatCard icon={Megaphone} label="Campanhas" value={campanhas.length} tone="muted" />
       </div>
 
@@ -173,8 +162,8 @@ export default function WhatsAppMarketing() {
           <div>
             <p className="font-semibold">Nenhum contato com consentimento registrado ainda.</p>
             <p className="text-xs mt-0.5 opacity-90">
-              Por política da Meta, ninguém pode entrar numa lista de campanha sem opt-in explícito.
-              Registre consentimento na aba "Consentimento" antes de criar listas e campanhas.
+              Por política da Meta, ninguém pode entrar numa campanha sem opt-in explícito.
+              Registre consentimento abaixo antes de criar uma campanha.
             </p>
           </div>
         </div>
@@ -183,7 +172,6 @@ export default function WhatsAppMarketing() {
       <Tabs value={aba} onValueChange={setAba}>
         <TabsList>
           <TabsTrigger value="optin" className="gap-1.5"><ShieldCheck size={14} /> Consentimento</TabsTrigger>
-          <TabsTrigger value="listas" className="gap-1.5"><ListChecks size={14} /> Listas</TabsTrigger>
           <TabsTrigger value="campanhas" className="gap-1.5"><Megaphone size={14} /> Campanhas</TabsTrigger>
         </TabsList>
 
@@ -191,20 +179,9 @@ export default function WhatsAppMarketing() {
           <AbaOptIn optins={optins} loading={loading} perfilId={perfil?.id} onRecarregar={carregar} />
         </TabsContent>
 
-        <TabsContent value="listas" className="mt-4">
-          <AbaListas
-            listas={listas}
-            optins={optins.filter((o) => o.status === "opt_in")}
-            loading={loading}
-            perfilId={perfil?.id}
-            onRecarregar={carregar}
-          />
-        </TabsContent>
-
         <TabsContent value="campanhas" className="mt-4">
           <AbaCampanhas
             campanhas={campanhas}
-            listas={listas}
             templates={templates}
             erroTemplates={erroTemplates}
             loading={loading}
@@ -236,35 +213,54 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: React.ElementType;
 }
 
 // ─── Aba Consentimento ──────────────────────────────────────────────────────────
+// Formulário único: aceita 1 telefone ou vários colados de uma vez (um por
+// linha ou separados por vírgula) — não existe mais um modo "em lote" à
+// parte, é o mesmo campo pros dois casos.
 function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
   optins: OptIn[]; loading: boolean; perfilId?: string; onRecarregar: () => void
 }) {
   const [dialogAberto, setDialogAberto] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [form, setForm] = useState({
-    telefone: "", nome: "", categoria: "promocoes" as Categoria,
+    telefones: "", nome: "", categoria: "promocoes" as Categoria,
     origem: "confirmacao_atendimento" as Origem, observacao: "", confirmo: false,
   })
 
   async function registrar() {
-    if (!form.telefone.trim()) return toast.error("Informe o telefone")
+    const telefones = extrairTelefones(form.telefones)
+    if (telefones.length === 0) return toast.error("Cole ao menos um telefone")
     if (!form.confirmo) return toast.error("Confirme que o consentimento foi de fato coletado")
     setSalvando(true)
-    const telefone = normalizarTelefone(form.telefone)
-    const { error } = await supabase.from("whatsapp_opt_in" as any).insert({
-      telefone, nome: form.nome || null, categoria: form.categoria,
-      status: "opt_in", origem: form.origem, observacao: form.observacao || null,
-      registrado_por: perfilId,
-    })
-    setSalvando(false)
-    if (error) {
-      if (error.code === "23505") toast.error("Este telefone já tem opt-in registrado nessa categoria")
-      else toast.error(`Erro ao registrar: ${error.message}`)
+
+    const { data: existentesData } = await supabase.from("whatsapp_opt_in" as any)
+      .select("telefone").eq("categoria", form.categoria).in("telefone", telefones)
+    const jaExistem = new Set((existentesData as unknown as { telefone: string }[] || []).map((e) => e.telefone))
+    const novos = telefones.filter((t) => !jaExistem.has(t))
+
+    if (novos.length === 0) {
+      setSalvando(false)
+      toast.info("Todos esses números já tinham opt-in registrado nessa categoria")
       return
     }
-    toast.success("Consentimento registrado")
+
+    const { error } = await supabase.from("whatsapp_opt_in" as any).insert(
+      novos.map((telefone) => ({
+        telefone,
+        nome: telefones.length === 1 ? (form.nome || null) : null,
+        categoria: form.categoria, status: "opt_in", origem: form.origem,
+        observacao: form.observacao || null, registrado_por: perfilId,
+      })),
+    )
+    setSalvando(false)
+    if (error) return toast.error(`Erro ao registrar: ${error.message}`)
+
+    toast.success(
+      jaExistem.size > 0
+        ? `${novos.length} registrado(s), ${jaExistem.size} já existiam nessa categoria`
+        : `${novos.length} registrado(s)`,
+    )
     setDialogAberto(false)
-    setForm({ telefone: "", nome: "", categoria: "promocoes", origem: "confirmacao_atendimento", observacao: "", confirmo: false })
+    setForm({ telefones: "", nome: "", categoria: "promocoes", origem: "confirmacao_atendimento", observacao: "", confirmo: false })
     onRecarregar()
   }
 
@@ -275,6 +271,8 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
     toast.success(novo === "opt_out" ? "Marcado como opt-out" : "Reativado como opt-in")
     onRecarregar()
   }
+
+  const multiplos = extrairTelefones(form.telefones).length > 1
 
   return (
     <div className="space-y-3">
@@ -331,12 +329,17 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
           <DialogHeader><DialogTitle>Registrar consentimento</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Telefone (com DDD)</Label>
-              <Input value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(11) 99999-9999" />
+              <Label className="text-xs">Telefone(s)</Label>
+              <Textarea
+                rows={3}
+                value={form.telefones}
+                onChange={(e) => setForm((f) => ({ ...f, telefones: e.target.value }))}
+                placeholder={"Um por linha ou separados por vírgula\n(11) 99999-9999\n(11) 98888-8888"}
+              />
             </div>
             <div>
-              <Label className="text-xs">Nome</Label>
-              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} />
+              <Label className="text-xs">Nome {multiplos && <span className="text-muted-foreground font-normal">(só é salvo se for 1 telefone só)</span>}</Label>
+              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} disabled={multiplos} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -344,7 +347,7 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
                 <Select value={form.categoria} onValueChange={(v) => setForm((f) => ({ ...f, categoria: v as Categoria }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(CATEGORIA_LABEL) as Categoria[]).map((c) => (
+                    {CATEGORIAS.map((c) => (
                       <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
                     ))}
                   </SelectContent>
@@ -364,11 +367,11 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
             </div>
             <div>
               <Label className="text-xs">Observação (opcional)</Label>
-              <Textarea rows={2} value={form.observacao} onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))} placeholder="Ex.: respondeu 'sim' no template de confirmação em 05/08" />
+              <Textarea rows={2} value={form.observacao} onChange={(e) => setForm((f) => ({ ...f, observacao: e.target.value }))} placeholder="Ex.: respondeu ao anúncio de captação em 05/08" />
             </div>
             <label className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
               <Checkbox checked={form.confirmo} onCheckedChange={(v) => setForm((f) => ({ ...f, confirmo: !!v }))} className="mt-0.5" />
-              Confirmo que esta pessoa deu consentimento explícito pra receber mensagens de marketing da 3W — não é um número importado sem confirmação.
+              Confirmo que {multiplos ? "todos esses números deram" : "esta pessoa deu"} consentimento explícito pra receber mensagens de marketing da 3W.
             </label>
           </div>
           <DialogFooter>
@@ -381,216 +384,55 @@ function AbaOptIn({ optins, loading, perfilId, onRecarregar }: {
   )
 }
 
-// ─── Aba Listas ─────────────────────────────────────────────────────────────
-function AbaListas({ listas, optins, loading, perfilId, onRecarregar }: {
-  listas: Lista[]; optins: OptIn[]; loading: boolean; perfilId?: string; onRecarregar: () => void
-}) {
-  const [dialogNovaLista, setDialogNovaLista] = useState(false)
-  const [nomeLista, setNomeLista] = useState("")
-  const [descLista, setDescLista] = useState("")
-  const [listaGerenciando, setListaGerenciando] = useState<Lista | null>(null)
-
-  async function criarLista() {
-    if (!nomeLista.trim()) return toast.error("Dê um nome pra lista")
-    const { error } = await supabase.from("whatsapp_listas" as any).insert({
-      nome: nomeLista, descricao: descLista || null, criado_por: perfilId,
-    })
-    if (error) return toast.error(`Erro: ${error.message}`)
-    toast.success("Lista criada")
-    setDialogNovaLista(false)
-    setNomeLista(""); setDescLista("")
-    onRecarregar()
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Listas fixas montadas a partir de contatos com opt-in ativo.</p>
-        <Button size="sm" className="gap-1.5" onClick={() => setDialogNovaLista(true)}><Plus size={14} /> Nova lista</Button>
-      </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead className="text-right">Contatos</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
-            ) : listas.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma lista ainda.</TableCell></TableRow>
-            ) : listas.map((l) => (
-              <TableRow key={l.id}>
-                <TableCell className="font-medium">{l.nome}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">{l.descricao || "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{l.total ?? 0}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setListaGerenciando(l)}>Gerenciar</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={dialogNovaLista} onOpenChange={setDialogNovaLista}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Nova lista</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Nome</Label>
-              <Input value={nomeLista} onChange={(e) => setNomeLista(e.target.value)} placeholder="Ex.: Clientes hotelaria — SP" />
-            </div>
-            <div>
-              <Label className="text-xs">Descrição (opcional)</Label>
-              <Textarea rows={2} value={descLista} onChange={(e) => setDescLista(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogNovaLista(false)}>Cancelar</Button>
-            <Button onClick={criarLista}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {listaGerenciando && (
-        <GerenciarListaDialog
-          lista={listaGerenciando}
-          optinsDisponiveis={optins}
-          onClose={() => setListaGerenciando(null)}
-          onMudou={onRecarregar}
-        />
-      )}
-    </div>
-  )
-}
-
-function GerenciarListaDialog({ lista, optinsDisponiveis, onClose, onMudou }: {
-  lista: Lista; optinsDisponiveis: OptIn[]; onClose: () => void; onMudou: () => void
-}) {
-  const [membros, setMembros] = useState<{ id: string; telefone: string; nome: string | null }[]>([])
-  const [loadingMembros, setLoadingMembros] = useState(true)
-  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
-
-  const carregarMembros = useCallback(async () => {
-    setLoadingMembros(true)
-    const { data } = await supabase.from("whatsapp_lista_contatos" as any)
-      .select("id, telefone, nome").eq("lista_id", lista.id)
-    setMembros((data as any) || [])
-    setLoadingMembros(false)
-  }, [lista.id])
-
-  useEffect(() => { carregarMembros() }, [carregarMembros])
-
-  const telefonesNaLista = new Set(membros.map((m) => m.telefone))
-  const disponiveisParaAdicionar = optinsDisponiveis.filter((o) => !telefonesNaLista.has(o.telefone))
-
-  async function adicionarSelecionados() {
-    const itens = optinsDisponiveis
-      .filter((o) => selecionados.has(o.telefone))
-      .map((o) => ({ lista_id: lista.id, telefone: o.telefone, nome: o.nome }))
-    if (itens.length === 0) return
-    const { error } = await supabase.from("whatsapp_lista_contatos" as any).insert(itens)
-    if (error) {
-      toast.error(`Erro ao adicionar (verifique se todos têm opt-in ativo): ${error.message}`)
-      return
-    }
-    toast.success(`${itens.length} contato(s) adicionado(s)`)
-    setSelecionados(new Set())
-    carregarMembros()
-    onMudou()
-  }
-
-  async function remover(id: string) {
-    const { error } = await supabase.from("whatsapp_lista_contatos" as any).delete().eq("id", id)
-    if (error) return toast.error("Erro ao remover")
-    carregarMembros()
-    onMudou()
-  }
-
-  return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader><DialogTitle>Gerenciar lista — {lista.nome}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-          <div className="flex flex-col min-h-0">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Disponíveis (opt-in ativo, fora da lista)
-            </p>
-            <div className="flex-1 overflow-y-auto border border-border rounded-lg divide-y divide-border/60">
-              {disponiveisParaAdicionar.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-3">Nenhum contato disponível.</p>
-              ) : disponiveisParaAdicionar.map((o) => (
-                <label key={o.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/40">
-                  <Checkbox
-                    checked={selecionados.has(o.telefone)}
-                    onCheckedChange={(v) => setSelecionados((prev) => {
-                      const next = new Set(prev)
-                      if (v) next.add(o.telefone); else next.delete(o.telefone)
-                      return next
-                    })}
-                  />
-                  <span className="truncate">{o.nome || o.telefone} <span className="text-muted-foreground text-xs font-mono">{o.telefone}</span></span>
-                </label>
-              ))}
-            </div>
-            <Button size="sm" className="mt-2 gap-1.5" disabled={selecionados.size === 0} onClick={adicionarSelecionados}>
-              <UserPlus size={14} /> Adicionar {selecionados.size > 0 ? `(${selecionados.size})` : ""}
-            </Button>
-          </div>
-          <div className="flex flex-col min-h-0">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Membros da lista ({membros.length})
-            </p>
-            <div className="flex-1 overflow-y-auto border border-border rounded-lg divide-y divide-border/60">
-              {loadingMembros ? (
-                <p className="text-xs text-muted-foreground p-3">Carregando…</p>
-              ) : membros.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-3">Vazia.</p>
-              ) : membros.map((m) => (
-                <div key={m.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <span className="truncate">{m.nome || m.telefone} <span className="text-muted-foreground text-xs font-mono">{m.telefone}</span></span>
-                  <Button variant="ghost" size="sm" onClick={() => remover(m.id)}><UserMinus size={14} /></Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <DialogFooter><Button variant="outline" onClick={onClose}>Fechar</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 // ─── Aba Campanhas ──────────────────────────────────────────────────────────
-function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, perfilId, onRecarregar }: {
-  campanhas: Campanha[]; listas: Lista[]; templates: Template[]; erroTemplates: string | null
+// Sem etapa de "lista": a campanha define quem recebe escolhendo categorias
+// de opt-in — o sistema busca os contatos elegíveis sozinho na hora de criar.
+function AbaCampanhas({ campanhas, templates, erroTemplates, loading, perfilId, onRecarregar }: {
+  campanhas: Campanha[]; templates: Template[]; erroTemplates: string | null
   loading: boolean; perfilId?: string; onRecarregar: () => void
 }) {
   const [dialogAberto, setDialogAberto] = useState(false)
   const [criando, setCriando] = useState(false)
-  const [form, setForm] = useState({ nome: "", template: "", lista_id: "" })
+  const [form, setForm] = useState({ nome: "", template: "", categorias: new Set<Categoria>() })
+  const [contagemElegiveis, setContagemElegiveis] = useState<number | null>(null)
   const [expandida, setExpandida] = useState<string | null>(null)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [progresso, setProgresso] = useState<{ atual: number; total: number } | null>(null)
 
   const templateEscolhido = templates.find((t) => t.name === form.template)
 
+  // Recalcula quantos contatos elegíveis existem toda vez que as categorias mudam.
+  useEffect(() => {
+    if (!dialogAberto || form.categorias.size === 0) { setContagemElegiveis(null); return }
+    let cancelado = false
+    ;(async () => {
+      const { count } = await supabase.from("whatsapp_opt_in" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("status", "opt_in").in("categoria", Array.from(form.categorias))
+      if (!cancelado) setContagemElegiveis(count ?? 0)
+    })()
+    return () => { cancelado = true }
+  }, [dialogAberto, form.categorias])
+
+  function toggleCategoria(c: Categoria) {
+    setForm((f) => {
+      const next = new Set(f.categorias)
+      if (next.has(c)) next.delete(c); else next.add(c)
+      return { ...f, categorias: next }
+    })
+  }
+
   async function criarCampanha() {
     if (!form.nome.trim()) return toast.error("Dê um nome pra campanha")
     if (!form.template) return toast.error("Escolha um template aprovado")
-    if (!form.lista_id) return toast.error("Escolha uma lista")
+    if (form.categorias.size === 0) return toast.error("Escolha ao menos uma categoria de destinatários")
     setCriando(true)
 
+    const categoriasArr = Array.from(form.categorias)
     const { data: campanha, error } = await supabase.from("whatsapp_campanhas" as any).insert({
       nome: form.nome, template_nome: form.template, template_idioma: templateEscolhido?.language || "pt_BR",
       categoria: (templateEscolhido?.category || "marketing").toLowerCase(),
-      lista_id: form.lista_id, status: "rascunho", criado_por: perfilId,
+      categorias_alvo: categoriasArr, status: "rascunho", criado_por: perfilId,
     }).select().single()
 
     if (error || !campanha) {
@@ -598,30 +440,25 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
       return toast.error(`Erro ao criar campanha: ${error?.message}`)
     }
 
-    // Prepara envios: copia membros da lista que ainda têm opt-in ativo agora.
-    const { data: membros } = await supabase.from("whatsapp_lista_contatos" as any)
-      .select("telefone, nome").eq("lista_id", form.lista_id)
-    const { data: optinsAtivos } = await supabase.from("whatsapp_opt_in" as any)
-      .select("telefone").eq("status", "opt_in")
-    const telefonesValidos = new Set((optinsAtivos as unknown as { telefone: string }[] || []).map((o) => o.telefone))
-    const elegiveis = ((membros as unknown as { telefone: string; nome: string | null }[]) || [])
-      .filter((m) => telefonesValidos.has(m.telefone))
+    const { data: elegiveis } = await supabase.from("whatsapp_opt_in" as any)
+      .select("telefone, nome").eq("status", "opt_in").in("categoria", categoriasArr)
+    const lista = (elegiveis as unknown as { telefone: string; nome: string | null }[]) || []
 
-    if (elegiveis.length > 0) {
+    if (lista.length > 0) {
       await supabase.from("whatsapp_campanha_envios" as any).insert(
-        elegiveis.map((m) => ({ campanha_id: (campanha as any).id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
+        lista.map((m) => ({ campanha_id: (campanha as any).id, telefone: m.telefone, nome: m.nome, status: "pendente" })),
       )
     }
     await supabase.from("whatsapp_campanhas" as any).update({
-      total_destinatarios: elegiveis.length, status: elegiveis.length > 0 ? "pronta" : "rascunho",
+      total_destinatarios: lista.length, status: lista.length > 0 ? "pronta" : "rascunho",
     }).eq("id", (campanha as any).id)
 
     setCriando(false)
-    toast.success(elegiveis.length > 0
-      ? `Campanha pronta com ${elegiveis.length} destinatário(s)`
-      : "Campanha criada, mas a lista não tem contatos elegíveis ainda")
+    toast.success(lista.length > 0
+      ? `Campanha pronta com ${lista.length} destinatário(s)`
+      : "Campanha criada, mas nenhum contato elegível nessas categorias ainda")
     setDialogAberto(false)
-    setForm({ nome: "", template: "", lista_id: "" })
+    setForm({ nome: "", template: "", categorias: new Set() })
     onRecarregar()
   }
 
@@ -692,7 +529,7 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">Broadcast simples: 1 template aprovado para 1 lista fixa.</p>
+        <p className="text-sm text-muted-foreground">Escolha um template aprovado e quem deve receber — sem montar lista na mão.</p>
         <Button size="sm" className="gap-1.5" onClick={() => setDialogAberto(true)}><Plus size={14} /> Nova campanha</Button>
       </div>
 
@@ -709,6 +546,7 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
               <TableHead></TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Template</TableHead>
+              <TableHead>Público</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Progresso</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -716,9 +554,9 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
             ) : campanhas.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma campanha ainda.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma campanha ainda.</TableCell></TableRow>
             ) : campanhas.map((c) => {
               const feitos = c.total_enviados + c.total_falhas + c.total_optout_bloqueados
               const pct = c.total_destinatarios > 0 ? Math.round((feitos / c.total_destinatarios) * 100) : 0
@@ -735,6 +573,9 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
                     <TableCell className="text-xs">
                       <span className="font-mono">{c.template_nome}</span>
                       <Badge variant="outline" className="ml-1.5 text-[10px]">{c.categoria}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {(c.categorias_alvo || []).map((cat) => CATEGORIA_LABEL[cat]).join(", ") || "—"}
                     </TableCell>
                     <TableCell><Badge variant={c.status === "concluida" ? "default" : "secondary"}>{STATUS_CAMPANHA_LABEL[c.status]}</Badge></TableCell>
                     <TableCell className="min-w-[140px]">
@@ -766,7 +607,7 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Nome (interno, não vai pro cliente)</Label>
-              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex.: Promoção agosto — hotelaria SP" />
+              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex.: Promoção agosto" />
             </div>
             <div>
               <Label className="text-xs">Template aprovado</Label>
@@ -783,15 +624,20 @@ function AbaCampanhas({ campanhas, listas, templates, erroTemplates, loading, pe
               )}
             </div>
             <div>
-              <Label className="text-xs">Lista</Label>
-              <Select value={form.lista_id} onValueChange={(v) => setForm((f) => ({ ...f, lista_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Escolha uma lista" /></SelectTrigger>
-                <SelectContent>
-                  {listas.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome} ({l.total ?? 0} contatos)</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Quem deve receber</Label>
+              <div className="space-y-1.5 mt-1">
+                {CATEGORIAS.map((c) => (
+                  <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={form.categorias.has(c)} onCheckedChange={() => toggleCategoria(c)} />
+                    {CATEGORIA_LABEL[c]}
+                  </label>
+                ))}
+              </div>
+              {form.categorias.size > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {contagemElegiveis === null ? "Calculando…" : `${contagemElegiveis} contato(s) elegível(is) agora`}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -824,12 +670,12 @@ function CampanhaDetalhe({ campanhaId }: { campanhaId: string }) {
 
   return (
     <TableRow>
-      <TableCell colSpan={6} className="bg-muted/30 p-0">
+      <TableCell colSpan={7} className="bg-muted/30 p-0">
         <div className="max-h-64 overflow-y-auto px-4 py-3">
           {loading ? (
             <p className="text-xs text-muted-foreground">Carregando envios…</p>
           ) : envios.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nenhum envio ainda — a lista não tinha contatos elegíveis no momento da criação.</p>
+            <p className="text-xs text-muted-foreground">Nenhum envio ainda — não havia contato elegível no momento da criação.</p>
           ) : (
             <div className="space-y-1">
               {envios.map((e) => (
