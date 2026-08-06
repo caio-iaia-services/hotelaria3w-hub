@@ -166,37 +166,42 @@ export default function AdminTemplatesWhatsApp() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-4">
         {erro && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle size={14} /> Não foi possível carregar os templates da Meta: {erro}
           </div>
         )}
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <p className="text-xs text-muted-foreground">
+          Sem nenhuma marcação, o template continua visível no Atendimento (comportamento de sempre) — só fica de fora se você marcar explicitamente só "Campanha".
+        </p>
+
+        <div className="bg-card border border-border rounded-xl overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Idioma</TableHead>
-                <TableHead>Categoria Meta</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="w-[220px]">Nome</TableHead>
+                <TableHead className="w-[110px]">Categoria</TableHead>
+                <TableHead className="w-[130px]">Status</TableHead>
                 <TableHead>Texto</TableHead>
-                <TableHead>Usado em</TableHead>
+                <TableHead className="w-[190px]">Usado em</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
               ) : templates.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
               ) : templates.map((t) => {
                 const info = STATUS_TEMPLATE_INFO[t.status] || { label: t.status, tone: "outline" as const }
                 const marcadas = finalidades[t.name] || []
                 return (
                   <TableRow key={t.name}>
-                    <TableCell className="font-mono text-xs">{t.name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{t.language}</TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs">{t.name}</span>
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">{t.language}</span>
+                    </TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px]">{t.category}</Badge></TableCell>
                     <TableCell>
                       <Badge variant={info.tone} className="gap-1">
@@ -205,21 +210,18 @@ export default function AdminTemplatesWhatsApp() {
                         {info.label}
                       </Badge>
                       {t.status === "REJECTED" && t.motivoRejeicao && (
-                        <p className="text-[11px] text-destructive mt-1 max-w-[220px]">{t.motivoRejeicao}</p>
+                        <p className="text-[11px] text-destructive mt-1 max-w-[180px]">{t.motivoRejeicao}</p>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{t.texto}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">{t.texto}</TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3 whitespace-nowrap">
                         {(["atendimento", "campanha"] as Finalidade[]).map((f) => (
-                          <label key={f} className="flex items-center gap-2 cursor-pointer">
+                          <label key={f} className="flex items-center gap-1.5 cursor-pointer">
                             <Checkbox checked={marcadas.includes(f)} onCheckedChange={(v) => alternarFinalidade(t.name, f, !!v)} />
                             <span className="text-xs text-muted-foreground">{FINALIDADE_LABEL[f]}</span>
                           </label>
                         ))}
-                        {marcadas.length === 0 && (
-                          <span className="text-[10px] text-muted-foreground italic">sem marcação — visível no Atendimento por padrão</span>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
