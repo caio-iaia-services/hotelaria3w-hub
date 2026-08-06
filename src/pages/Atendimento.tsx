@@ -380,10 +380,27 @@ function DropdownTemplatesMeta({ onSelecionar, disabled }: { onSelecionar: (t: T
       setCarregando(true);
       setErro(null);
       try {
-        const res = await apiFetch("/api/templates");
+        const [res, tagsRes] = await Promise.all([
+          apiFetch("/api/templates"),
+          supabase.from("whatsapp_template_tags" as any).select("template_nome, finalidades"),
+        ]);
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
-        setTemplates(json.templates ?? []);
+
+        // Templates sem NENHUMA tag continuam aparecendo aqui (comportamento
+        // de sempre, preservado) — só somem se alguém marcar explicitamente
+        // "só Campanha" em Admin › Templates WhatsApp.
+        const finalidadesPorNome: Record<string, string[]> = {};
+        for (const t of (tagsRes.data as unknown as { template_nome: string; finalidades: string[] }[]) || []) {
+          finalidadesPorNome[t.template_nome] = t.finalidades || [];
+        }
+        const todos = (json.templates ?? []) as TemplateMeta[];
+        const filtrados = todos.filter((t) => {
+          const f = finalidadesPorNome[t.name];
+          return !f || f.length === 0 || f.includes("atendimento");
+        });
+
+        setTemplates(filtrados);
         setJaCarregou(true);
       } catch (err) {
         console.error("[DropdownTemplatesMeta] erro ao carregar:", err);

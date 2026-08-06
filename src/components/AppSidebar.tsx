@@ -131,6 +131,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         ...(temModulo("admin_usuarios") ? [{ title: "Usuários", url: "/admin/usuarios" }] : []),
         { title: "Configurações E-mail", url: "/admin/email" },
         { title: "Config. Marketing", url: "/admin/marketing" },
+        { title: "Templates WhatsApp", url: "/admin/templates-whatsapp" },
       ],
     },
   ];

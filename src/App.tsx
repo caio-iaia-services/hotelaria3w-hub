@@ -28,6 +28,7 @@ const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios"));
 const Atendimento = lazy(() => import("./pages/Atendimento"));
 const Marketing = lazy(() => import("./pages/Marketing"));
 const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const AdminTemplatesWhatsApp = lazy(() => import("./pages/AdminTemplatesWhatsApp"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const RH = lazy(() => import("./pages/RH"));
 const Inteligencia = lazy(() => import("./pages/Inteligencia"));
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/atendimento" element={<Protected><Atendimento /></Protected>} />
               <Route path="/marketing" element={<Protected><Marketing /></Protected>} />
               <Route path="/admin/marketing" element={<Protected><AdminMarketing /></Protected>} />
+              <Route path="/admin/templates-whatsapp" element={<Protected><AdminTemplatesWhatsApp /></Protected>} />
               <Route path="/financeiro" element={<Protected><Financeiro /></Protected>} />
               <Route path="/rh" element={<Protected><RH /></Protected>} />
               <Route path="/inteligencia" element={<Protected><Inteligencia /></Protected>} />
