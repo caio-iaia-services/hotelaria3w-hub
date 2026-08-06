@@ -138,17 +138,24 @@ export default function WhatsAppMarketing() {
   const [optins, setOptins] = useState<OptIn[]>([])
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
+  const [templateTags, setTemplateTags] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [erroTemplates, setErroTemplates] = useState<string | null>(null)
 
   const carregar = useCallback(async () => {
     setLoading(true)
-    const [{ data: optinData }, { data: campanhaData }] = await Promise.all([
+    const [{ data: optinData }, { data: campanhaData }, { data: tagsData }] = await Promise.all([
       supabase.from("whatsapp_opt_in" as any).select("*").order("registrado_em", { ascending: false }),
       supabase.from("whatsapp_campanhas" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("whatsapp_template_tags" as any).select("template_nome, uso_campanha"),
     ])
     setOptins((optinData as unknown as OptIn[]) || [])
     setCampanhas((campanhaData as unknown as Campanha[]) || [])
+    const mapa: Record<string, boolean> = {}
+    for (const t of (tagsData as unknown as { template_nome: string; uso_campanha: boolean }[]) || []) {
+      mapa[t.template_nome] = t.uso_campanha
+    }
+    setTemplateTags(mapa)
     setLoading(false)
   }, [])
 
@@ -170,9 +177,21 @@ export default function WhatsAppMarketing() {
     }
   }
 
+  async function recarregarTudo() {
+    await Promise.all([carregar(), recarregarTemplates()])
+  }
+
+  /** Marca/desmarca um template como disponível pra campanha (upsert por nome). */
+  async function alternarUsoCampanha(nome: string, valor: boolean) {
+    const { error } = await supabase.from("whatsapp_template_tags" as any)
+      .upsert({ template_nome: nome, uso_campanha: valor }, { onConflict: "template_nome" })
+    if (error) { toast.error(`Erro ao atualizar: ${error.message}`); return }
+    setTemplateTags((prev) => ({ ...prev, [nome]: valor }))
+  }
+
   const optinsAtivos = optins.filter((o) => o.status === "opt_in").length
   const optinsOut = optins.filter((o) => o.status === "opt_out").length
-  const templatesAprovados = templates.filter((t) => t.status === "APPROVED")
+  const templatesAprovados = templates.filter((t) => t.status === "APPROVED" && templateTags[t.name])
 
   return (
     <div className="p-5 space-y-5">
@@ -208,7 +227,13 @@ export default function WhatsAppMarketing() {
         </TabsContent>
 
         <TabsContent value="templates" className="mt-4">
-          <AbaTemplates templates={templates} erroTemplates={erroTemplates} onRecarregar={recarregarTemplates} />
+          <AbaTemplates
+            templates={templates}
+            templateTags={templateTags}
+            erroTemplates={erroTemplates}
+            onRecarregar={recarregarTudo}
+            onAlternarUso={alternarUsoCampanha}
+          />
         </TabsContent>
 
         <TabsContent value="campanhas" className="mt-4">
@@ -738,8 +763,9 @@ const STATUS_TEMPLATE_INFO: Record<string, { label: string; tone: "default" | "s
   REJECTED: { label: "Rejeitado", tone: "destructive" },
 }
 
-function AbaTemplates({ templates, erroTemplates, onRecarregar }: {
-  templates: Template[]; erroTemplates: string | null; onRecarregar: () => Promise<void> | void
+function AbaTemplates({ templates, templateTags, erroTemplates, onRecarregar, onAlternarUso }: {
+  templates: Template[]; templateTags: Record<string, boolean>; erroTemplates: string | null
+  onRecarregar: () => Promise<void> | void; onAlternarUso: (nome: string, valor: boolean) => Promise<void>
 }) {
   const [dialogAberto, setDialogAberto] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -773,6 +799,9 @@ function AbaTemplates({ templates, erroTemplates, onRecarregar }: {
       if (!json.ok) {
         toast.error(json.error || "Erro ao enviar template pra aprovação")
       } else {
+        // Criado por aqui = "de campanha" por definição — já nasce marcado,
+        // sem precisar de um passo manual extra depois.
+        await onAlternarUso(nomeFinal, true)
         toast.success('Template enviado! Vai aparecer como "Em análise" até a Meta revisar.')
         setDialogAberto(false)
         setNomeDigitado(""); setForm({ language: "pt_BR", category: "MARKETING", corpo: "", rodape: "" }); setExemplos({})
@@ -807,13 +836,15 @@ function AbaTemplates({ templates, erroTemplates, onRecarregar }: {
               <TableHead>Categoria</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Texto</TableHead>
+              <TableHead>Usar em campanha</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {templates.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
             ) : templates.map((t) => {
               const info = STATUS_TEMPLATE_INFO[t.status] || { label: t.status, tone: "outline" as const }
+              const marcado = !!templateTags[t.name]
               return (
                 <TableRow key={t.name}>
                   <TableCell className="font-mono text-xs">{t.name}</TableCell>
@@ -830,12 +861,22 @@ function AbaTemplates({ templates, erroTemplates, onRecarregar }: {
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{t.texto}</TableCell>
+                  <TableCell>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={marcado} onCheckedChange={(v) => onAlternarUso(t.name, !!v)} />
+                      <span className="text-xs text-muted-foreground">{marcado ? "Sim" : "Não"}</span>
+                    </label>
+                  </TableCell>
                 </TableRow>
               )
             })}
           </TableBody>
         </Table>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Só templates marcados "Usar em campanha" aparecem na hora de criar uma campanha — assim os templates do Atendimento (como "oi"/"tudo_bem") não se misturam com os de marketing.
+        Templates criados por aqui já nascem marcados.
+      </p>
 
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
         <DialogContent className="max-w-md">
