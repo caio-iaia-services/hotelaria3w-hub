@@ -32,7 +32,7 @@ import {
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Categoria = "promocoes" | "novidades" | "avisos"
 type StatusOptIn = "opt_in" | "opt_out"
-type Origem = "formulario_site" | "confirmacao_atendimento" | "importacao_manual_confirmada" | "outro"
+type Origem = "formulario_site" | "confirmacao_atendimento" | "importacao_manual_confirmada" | "anuncio_click_to_whatsapp" | "outro"
 type StatusCampanha = "rascunho" | "pronta" | "enviando" | "concluida" | "pausada" | "cancelada"
 type StatusEnvio = "pendente" | "enviado" | "entregue" | "lido" | "falhou" | "bloqueado_optout"
 
@@ -95,6 +95,7 @@ const ORIGEM_LABEL: Record<Origem, string> = {
   formulario_site: "Formulário do site",
   confirmacao_atendimento: "Confirmado no Atendimento",
   importacao_manual_confirmada: "Importação (consentimento verificado)",
+  anuncio_click_to_whatsapp: "Anúncio click-to-WhatsApp",
   outro: "Outro",
 }
 const STATUS_CAMPANHA_LABEL: Record<StatusCampanha, string> = {
