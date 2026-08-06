@@ -9,6 +9,9 @@
 -- vazia. Nenhum contato é populado automaticamente em whatsapp_opt_in — a base
 -- de opt-in legítima ainda depende de confirmação com o cliente (3W). Ver
 -- memória modulo_marketing_whatsapp.md.
+--
+-- Idempotente: seguro rodar mais de uma vez (drop ... if exists antes de cada
+-- create policy/trigger, já que Postgres não tem "create policy if not exists").
 
 -- ─── Consentimento (opt-in/opt-out) por telefone × categoria ──────────────────
 -- Chave é o telefone (não contato_id) porque a origem de um contato de
@@ -35,23 +38,28 @@ create index if not exists idx_whatsapp_opt_in_status    on whatsapp_opt_in(stat
 
 alter table whatsapp_opt_in enable row level security;
 
+drop policy if exists "whatsapp_opt_in_select_modulo" on whatsapp_opt_in;
 create policy "whatsapp_opt_in_select_modulo"
   on whatsapp_opt_in for select to authenticated
   using (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_opt_in_insert_modulo" on whatsapp_opt_in;
 create policy "whatsapp_opt_in_insert_modulo"
   on whatsapp_opt_in for insert to authenticated
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_opt_in_update_modulo" on whatsapp_opt_in;
 create policy "whatsapp_opt_in_update_modulo"
   on whatsapp_opt_in for update to authenticated
   using (public.tem_modulo('marketing'))
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_opt_in_delete_admin" on whatsapp_opt_in;
 create policy "whatsapp_opt_in_delete_admin"
   on whatsapp_opt_in for delete to authenticated
   using (public.is_admin());
 
+drop trigger if exists trg_whatsapp_opt_in_atualizado on whatsapp_opt_in;
 create trigger trg_whatsapp_opt_in_atualizado
   before update on whatsapp_opt_in
   for each row execute function update_atualizado_em();
@@ -68,19 +76,23 @@ create table if not exists whatsapp_listas (
 
 alter table whatsapp_listas enable row level security;
 
+drop policy if exists "whatsapp_listas_select_modulo" on whatsapp_listas;
 create policy "whatsapp_listas_select_modulo"
   on whatsapp_listas for select to authenticated
   using (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_listas_insert_modulo" on whatsapp_listas;
 create policy "whatsapp_listas_insert_modulo"
   on whatsapp_listas for insert to authenticated
   with check (public.tem_modulo('marketing') and criado_por = auth.uid());
 
+drop policy if exists "whatsapp_listas_update_modulo" on whatsapp_listas;
 create policy "whatsapp_listas_update_modulo"
   on whatsapp_listas for update to authenticated
   using (public.tem_modulo('marketing'))
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_listas_delete_criador_admin" on whatsapp_listas;
 create policy "whatsapp_listas_delete_criador_admin"
   on whatsapp_listas for delete to authenticated
   using (criado_por = auth.uid() or public.is_admin());
@@ -113,20 +125,24 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
+drop trigger if exists trg_whatsapp_lista_contatos_checa_opt_in on whatsapp_lista_contatos;
 create trigger trg_whatsapp_lista_contatos_checa_opt_in
   before insert on whatsapp_lista_contatos
   for each row execute function public.checar_opt_in_lista();
 
 alter table whatsapp_lista_contatos enable row level security;
 
+drop policy if exists "whatsapp_lista_contatos_select_modulo" on whatsapp_lista_contatos;
 create policy "whatsapp_lista_contatos_select_modulo"
   on whatsapp_lista_contatos for select to authenticated
   using (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_lista_contatos_insert_modulo" on whatsapp_lista_contatos;
 create policy "whatsapp_lista_contatos_insert_modulo"
   on whatsapp_lista_contatos for insert to authenticated
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_lista_contatos_delete_modulo" on whatsapp_lista_contatos;
 create policy "whatsapp_lista_contatos_delete_modulo"
   on whatsapp_lista_contatos for delete to authenticated
   using (public.tem_modulo('marketing'));
@@ -153,19 +169,23 @@ create table if not exists whatsapp_campanhas (
 
 alter table whatsapp_campanhas enable row level security;
 
+drop policy if exists "whatsapp_campanhas_select_modulo" on whatsapp_campanhas;
 create policy "whatsapp_campanhas_select_modulo"
   on whatsapp_campanhas for select to authenticated
   using (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_campanhas_insert_modulo" on whatsapp_campanhas;
 create policy "whatsapp_campanhas_insert_modulo"
   on whatsapp_campanhas for insert to authenticated
   with check (public.tem_modulo('marketing') and criado_por = auth.uid());
 
+drop policy if exists "whatsapp_campanhas_update_modulo" on whatsapp_campanhas;
 create policy "whatsapp_campanhas_update_modulo"
   on whatsapp_campanhas for update to authenticated
   using (public.tem_modulo('marketing'))
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_campanhas_delete_criador_admin" on whatsapp_campanhas;
 create policy "whatsapp_campanhas_delete_criador_admin"
   on whatsapp_campanhas for delete to authenticated
   using (criado_por = auth.uid() or public.is_admin());
@@ -194,19 +214,23 @@ create index if not exists idx_whatsapp_envios_wamid     on whatsapp_campanha_en
 
 alter table whatsapp_campanha_envios enable row level security;
 
+drop policy if exists "whatsapp_campanha_envios_select_modulo" on whatsapp_campanha_envios;
 create policy "whatsapp_campanha_envios_select_modulo"
   on whatsapp_campanha_envios for select to authenticated
   using (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_campanha_envios_insert_modulo" on whatsapp_campanha_envios;
 create policy "whatsapp_campanha_envios_insert_modulo"
   on whatsapp_campanha_envios for insert to authenticated
   with check (public.tem_modulo('marketing'));
 
+drop policy if exists "whatsapp_campanha_envios_update_modulo" on whatsapp_campanha_envios;
 create policy "whatsapp_campanha_envios_update_modulo"
   on whatsapp_campanha_envios for update to authenticated
   using (public.tem_modulo('marketing'))
   with check (public.tem_modulo('marketing'));
 
+drop trigger if exists trg_whatsapp_campanhas_atualizado on whatsapp_campanhas;
 create trigger trg_whatsapp_campanhas_atualizado
   before update on whatsapp_campanhas
   for each row execute function update_atualizado_em();
