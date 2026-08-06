@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmailMarketing from "./marketing/EmailMarketing";
+import WhatsAppMarketing from "./marketing/WhatsAppMarketing";
 
 // ─── Guarda global para evitar tela branca em qualquer erro do módulo ─────────
 class ModuleErrorBoundary extends Component<{ children: ReactNode }, { err: string | null }> {
@@ -204,6 +205,8 @@ export default function Marketing() {
         {midiaAtiva && (
           midiaAtiva.slug === "email_marketing"
             ? <ModuleErrorBoundary><EmailMarketing /></ModuleErrorBoundary>
+            : midiaAtiva.slug === "whatsapp"
+            ? <ModuleErrorBoundary><WhatsAppMarketing /></ModuleErrorBoundary>
             : <CanalPlaceholder midia={midiaAtiva} />
         )}
       </div>
