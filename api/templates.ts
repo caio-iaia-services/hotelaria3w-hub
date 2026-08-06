@@ -34,7 +34,7 @@ export default async function handler(req: Request): Promise<Response> {
   const incluirTodos = new URL(req.url).searchParams.get("todos") === "1";
 
   try {
-    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_WABA_ID}/message_templates?fields=name,status,language,category,components,rejected_reason&limit=100`;
+    const url = `https://graph.facebook.com/${META_API_VERSION}/${META_WABA_ID}/message_templates?fields=id,name,status,language,category,components,rejected_reason&limit=100`;
     const metaRes = await fetch(url, { headers: { Authorization: `Bearer ${META_ACCESS_TOKEN}` } });
     const json = await metaRes.json();
 
@@ -47,9 +47,13 @@ export default async function handler(req: Request): Promise<Response> {
 
     const templates = (json.data ?? [])
       .filter((t: { status: string; name: string }) => t.name !== "hello_world" && (incluirTodos || t.status === "APPROVED"))
-      .map((t: { name: string; language: string; category: string; status: string; rejected_reason?: string; components?: { type: string; text?: string }[] }) => {
+      .map((t: { id: string; name: string; language: string; category: string; status: string; rejected_reason?: string; components?: { type: string; text?: string }[] }) => {
         const body = (t.components ?? []).find(c => c.type === "BODY");
-        return { name: t.name, language: t.language, category: t.category, status: t.status, motivoRejeicao: t.rejected_reason, texto: body?.text ?? "" };
+        const footer = (t.components ?? []).find(c => c.type === "FOOTER");
+        return {
+          id: t.id, name: t.name, language: t.language, category: t.category, status: t.status,
+          motivoRejeicao: t.rejected_reason, texto: body?.text ?? "", rodape: footer?.text ?? "",
+        };
       });
 
     return new Response(JSON.stringify({ ok: true, templates }), {

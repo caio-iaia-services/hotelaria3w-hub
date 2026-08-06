@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { apiFetch } from "@/lib/apiFetch"
 import { toast } from "sonner"
 import { slugifyNomeTemplate, detectarVariaveis } from "@/lib/whatsappTemplates"
-import { FileText, Plus, AlertCircle, Clock, X as XIcon } from "lucide-react"
+import { FileText, Plus, AlertCircle, Clock, X as XIcon, Eye, Pencil, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -39,12 +43,14 @@ type Finalidade = "atendimento" | "campanha"
 type StatusTemplate = "APPROVED" | "PENDING" | "REJECTED" | string
 
 interface Template {
+  id: string
   name: string
   language: string
   category: string
   status: StatusTemplate
   motivoRejeicao?: string
   texto: string
+  rodape: string
 }
 
 const FINALIDADE_LABEL: Record<Finalidade, string> = { atendimento: "Atendimento", campanha: "Campanha" }
@@ -149,6 +155,82 @@ export default function AdminTemplatesWhatsApp() {
     }
   }
 
+  // ─── Visualizar ────────────────────────────────────────────────────────
+  const [templateVisualizando, setTemplateVisualizando] = useState<Template | null>(null)
+
+  // ─── Editar ────────────────────────────────────────────────────────────
+  const [templateEditando, setTemplateEditando] = useState<Template | null>(null)
+  const [formEdicao, setFormEdicao] = useState({ category: "MARKETING" as "MARKETING" | "UTILITY", corpo: "", rodape: "" })
+  const [exemplosEdicao, setExemplosEdicao] = useState<Record<number, string>>({})
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+  const variaveisEdicao = detectarVariaveis(formEdicao.corpo)
+
+  function abrirEdicao(t: Template) {
+    setTemplateEditando(t)
+    setFormEdicao({ category: (t.category === "UTILITY" ? "UTILITY" : "MARKETING"), corpo: t.texto, rodape: t.rodape || "" })
+    setExemplosEdicao({})
+  }
+
+  async function salvarEdicao() {
+    if (!templateEditando) return
+    if (!formEdicao.corpo.trim()) return toast.error("Escreva o corpo da mensagem")
+    if (variaveisEdicao.some((v) => !exemplosEdicao[v]?.trim())) return toast.error("Preencha um exemplo pra cada variável — a Meta exige isso pra reaprovar")
+
+    setSalvandoEdicao(true)
+    try {
+      const res = await apiFetch("/api/editar-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: templateEditando.id, category: formEdicao.category,
+          corpo: formEdicao.corpo, rodape: formEdicao.rodape || undefined,
+          exemplos: variaveisEdicao.map((v) => exemplosEdicao[v]),
+        }),
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        toast.error(json.error || "Erro ao editar template")
+      } else {
+        toast.success("Template atualizado — se já estava aprovado, volta pra revisão da Meta.")
+        setTemplateEditando(null)
+        await carregar()
+      }
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setSalvandoEdicao(false)
+    }
+  }
+
+  // ─── Apagar ────────────────────────────────────────────────────────────
+  const [templateApagando, setTemplateApagando] = useState<Template | null>(null)
+  const [apagando, setApagando] = useState(false)
+
+  async function confirmarApagar() {
+    if (!templateApagando) return
+    setApagando(true)
+    try {
+      const res = await apiFetch("/api/deletar-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: templateApagando.name }),
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        toast.error(json.error || "Erro ao apagar template")
+      } else {
+        await supabase.from("whatsapp_template_tags" as any).delete().eq("template_nome", templateApagando.name)
+        toast.success("Template apagado")
+        setTemplateApagando(null)
+        await carregar()
+      }
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setApagando(false)
+    }
+  }
+
   return (
     <div className="min-h-full bg-background">
       <div className="border-b border-border/60 bg-card">
@@ -166,7 +248,7 @@ export default function AdminTemplatesWhatsApp() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-4">
+      <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">
         {erro && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle size={14} /> Não foi possível carregar os templates da Meta: {erro}
@@ -178,21 +260,22 @@ export default function AdminTemplatesWhatsApp() {
         </p>
 
         <div className="bg-card border border-border rounded-xl overflow-x-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[220px]">Nome</TableHead>
-                <TableHead className="w-[110px]">Categoria</TableHead>
-                <TableHead className="w-[130px]">Status</TableHead>
+                <TableHead className="w-[200px]">Nome</TableHead>
+                <TableHead className="w-[100px]">Categoria</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead>Texto</TableHead>
-                <TableHead className="w-[190px]">Usado em</TableHead>
+                <TableHead className="w-[180px]">Usado em</TableHead>
+                <TableHead className="w-[130px] pr-6">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
               ) : templates.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum template ainda.</TableCell></TableRow>
               ) : templates.map((t) => {
                 const info = STATUS_TEMPLATE_INFO[t.status] || { label: t.status, tone: "outline" as const }
                 const marcadas = finalidades[t.name] || []
@@ -222,6 +305,19 @@ export default function AdminTemplatesWhatsApp() {
                             <span className="text-xs text-muted-foreground">{FINALIDADE_LABEL[f]}</span>
                           </label>
                         ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="pr-6">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar" onClick={() => setTemplateVisualizando(t)}>
+                          <Eye size={14} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar" onClick={() => abrirEdicao(t)}>
+                          <Pencil size={14} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Apagar" onClick={() => setTemplateApagando(t)}>
+                          <Trash2 size={14} />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -314,6 +410,121 @@ export default function AdminTemplatesWhatsApp() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Visualizar ────────────────────────────────────────────────── */}
+      <Dialog open={!!templateVisualizando} onOpenChange={(v) => !v && setTemplateVisualizando(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-mono text-base">{templateVisualizando?.name}</DialogTitle></DialogHeader>
+          {templateVisualizando && (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-[10px]">{templateVisualizando.language}</Badge>
+                <Badge variant="outline" className="text-[10px]">{templateVisualizando.category}</Badge>
+                <Badge variant={(STATUS_TEMPLATE_INFO[templateVisualizando.status] || { tone: "outline" as const }).tone}>
+                  {(STATUS_TEMPLATE_INFO[templateVisualizando.status] || { label: templateVisualizando.status }).label}
+                </Badge>
+              </div>
+              {templateVisualizando.status === "REJECTED" && templateVisualizando.motivoRejeicao && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {templateVisualizando.motivoRejeicao}
+                </div>
+              )}
+              <div className="rounded-lg border border-border bg-muted/40 p-3 whitespace-pre-wrap text-sm">
+                {templateVisualizando.texto}
+                {templateVisualizando.rodape && (
+                  <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/60">{templateVisualizando.rodape}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Usado em</p>
+                <div className="flex gap-1.5">
+                  {(finalidades[templateVisualizando.name] || []).length === 0 ? (
+                    <span className="text-xs text-muted-foreground italic">nenhuma marcação — visível no Atendimento por padrão</span>
+                  ) : (finalidades[templateVisualizando.name] || []).map((f) => (
+                    <Badge key={f} variant="secondary" className="text-[10px]">{FINALIDADE_LABEL[f as Finalidade]}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={() => setTemplateVisualizando(null)}>Fechar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Editar ────────────────────────────────────────────────────── */}
+      <Dialog open={!!templateEditando} onOpenChange={(v) => !v && setTemplateEditando(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar <span className="font-mono">{templateEditando?.name}</span></DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span>Nome e idioma não dão pra mudar (é limitação da Meta, não nossa). Se o template já estava aprovado, editar o conteúdo manda ele de volta pra revisão.</span>
+            </div>
+            <div>
+              <Label className="text-xs">Categoria (Meta)</Label>
+              <Select value={formEdicao.category} onValueChange={(v) => setFormEdicao((f) => ({ ...f, category: v as "MARKETING" | "UTILITY" }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MARKETING">Marketing</SelectItem>
+                  <SelectItem value="UTILITY">Utility</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Corpo da mensagem</Label>
+              <Textarea rows={4} value={formEdicao.corpo} onChange={(e) => setFormEdicao((f) => ({ ...f, corpo: e.target.value }))} />
+            </div>
+            {variaveisEdicao.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <p className="text-xs font-semibold">Exemplo de cada variável (obrigatório pra Meta reaprovar)</p>
+                {variaveisEdicao.map((v) => (
+                  <div key={v}>
+                    <Label className="text-xs text-muted-foreground">Exemplo pra {"{{"}{v}{"}}"}</Label>
+                    <Input value={exemplosEdicao[v] || ""} onChange={(e) => setExemplosEdicao((prev) => ({ ...prev, [v]: e.target.value }))} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div>
+              <Label className="text-xs">Rodapé (opcional)</Label>
+              <Input value={formEdicao.rodape} onChange={(e) => setFormEdicao((f) => ({ ...f, rodape: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateEditando(null)}>Cancelar</Button>
+            <Button onClick={salvarEdicao} disabled={salvandoEdicao} className="gap-1.5">
+              {salvandoEdicao && <Loader2 size={14} className="animate-spin" />} {salvandoEdicao ? "Salvando…" : "Salvar alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Apagar ────────────────────────────────────────────────────── */}
+      <AlertDialog open={!!templateApagando} onOpenChange={(v) => !v && setTemplateApagando(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar template <span className="font-mono">{templateApagando?.name}</span>?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove o template permanentemente da Meta — não dá pra desfazer.
+              {templateApagando && (finalidades[templateApagando.name] || []).length > 0 && (
+                <span className="block mt-2 font-medium text-destructive">
+                  Está marcado como {(finalidades[templateApagando.name] || []).map((f) => FINALIDADE_LABEL[f as Finalidade]).join(" e ")} — apagar pode quebrar esse fluxo.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={apagando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmarApagar() }}
+              disabled={apagando}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+            >
+              {apagando && <Loader2 size={14} className="animate-spin" />} {apagando ? "Apagando…" : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
