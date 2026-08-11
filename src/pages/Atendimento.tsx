@@ -811,17 +811,23 @@ function ChatView({
   };
 
   const carregar = useCallback(async () => {
+    // Busca as 200 mais RECENTES (desc) e inverte pra ordem cronológica — não
+    // pode ser `.order(asc).limit(200)`: isso trava nas 200 mensagens mais
+    // ANTIGAS pra sempre em qualquer chat que passe de 200 mensagens (comum em
+    // conversa longa/importada do Multi360) — toda mensagem nova, enviada ou
+    // recebida, para de aparecer no chat mesmo tendo sido entregue de verdade
+    // no WhatsApp (bug encontrado em 2026-08-11, chat com 209 mensagens).
     const { data, error } = await supabase
       .from("mensagens")
       .select("id, chat_id, origem, conteudo, tipo, media_url, duracao_segundos, lida, criado_em, wamid, status_entrega")
       .eq("chat_id", chat.id)
-      .order("criado_em", { ascending: true })
+      .order("criado_em", { ascending: false })
       .limit(200);
     if (error) {
       console.error("[ChatView] Erro ao carregar mensagens:", error);
       toast.error("Erro ao carregar mensagens");
     }
-    setMensagens((data as Mensagem[]) ?? []);
+    setMensagens(((data as Mensagem[]) ?? []).slice().reverse());
     setLoading(false);
   }, [chat.id]);
 
