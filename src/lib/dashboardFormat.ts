@@ -59,14 +59,21 @@ export const STATUS_LABELS: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
   aprovado: "Aprovado",
-  // "consolidado", "cancelado" e "refutado" são status legados (import Multi360) —
-  // semântica de negócio (contam como aprovado/perdido?) pendente de confirmação do Caio.
   consolidado: "Consolidado",
   rejeitado: "Rejeitado",
   cancelado: "Cancelado",
   refutado: "Refutado",
   expirado: "Expirado",
 };
+
+/**
+ * "consolidado" = orçamento virou nota fiscal (confirmado pelo Caio, 13/08/2026) —
+ * é um estágio ainda mais avançado que "aprovado", conta como venda ganha.
+ * "cancelado"/"refutado" tratados como perdido (mesma família de "rejeitado") —
+ * assumido por analogia, não confirmado explicitamente; corrigir se estiver errado.
+ */
+export const STATUS_GANHOS = ["aprovado", "consolidado"];
+export const STATUS_PERDIDOS = ["rejeitado", "cancelado", "refutado"];
 
 export const statusBadgeClass: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-600 border-gray-200",

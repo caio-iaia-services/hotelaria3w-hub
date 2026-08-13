@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import {
   formatCurrency, formatCurrencyFull, STATUS_LABELS, STATUS_COLORS, statusBadgeClass,
-  mesesAbrev, gestaoColor, labelGestao, fetchPaginado,
+  mesesAbrev, gestaoColor, labelGestao, fetchPaginado, STATUS_GANHOS, STATUS_PERDIDOS,
 } from "@/lib/dashboardFormat";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardAtividadeRecente } from "@/components/dashboard/CardAtividadeRecente";
@@ -95,9 +95,10 @@ export default function DashboardAdmin() {
     setTotalOrcamentos(orcamentos.length);
     const pendentes = orcamentos.filter(o => o.status === "rascunho" || o.status === "enviado");
     setOrcamentosPendentes(pendentes.length);
-    const aprovados = orcamentos.filter(o => o.status === "aprovado");
+    // "aprovado" + "consolidado" (consolidado = já virou nota fiscal, venda ganha)
+    const aprovados = orcamentos.filter(o => STATUS_GANHOS.includes(o.status));
     setOrcamentosAprovados(aprovados.length);
-    const rejeitados = orcamentos.filter(o => o.status === "rejeitado");
+    const rejeitados = orcamentos.filter(o => STATUS_PERDIDOS.includes(o.status));
     setOrcamentosRejeitados(rejeitados.length);
     const valorAprov = aprovados.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
     setValorTotalAprovado(valorAprov);
@@ -138,10 +139,11 @@ export default function DashboardAdmin() {
         .slice(0, 5)
     );
 
-    // Por gestão (somente na aba Total)
+    // Por gestão (somente na aba Total) — só negócios ganhos, senão a régua fica
+    // inflada por orçamento expirado/cancelado que nunca virou venda
     if (selectedGestao === null) {
       const gestaoMap: Record<string, { total: number; valor: number }> = {};
-      orcamentos.forEach(o => {
+      orcamentos.filter(o => STATUS_GANHOS.includes(o.status)).forEach(o => {
         if (!o.gestao) return;
         if (!gestaoMap[o.gestao]) gestaoMap[o.gestao] = { total: 0, valor: 0 };
         gestaoMap[o.gestao].total++;
@@ -232,9 +234,9 @@ export default function DashboardAdmin() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         {[
           {
-            title: "Orçamentos Aprovados",
+            title: "Negócios Fechados",
             value: loading ? "—" : formatCurrencyFull(valorTotalAprovado),
-            sub: `${orcamentosAprovados} aprovados`,
+            sub: `${orcamentosAprovados} (aprovado + NF emitida)`,
             icon: CheckCircle2,
             iconBg: "bg-emerald-100", iconColor: "text-emerald-600",
           },
@@ -400,7 +402,7 @@ export default function DashboardAdmin() {
             <CardHeader className="pb-3">
               <CardTitle className="font-heading text-base flex items-center gap-2">
                 <Building2 size={16} />
-                Orçamentos por Gestão
+                Faturamento Fechado por Gestão
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -416,7 +418,7 @@ export default function DashboardAdmin() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{labelGestao(g.gestao)}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{g.total} orç.</span>
+                        <span className="text-xs text-muted-foreground">{g.total} fechados</span>
                         <span className="text-xs font-semibold w-28 text-right">{formatCurrencyFull(g.valor)}</span>
                       </div>
                     </div>
@@ -441,7 +443,7 @@ export default function DashboardAdmin() {
               {[
                 { label: "Total de Orçamentos", value: totalOrcamentos, icon: FileText, color: "text-blue-600", bg: "bg-blue-100" },
                 { label: "Pendentes de Retorno", value: orcamentosPendentes, icon: Clock, color: "text-amber-600", bg: "bg-amber-100" },
-                { label: "Aprovados", value: orcamentosAprovados, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
+                { label: "Fechados (aprovado + NF)", value: orcamentosAprovados, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
                 { label: "Oportunidades Abertas", value: totalOportunidades, icon: Target, color: "text-purple-600", bg: "bg-purple-100" },
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
@@ -456,7 +458,7 @@ export default function DashboardAdmin() {
               ))}
               <div className="pt-1 border-t border-border/50">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Faturamento aprovado</span>
+                  <span className="text-sm text-muted-foreground">Faturamento fechado</span>
                   <span className="text-sm font-bold text-emerald-700">{loading ? "—" : formatCurrencyFull(valorTotalAprovado)}</span>
                 </div>
               </div>

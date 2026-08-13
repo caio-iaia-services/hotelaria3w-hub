@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { gestaoLabel } from "@/lib/userProfile";
+import { STATUS_GANHOS } from "@/lib/dashboardFormat";
 
 function formatCurrencyFull(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -33,11 +34,11 @@ export function CardComissao() {
     const pct = config?.comissao_pct != null ? Number(config.comissao_pct) : null;
     setComissaoPct(pct);
 
-    // Orçamentos aprovados desta gestão
+    // Orçamentos fechados desta gestão (aprovado + consolidado = já virou NF)
     const { data: orcamentos } = await supabase
       .from("orcamentos")
       .select("total, created_at")
-      .eq("status", "aprovado")
+      .in("status", STATUS_GANHOS)
       .eq("gestao", gestaoFiltro);
 
     const todos = (orcamentos || []) as { total: number | string; created_at: string }[];

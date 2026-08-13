@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-import { formatCurrencyFull, labelGestao } from "@/lib/dashboardFormat";
+import { formatCurrencyFull, labelGestao, STATUS_GANHOS } from "@/lib/dashboardFormat";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardComissao } from "@/components/dashboard/CardComissao";
 import { CardTarefas } from "@/components/dashboard/CardTarefas";
@@ -43,7 +43,8 @@ export default function DashboardGestor() {
     let qAbertos = supabase.from("orcamentos").select("*", { count: "exact", head: true }).in("status", ["rascunho", "enviado"]);
     if (gestaoFiltro) qAbertos = qAbertos.eq("gestao", gestaoFiltro);
 
-    let qAprovMes = supabase.from("orcamentos").select("total").eq("status", "aprovado").gte("created_at", primeiroDiaMes);
+    // "aprovado" + "consolidado" (consolidado = já virou nota fiscal, venda ganha)
+    let qAprovMes = supabase.from("orcamentos").select("total").in("status", STATUS_GANHOS).gte("created_at", primeiroDiaMes);
     if (gestaoFiltro) qAprovMes = qAprovMes.eq("gestao", gestaoFiltro);
 
     let qOp = supabase.from("oportunidades").select("*", { count: "exact", head: true }).eq("status", "em_andamento");
@@ -112,9 +113,9 @@ export default function DashboardGestor() {
         <Card className="border-border/50 shadow-sm">
           <CardContent className="p-5 flex items-start justify-between">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Aprovados no Mês</p>
+              <p className="text-sm text-muted-foreground font-medium">Fechados no Mês</p>
               <p className="text-xl font-heading font-bold mt-1">{loading ? "—" : formatCurrencyFull(aprovadosMesValor)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{aprovadosMesQtd} orçamento{aprovadosMesQtd === 1 ? "" : "s"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{aprovadosMesQtd} orçamento{aprovadosMesQtd === 1 ? "" : "s"} (aprovado + NF)</p>
             </div>
             <div className="p-2.5 rounded-xl bg-emerald-100 shrink-0"><Clock size={20} className="text-emerald-600" /></div>
           </CardContent>
