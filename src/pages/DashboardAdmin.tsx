@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import {
   formatCurrency, formatCurrencyFull, STATUS_LABELS, STATUS_COLORS, statusBadgeClass,
-  mesesAbrev, gestaoColor, labelGestao,
+  mesesAbrev, gestaoColor, labelGestao, fetchPaginado,
 } from "@/lib/dashboardFormat";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardAtividadeRecente } from "@/components/dashboard/CardAtividadeRecente";
@@ -81,14 +81,16 @@ export default function DashboardAdmin() {
   const carregar = async () => {
     setLoading(true);
 
-    const baseQuery = () => {
-      let q = supabase.from("orcamentos").select("id, numero, status, total, created_at, gestao, cliente_nome, cliente_razao_social, fornecedor_nome, operacao").limit(10000);
+    // O Supabase corta selects em 1000 linhas por padrão — a empresa já tem
+    // 2600+ orçamentos, então isso precisa paginar de verdade (ver fetchPaginado).
+    const orcamentos = await fetchPaginado<any>((from, to) => {
+      let q = supabase
+        .from("orcamentos")
+        .select("id, numero, status, total, created_at, gestao, cliente_nome, cliente_razao_social, fornecedor_nome, operacao")
+        .range(from, to);
       if (selectedGestao) q = (q as any).eq("gestao", selectedGestao);
       return q;
-    };
-
-    const { data: todos } = await baseQuery();
-    const orcamentos = (todos || []) as any[];
+    });
 
     setTotalOrcamentos(orcamentos.length);
     const pendentes = orcamentos.filter(o => o.status === "rascunho" || o.status === "enviado");

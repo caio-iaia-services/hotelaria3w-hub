@@ -1,5 +1,33 @@
 import { gestaoLabel } from "@/lib/userProfile";
 
+// ─── Paginação ──────────────────────────────────────────────────────────────
+
+/**
+ * O Supabase (PostgREST) corta qualquer select em 1000 linhas por padrão,
+ * mesmo pedindo `.limit()` maior no client — isso já causou KPIs errados
+ * no Dashboard (ex.: total de orçamentos calculado em cima de 1000 de 2691).
+ * Usar isso pra qualquer consulta que possa ultrapassar 1000 linhas.
+ */
+export async function fetchPaginado<T>(
+  montarQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  tamanhoPagina = 1000,
+  maxPaginas = 30
+): Promise<T[]> {
+  const linhas: T[] = [];
+  for (let pagina = 0; pagina < maxPaginas; pagina++) {
+    const from = pagina * tamanhoPagina;
+    const { data, error } = await montarQuery(from, from + tamanhoPagina - 1);
+    if (error) {
+      console.error("fetchPaginado:", error);
+      break;
+    }
+    const bloco = data || [];
+    linhas.push(...bloco);
+    if (bloco.length < tamanhoPagina) break;
+  }
+  return linhas;
+}
+
 // ─── Formatação de valores ─────────────────────────────────────────────────
 
 export function formatCurrency(value: number) {
@@ -20,7 +48,10 @@ export const STATUS_COLORS: Record<string, string> = {
   rascunho: "hsl(215, 16%, 65%)",
   enviado: "hsl(224, 64%, 33%)",
   aprovado: "hsl(152, 60%, 40%)",
+  consolidado: "hsl(152, 45%, 30%)",
   rejeitado: "hsl(0, 72%, 55%)",
+  cancelado: "hsl(340, 60%, 50%)",
+  refutado: "hsl(280, 50%, 50%)",
   expirado: "hsl(25, 90%, 55%)",
 };
 
@@ -28,7 +59,12 @@ export const STATUS_LABELS: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
   aprovado: "Aprovado",
+  // "consolidado", "cancelado" e "refutado" são status legados (import Multi360) —
+  // semântica de negócio (contam como aprovado/perdido?) pendente de confirmação do Caio.
+  consolidado: "Consolidado",
   rejeitado: "Rejeitado",
+  cancelado: "Cancelado",
+  refutado: "Refutado",
   expirado: "Expirado",
 };
 
@@ -36,7 +72,10 @@ export const statusBadgeClass: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-600 border-gray-200",
   enviado: "bg-blue-100 text-blue-700 border-blue-200",
   aprovado: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  consolidado: "bg-emerald-100 text-emerald-800 border-emerald-300",
   rejeitado: "bg-red-100 text-red-700 border-red-200",
+  cancelado: "bg-pink-100 text-pink-700 border-pink-200",
+  refutado: "bg-purple-100 text-purple-700 border-purple-200",
   expirado: "bg-orange-100 text-orange-700 border-orange-200",
 };
 
