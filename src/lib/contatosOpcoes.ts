@@ -36,3 +36,23 @@ export const QUALIFICACAO_OPTIONS: { value: string; label: string }[] = [
   { value: "com_defeito", label: "Com Defeito" },
   { value: "inativo", label: "Inativo" },
 ]
+
+// Fonte do contato (de onde o registro veio) — usado pelo filtro Fonte em
+// Contatos.tsx e pelo campo "Fonte" do ContatoModal. Reaproveita a coluna
+// `origem` do banco (antes usada com valores como "WIX"/"Indicação"/"Feira";
+// migração 2026-08-13 remapeou a base legada existente para "Base 3W").
+export const FONTE_OPTIONS: { value: string; label: string }[] = [
+  { value: "Wix", label: "Wix" },
+  { value: "Empresa Aqui", label: "Empresa Aqui" },
+  { value: "Base 3W", label: "Base 3W" },
+  { value: "Usuário", label: "Usuário" },
+  { value: "IA", label: "IA" },
+]
+
+// Qualificações visíveis por Status — usado pelo filtro de Qualificação em
+// Contatos.tsx, que restringe as opções ao grupo do(s) Status marcado(s)
+// (união dos dois grupos se nenhum ou os dois estiverem marcados).
+export const QUALIFICACAO_POR_STATUS: Record<StatusContato, string[]> = {
+  ativo: ["higienizado", "aquecido", "em_prospeccao", "ativo_super", "ativo_interessado", "ativo_em_observacao"],
+  inativo: ["cadastrado", "com_defeito", "inativo"],
+}

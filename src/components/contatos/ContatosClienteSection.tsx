@@ -15,9 +15,8 @@ interface Props {
 }
 
 const statusColors: Record<string, string> = {
-  ativo:     "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  inativo:   "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400",
-  bloqueado: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  ativo:   "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  inativo: "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400",
 };
 
 export default function ContatosClienteSection({ clienteId, clienteNome, clienteCnpj }: Props) {

@@ -1147,6 +1147,7 @@ export type Database = {
       }
       contatos: {
         Row: {
+          canal_marketing_id: string | null
           cargo: string | null
           cpf: string | null
           created_at: string
@@ -1164,6 +1165,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          canal_marketing_id?: string | null
           cargo?: string | null
           cpf?: string | null
           created_at?: string
@@ -1181,6 +1183,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          canal_marketing_id?: string | null
           cargo?: string | null
           cpf?: string | null
           created_at?: string
@@ -1197,7 +1200,15 @@ export type Database = {
           updated_at?: string
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contatos_canal_marketing_id_fkey"
+            columns: ["canal_marketing_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_midias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contatos_cliente: {
         Row: {

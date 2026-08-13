@@ -16,6 +16,8 @@ import {
   CATEGORIAS_CONSENTIMENTO, CATEGORIA_CONSENTIMENTO_LABEL, ORIGEM_CONSENTIMENTO_LABEL,
   type CategoriaConsentimento, type OrigemConsentimento,
 } from "@/lib/whatsappConsentimento";
+import { FONTE_OPTIONS } from "@/lib/contatosOpcoes";
+import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
 
 interface ClienteVinculo {
   id: string;
@@ -31,7 +33,6 @@ interface Props {
   onSaved?: () => void;
 }
 
-const ORIGENS = ["WIX", "Indicação", "Feira", "Prospecção ativa", "Site", "Base Clientes", "Outros"];
 const PREFERENCIAS = ["E-mail", "WhatsApp", "Telefone"];
 
 const QUALIFICACAO_OPTIONS = [
@@ -60,6 +61,7 @@ function emailValido(email: string) {
 
 export default function ContatoModal({ open, onClose, contato, clientePreVinculado, onSaved }: Props) {
   const { perfil } = useAuth();
+  const { canais: canaisAtivos } = useCanaisMarketingAtivos();
   const editing = !!contato;
   const [form, setForm] = useState<Partial<Contato>>({
     nome: "", email: "", status: "ativo", qualificacao: "cadastrado",
@@ -185,6 +187,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
           qualificacao: form.qualificacao || "cadastrado",
+          canal_marketing_id: form.canal_marketing_id || null,
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).eq("id", contatoId);
@@ -196,6 +199,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           data_nascimento: form.data_nascimento || null, cargo: form.cargo || null,
           origem: form.origem || null, status: form.status || "ativo",
           qualificacao: form.qualificacao || "cadastrado",
+          canal_marketing_id: form.canal_marketing_id || null,
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).select("id").single();
@@ -303,11 +307,11 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
               <Input value={form.cargo || ""} onChange={e => set("cargo", e.target.value)} placeholder="Ex: Gerente Geral" />
             </div>
             <div className="space-y-1.5">
-              <Label>Origem do contato</Label>
+              <Label>Fonte</Label>
               <Select value={form.origem || ""} onValueChange={v => set("origem", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent className="bg-card z-50">
-                  {ORIGENS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {FONTE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -318,7 +322,15 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
                 <SelectContent className="bg-card z-50">
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="inativo">Inativo</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Canal de marketing</Label>
+              <Select value={form.canal_marketing_id || ""} onValueChange={v => set("canal_marketing_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent className="bg-card z-50">
+                  {canaisAtivos.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

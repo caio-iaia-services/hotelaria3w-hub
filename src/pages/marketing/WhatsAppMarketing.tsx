@@ -637,7 +637,7 @@ function AbaCampanhas({ campanhas, templates, loading, perfilId, onRecarregar }:
                   </div>
 
                   <p className="text-[11px] text-muted-foreground">
-                    Segmento/Região/Estado/Cidade vêm da empresa vinculada ao contato — um contato ligado a mais de uma empresa entra se qualquer uma delas bater com o filtro. Contatos com status "Bloqueado" nunca entram, mesmo sem marcar nada aqui.
+                    Segmento/Região/Estado/Cidade vêm da empresa vinculada ao contato — um contato ligado a mais de uma empresa entra se qualquer uma delas bater com o filtro.
                   </p>
                 </div>
               )}

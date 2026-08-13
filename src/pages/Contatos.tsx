@@ -1,23 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon, UserCheck, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
 import ContatoModal from "@/components/contatos/ContatoModal";
+import FiltroMultiSelect from "@/components/filtros/FiltroMultiSelect";
+import { FONTE_OPTIONS, QUALIFICACAO_POR_STATUS } from "@/lib/contatosOpcoes";
+import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
 
 type Visualizacao = "cards" | "lista";
 
 const statusColors: Record<string, string> = {
-  ativo:     "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  inativo:   "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400",
-  bloqueado: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  ativo:   "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  inativo: "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400",
 };
+
+const STATUS_OPTIONS = [
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
+];
 
 const preferenciaBadge: Record<string, string> = {
   "E-mail":    "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
@@ -51,9 +57,11 @@ export default function Contatos() {
   const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState("");
   const [buscaDebounced, setBuscaDebounced] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("todos");
-  const [filtroOrigem, setFiltroOrigem] = useState("todas");
-  const [filtroQualificacao, setFiltroQualificacao] = useState("todas");
+  const [filtroStatus, setFiltroStatus] = useState<string[]>([]);
+  const [filtroFonte, setFiltroFonte] = useState<string[]>([]);
+  const [filtroCanal, setFiltroCanal] = useState<string[]>([]);
+  const [filtroQualificacao, setFiltroQualificacao] = useState<string[]>([]);
+  const { canais: canaisAtivos } = useCanaisMarketingAtivos();
   const [modalOpen, setModalOpen] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
@@ -67,7 +75,24 @@ export default function Contatos() {
 
   useEffect(() => {
     setPagina(1);
-  }, [filtroStatus, filtroOrigem, filtroQualificacao]);
+  }, [filtroStatus, filtroFonte, filtroCanal, filtroQualificacao]);
+
+  // Qualificação disponível depende do(s) Status marcado(s): com só Ativo ou só
+  // Inativo marcado, mostra o grupo correspondente; com nenhum ou os dois
+  // marcados, mostra a união dos dois grupos.
+  const qualificacaoOptions = useMemo(() => {
+    const gruposMarcados = filtroStatus.filter((s) => s === "ativo" || s === "inativo") as ("ativo" | "inativo")[];
+    if (gruposMarcados.length !== 1) return QUALIFICACAO_OPTIONS;
+    const valoresValidos = QUALIFICACAO_POR_STATUS[gruposMarcados[0]];
+    return QUALIFICACAO_OPTIONS.filter((q) => valoresValidos.includes(q.value));
+  }, [filtroStatus]);
+
+  // Se o grupo de Status mudou e algum valor selecionado de Qualificação não
+  // pertence mais ao grupo válido, remove ele da seleção.
+  useEffect(() => {
+    const valoresValidos = qualificacaoOptions.map((q) => q.value);
+    setFiltroQualificacao((prev) => prev.filter((v) => valoresValidos.includes(v)));
+  }, [qualificacaoOptions]);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -77,9 +102,10 @@ export default function Contatos() {
       .order("nome");
 
     if (buscaDebounced) q = q.or(`nome.ilike.%${buscaDebounced}%,email.ilike.%${buscaDebounced}%,cargo.ilike.%${buscaDebounced}%`);
-    if (filtroStatus !== "todos") q = q.eq("status", filtroStatus);
-    if (filtroOrigem !== "todas") q = q.eq("origem", filtroOrigem);
-    if (filtroQualificacao !== "todas") q = q.eq("qualificacao", filtroQualificacao);
+    if (filtroStatus.length > 0) q = q.in("status", filtroStatus);
+    if (filtroFonte.length > 0) q = q.in("origem", filtroFonte);
+    if (filtroCanal.length > 0) q = q.in("canal_marketing_id", filtroCanal);
+    if (filtroQualificacao.length > 0) q = q.in("qualificacao", filtroQualificacao);
 
     const from = (pagina - 1) * PAGE_SIZE;
     const { data, count, error } = await q.range(from, from + PAGE_SIZE - 1);
@@ -95,7 +121,7 @@ export default function Contatos() {
       setTotal(count || 0);
     }
     setCarregando(false);
-  }, [buscaDebounced, filtroStatus, filtroOrigem, filtroQualificacao, pagina]);
+  }, [buscaDebounced, filtroStatus, filtroFonte, filtroCanal, filtroQualificacao, pagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -197,41 +223,31 @@ export default function Contatos() {
               </button>
             )}
           </div>
-          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-            <SelectTrigger className="w-36 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todos">Todos os status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-              <SelectItem value="bloqueado">Bloqueado</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todas">Todas as origens</SelectItem>
-              <SelectItem value="WIX">WIX</SelectItem>
-              <SelectItem value="Indicação">Indicação</SelectItem>
-              <SelectItem value="Feira">Feira</SelectItem>
-              <SelectItem value="Prospecção ativa">Prospecção ativa</SelectItem>
-              <SelectItem value="Site">Site</SelectItem>
-              <SelectItem value="Base Clientes">Base Clientes</SelectItem>
-              <SelectItem value="Outros">Outros</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filtroQualificacao} onValueChange={setFiltroQualificacao}>
-            <SelectTrigger className="w-44 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card z-50">
-              <SelectItem value="todas">Todas as qualificações</SelectItem>
-              {QUALIFICACAO_OPTIONS.map(q => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <FiltroMultiSelect
+            titulo="Status"
+            options={STATUS_OPTIONS}
+            selected={filtroStatus}
+            onChange={setFiltroStatus}
+          />
+          <FiltroMultiSelect
+            titulo="Fonte"
+            options={FONTE_OPTIONS}
+            selected={filtroFonte}
+            onChange={setFiltroFonte}
+          />
+          <FiltroMultiSelect
+            titulo="Canal"
+            options={canaisAtivos.map(c => ({ value: c.id, label: c.nome }))}
+            selected={filtroCanal}
+            onChange={setFiltroCanal}
+            vazioLabel="Nenhum canal de marketing ativo"
+          />
+          <FiltroMultiSelect
+            titulo="Qualificação"
+            options={qualificacaoOptions}
+            selected={filtroQualificacao}
+            onChange={setFiltroQualificacao}
+          />
         </div>
       </div>
 
@@ -246,7 +262,7 @@ export default function Contatos() {
             <UserRound size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">Nenhum contato encontrado</p>
             <p className="text-sm mt-1">
-              {busca || filtroStatus !== "todos" || filtroOrigem !== "todas" || filtroQualificacao !== "todas"
+              {busca || filtroStatus.length > 0 || filtroFonte.length > 0 || filtroCanal.length > 0 || filtroQualificacao.length > 0
                 ? "Tente ajustar os filtros de busca"
                 : "Clique em \"Novo Contato\" para começar"}
             </p>
