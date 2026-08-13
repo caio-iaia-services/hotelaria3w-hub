@@ -85,7 +85,7 @@ export default function DashboardGestor() {
       {/* Hero do dia */}
       <div className="rounded-2xl bg-gradient-to-br from-[#0f2c47] to-[#1a4168] text-white p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         <div>
-          <h1 className="text-xl font-heading font-bold">{saudacao()}, {primeiroNome} 👋</h1>
+          <h1 className="text-xl font-heading font-bold">{saudacao()}, {primeiroNome}</h1>
           <p className="text-sm text-white/70 mt-1">
             {gestaoFiltro ? labelGestao(gestaoFiltro) : "Sem gestão atribuída"} · aqui está o que importa hoje
           </p>
