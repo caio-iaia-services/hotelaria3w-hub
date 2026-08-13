@@ -14,6 +14,7 @@ import ExportarContatosModal from "@/components/contatos/ExportarContatosModal";
 import FiltroMultiSelect from "@/components/filtros/FiltroMultiSelect";
 import { FONTE_OPTIONS, QUALIFICACAO_POR_STATUS, DESTINOS_EXPORTACAO } from "@/lib/contatosOpcoes";
 import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
+import { useUsuariosAtivos } from "@/hooks/useUsuariosAtivos";
 
 type Visualizacao = "cards" | "lista";
 
@@ -67,7 +68,9 @@ export default function Contatos() {
   const [filtroFonte, setFiltroFonte] = useState<string[]>([]);
   const [filtroCanal, setFiltroCanal] = useState<string[]>([]);
   const [filtroQualificacao, setFiltroQualificacao] = useState<string[]>([]);
+  const [filtroResponsavel, setFiltroResponsavel] = useState<string[]>([]);
   const { canais: canaisAtivos } = useCanaisMarketingAtivos();
+  const { usuarios: usuariosAtivos } = useUsuariosAtivos();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImportar, setModalImportar] = useState(false);
   const [modalExportar, setModalExportar] = useState(false);
@@ -83,7 +86,7 @@ export default function Contatos() {
 
   useEffect(() => {
     setPagina(1);
-  }, [filtroStatus, filtroFonte, filtroCanal, filtroQualificacao]);
+  }, [filtroStatus, filtroFonte, filtroCanal, filtroQualificacao, filtroResponsavel]);
 
   // Qualificação disponível depende do(s) Status marcado(s): com só Ativo ou só
   // Inativo marcado, mostra o grupo correspondente; com nenhum ou os dois
@@ -102,7 +105,7 @@ export default function Contatos() {
     setFiltroQualificacao((prev) => prev.filter((v) => valoresValidos.includes(v)));
   }, [qualificacaoOptions]);
 
-  // Aplica busca + os 4 filtros multi-escolha numa query de contatos — usado
+  // Aplica busca + os 5 filtros multi-escolha numa query de contatos — usado
   // pra carregar a listagem paginada. O modal de exportação tem sua própria
   // versão (com filtros editáveis dentro do modal, pré-preenchidos com estes).
   const aplicarFiltros = useCallback(<Q,>(base: Q): Q => {
@@ -113,8 +116,9 @@ export default function Contatos() {
     if (filtroFonte.length > 0) q = q.in("origem", filtroFonte);
     if (filtroCanal.length > 0) q = q.in("canal_marketing_id", filtroCanal);
     if (filtroQualificacao.length > 0) q = q.in("qualificacao", filtroQualificacao);
+    if (filtroResponsavel.length > 0) q = q.in("responsavel_id", filtroResponsavel);
     return q;
-  }, [buscaDebounced, filtroStatus, filtroFonte, filtroCanal, filtroQualificacao]);
+  }, [buscaDebounced, filtroStatus, filtroFonte, filtroCanal, filtroQualificacao, filtroResponsavel]);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -273,6 +277,13 @@ export default function Contatos() {
             selected={filtroQualificacao}
             onChange={setFiltroQualificacao}
           />
+          <FiltroMultiSelect
+            titulo="Responsável"
+            options={usuariosAtivos.map(u => ({ value: u.id, label: u.nome }))}
+            selected={filtroResponsavel}
+            onChange={setFiltroResponsavel}
+            vazioLabel="Nenhum usuário ativo"
+          />
         </div>
       </div>
 
@@ -287,7 +298,7 @@ export default function Contatos() {
             <UserRound size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">Nenhum contato encontrado</p>
             <p className="text-sm mt-1">
-              {busca || filtroStatus.length > 0 || filtroFonte.length > 0 || filtroCanal.length > 0 || filtroQualificacao.length > 0
+              {busca || filtroStatus.length > 0 || filtroFonte.length > 0 || filtroCanal.length > 0 || filtroQualificacao.length > 0 || filtroResponsavel.length > 0
                 ? "Tente ajustar os filtros de busca"
                 : "Clique em \"Novo Contato\" para começar"}
             </p>
@@ -471,8 +482,9 @@ export default function Contatos() {
       <ExportarContatosModal
         open={modalExportar}
         onClose={() => setModalExportar(false)}
-        filtrosIniciais={{ busca: buscaDebounced, status: filtroStatus, fonte: filtroFonte, canal: filtroCanal, qualificacao: filtroQualificacao }}
+        filtrosIniciais={{ busca: buscaDebounced, status: filtroStatus, fonte: filtroFonte, canal: filtroCanal, qualificacao: filtroQualificacao, responsavel: filtroResponsavel }}
         canaisAtivos={canaisAtivos}
+        usuariosAtivos={usuariosAtivos}
       />
     </div>
   );

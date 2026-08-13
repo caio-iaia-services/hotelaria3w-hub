@@ -1159,6 +1159,7 @@ export type Database = {
           origem: string | null
           preferencia_contato: string | null
           qualificacao: string
+          responsavel_id: string | null
           status: string
           telefone: string | null
           updated_at: string
@@ -1177,6 +1178,7 @@ export type Database = {
           origem?: string | null
           preferencia_contato?: string | null
           qualificacao?: string
+          responsavel_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
@@ -1195,6 +1197,7 @@ export type Database = {
           origem?: string | null
           preferencia_contato?: string | null
           qualificacao?: string
+          responsavel_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
@@ -1206,6 +1209,13 @@ export type Database = {
             columns: ["canal_marketing_id"]
             isOneToOne: false
             referencedRelation: "marketing_midias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]

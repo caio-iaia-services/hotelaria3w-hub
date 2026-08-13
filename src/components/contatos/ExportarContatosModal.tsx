@@ -29,6 +29,7 @@ type Filtros = {
   fonte: string[];
   canal: string[];
   qualificacao: string[];
+  responsavel: string[];
 };
 
 type Props = {
@@ -38,9 +39,10 @@ type Props = {
    * pré-preencher o modal (a pessoa ainda pode ajustar aqui dentro). */
   filtrosIniciais: Filtros;
   canaisAtivos: { id: string; nome: string }[];
+  usuariosAtivos: { id: string; nome: string }[];
 };
 
-export default function ExportarContatosModal({ open, onClose, filtrosIniciais, canaisAtivos }: Props) {
+export default function ExportarContatosModal({ open, onClose, filtrosIniciais, canaisAtivos, usuariosAtivos }: Props) {
   const { perfil } = useAuth();
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
   const [destino, setDestino] = useState(DESTINOS_EXPORTACAO[0]?.value ?? "");
@@ -98,6 +100,7 @@ export default function ExportarContatosModal({ open, onClose, filtrosIniciais, 
     if (filtros.fonte.length > 0) q = q.in("origem", filtros.fonte);
     if (filtros.canal.length > 0) q = q.in("canal_marketing_id", filtros.canal);
     if (filtros.qualificacao.length > 0) q = q.in("qualificacao", filtros.qualificacao);
+    if (filtros.responsavel.length > 0) q = q.in("responsavel_id", filtros.responsavel);
     if (apenasNovos && idsJaExportados.size > 0) {
       q = q.not("id", "in", `(${[...idsJaExportados].join(",")})`);
     }
@@ -146,6 +149,7 @@ export default function ExportarContatosModal({ open, onClose, filtrosIniciais, 
       }
 
       const canalNome: Record<string, string> = Object.fromEntries(canaisAtivos.map((c) => [c.id, c.nome]));
+      const usuarioNome: Record<string, string> = Object.fromEntries(usuariosAtivos.map((u) => [u.id, u.nome]));
       const rows = todos.map((c) => ({
         "Nome":         c.nome || "",
         "E-mail":       c.email || "",
@@ -157,6 +161,7 @@ export default function ExportarContatosModal({ open, onClose, filtrosIniciais, 
         "Canal":        c.canal_marketing_id ? (canalNome[c.canal_marketing_id] || "") : "",
         "Status":       c.status === "inativo" ? "Inativo" : "Ativo",
         "Qualificação": qualificacaoLabel[c.qualificacao] || c.qualificacao || "",
+        "Responsável":  c.responsavel_id ? (usuarioNome[c.responsavel_id] || "") : "",
         "Observações":  c.observacoes || "",
       }));
 
@@ -249,6 +254,13 @@ export default function ExportarContatosModal({ open, onClose, filtrosIniciais, 
               options={qualificacaoOptions}
               selected={filtros.qualificacao}
               onChange={(v) => setFiltros((f) => ({ ...f, qualificacao: v }))}
+            />
+            <FiltroMultiSelect
+              titulo="Responsável"
+              options={usuariosAtivos.map((u) => ({ value: u.id, label: u.nome }))}
+              selected={filtros.responsavel}
+              onChange={(v) => setFiltros((f) => ({ ...f, responsavel: v }))}
+              vazioLabel="Nenhum usuário ativo"
             />
           </div>
 

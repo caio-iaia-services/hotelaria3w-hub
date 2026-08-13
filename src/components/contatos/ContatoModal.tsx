@@ -18,6 +18,7 @@ import {
 } from "@/lib/whatsappConsentimento";
 import { FONTE_OPTIONS } from "@/lib/contatosOpcoes";
 import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
+import { useUsuariosAtivos } from "@/hooks/useUsuariosAtivos";
 
 interface ClienteVinculo {
   id: string;
@@ -62,6 +63,7 @@ function emailValido(email: string) {
 export default function ContatoModal({ open, onClose, contato, clientePreVinculado, onSaved }: Props) {
   const { perfil } = useAuth();
   const { canais: canaisAtivos } = useCanaisMarketingAtivos();
+  const { usuarios: usuariosAtivos } = useUsuariosAtivos();
   const editing = !!contato;
   const [form, setForm] = useState<Partial<Contato>>({
     nome: "", email: "", status: "ativo", qualificacao: "cadastrado",
@@ -188,6 +190,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           origem: form.origem || null, status: form.status || "ativo",
           qualificacao: form.qualificacao || "cadastrado",
           canal_marketing_id: form.canal_marketing_id || null,
+          responsavel_id: form.responsavel_id || null,
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).eq("id", contatoId);
@@ -200,6 +203,7 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
           origem: form.origem || null, status: form.status || "ativo",
           qualificacao: form.qualificacao || "cadastrado",
           canal_marketing_id: form.canal_marketing_id || null,
+          responsavel_id: form.responsavel_id || null,
           preferencia_contato: form.preferencia_contato || null,
           observacoes: form.observacoes || null,
         }).select("id").single();
@@ -331,6 +335,15 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent className="bg-card z-50">
                   {canaisAtivos.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Responsável</Label>
+              <Select value={form.responsavel_id || ""} onValueChange={v => set("responsavel_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent className="bg-card z-50">
+                  {usuariosAtivos.map(u => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

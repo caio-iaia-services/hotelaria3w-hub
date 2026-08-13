@@ -68,6 +68,7 @@ export interface Contato {
   status: string
   qualificacao: string
   canal_marketing_id: string | null
+  responsavel_id: string | null
   preferencia_contato: string | null
   observacoes: string | null
   created_at: string
