@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileText, Clock, Target, RefreshCw, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { formatCurrencyFull, labelGestao, STATUS_GANHOS } from "@/lib/dashboardFormat";
+import { useTarefas } from "@/hooks/useTarefas";
+import { NovaTarefaModal } from "@/components/agenda/NovaTarefaModal";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardComissao } from "@/components/dashboard/CardComissao";
-import { CardTarefas } from "@/components/dashboard/CardTarefas";
-import { CardAgenda } from "@/components/dashboard/CardAgenda";
+import { CardMinhasTarefas } from "@/components/dashboard/CardMinhasTarefas";
+import { CardAgendaHoje } from "@/components/dashboard/CardAgendaHoje";
 import { CardOrcamentosAbertos } from "@/components/dashboard/CardOrcamentosAbertos";
 import { CardOportunidadesParadas } from "@/components/dashboard/CardOportunidadesParadas";
+import { CardConversasSemResposta } from "@/components/dashboard/CardConversasSemResposta";
 import { AcoesRapidas } from "@/components/dashboard/AcoesRapidas";
 
 const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -33,7 +36,16 @@ export default function DashboardGestor() {
   const [aprovadosMesQtd, setAprovadosMesQtd] = useState(0);
   const [oportunidadesAbertas, setOportunidadesAbertas] = useState(0);
 
-  const [focarNovaTarefa, setFocarNovaTarefa] = useState(false);
+  const [modalTarefaAberto, setModalTarefaAberto] = useState(false);
+
+  const {
+    tarefas, loading: tarefasLoading, recarregar: recarregarTarefas, concluirTarefa,
+  } = useTarefas();
+
+  const minhasTarefas = useMemo(
+    () => tarefas.filter(t => t.responsavel_id === perfil?.id),
+    [tarefas, perfil?.id]
+  );
 
   const carregar = async () => {
     setLoading(true);
@@ -83,19 +95,24 @@ export default function DashboardGestor() {
             <p className="text-3xl font-heading font-bold leading-none">{agora.getDate()}</p>
             <p className="text-[11px] text-white/70 uppercase tracking-wide mt-1">{diasSemana[agora.getDay()]} · {mesesLongos[agora.getMonth()]}</p>
           </div>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-white hover:bg-white/10 hover:text-white" onClick={carregar} disabled={loading}>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-white hover:bg-white/10 hover:text-white" onClick={() => { carregar(); recarregarTarefas(); }} disabled={loading}>
             <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             {atualizado.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </Button>
         </div>
       </div>
 
-      {/* Agenda + Tarefas de hoje */}
+      {/* Agenda + Tarefas de hoje (dados reais da tabela `tarefas`) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
-          <CardTarefas focarNovaTarefa={focarNovaTarefa} onFocoConcluido={() => setFocarNovaTarefa(false)} />
+          <CardMinhasTarefas
+            tarefas={minhasTarefas}
+            loading={tarefasLoading}
+            onConcluir={concluirTarefa}
+            onNova={() => setModalTarefaAberto(true)}
+          />
         </div>
-        <CardAgenda />
+        <CardAgendaHoje tarefas={minhasTarefas} loading={tarefasLoading} />
       </div>
 
       {/* KPIs da própria gestão */}
@@ -138,8 +155,9 @@ export default function DashboardGestor() {
         <CardComissao />
       </div>
 
-      {/* Orçamentos em aberto + Oportunidades paradas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Conversas sem resposta + Orçamentos em aberto + Oportunidades paradas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <CardConversasSemResposta canalFiltro={gestaoFiltro} />
         <CardOrcamentosAbertos gestaoFiltro={gestaoFiltro} />
         <CardOportunidadesParadas gestaoFiltro={gestaoFiltro} />
       </div>
@@ -150,9 +168,16 @@ export default function DashboardGestor() {
           <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 shrink-0">
             <CalendarDays size={13} /> Ações rápidas
           </span>
-          <AcoesRapidas onNovaTarefa={() => setFocarNovaTarefa(true)} />
+          <AcoesRapidas onNovaTarefa={() => setModalTarefaAberto(true)} />
         </CardContent>
       </Card>
+
+      <NovaTarefaModal
+        open={modalTarefaAberto}
+        onOpenChange={setModalTarefaAberto}
+        onSalvo={recarregarTarefas}
+        gestaoInicial={gestaoFiltro}
+      />
     </div>
   );
 }

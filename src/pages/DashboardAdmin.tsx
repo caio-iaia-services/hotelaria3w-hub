@@ -20,6 +20,9 @@ import {
 } from "@/lib/dashboardFormat";
 import { CardAlertas } from "@/components/dashboard/CardAlertas";
 import { CardAtividadeRecente } from "@/components/dashboard/CardAtividadeRecente";
+import { CardFunilComercial } from "@/components/dashboard/CardFunilComercial";
+import { CardAtendimentoConsolidado } from "@/components/dashboard/CardAtendimentoConsolidado";
+import { CardTarefasEquipe } from "@/components/dashboard/CardTarefasEquipe";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
@@ -354,11 +357,20 @@ export default function DashboardAdmin() {
         </Card>
       </div>
 
+      {/* ── Funil comercial + Atendimento consolidado ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <CardFunilComercial gestaoFiltro={selectedGestao} />
+        <CardAtendimentoConsolidado />
+      </div>
+
       {/* ── Alertas + Atividade recente ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CardAlertas gestaoFiltro={selectedGestao} />
         <CardAtividadeRecente />
       </div>
+
+      {/* ── Tarefas da equipe ── */}
+      <CardTarefasEquipe />
 
       {/* ── Recentes + Por Gestão / Resumo ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
