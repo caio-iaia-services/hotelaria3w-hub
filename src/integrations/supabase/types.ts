@@ -1210,6 +1210,45 @@ export type Database = {
           },
         ]
       }
+      contatos_exportacoes: {
+        Row: {
+          contato_id: string
+          destino: string
+          exportado_em: string
+          exportado_por: string | null
+          id: string
+        }
+        Insert: {
+          contato_id: string
+          destino: string
+          exportado_em?: string
+          exportado_por?: string | null
+          id?: string
+        }
+        Update: {
+          contato_id?: string
+          destino?: string
+          exportado_em?: string
+          exportado_por?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_exportacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_exportacoes_exportado_por_fkey"
+            columns: ["exportado_por"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contatos_cliente: {
         Row: {
           cliente_id: string

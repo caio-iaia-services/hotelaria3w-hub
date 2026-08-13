@@ -56,3 +56,11 @@ export const QUALIFICACAO_POR_STATUS: Record<StatusContato, string[]> = {
   ativo: ["higienizado", "aquecido", "em_prospeccao", "ativo_super", "ativo_interessado", "ativo_em_observacao"],
   inativo: ["cadastrado", "com_defeito", "inativo"],
 }
+
+// Destinos de exportação rastreados em `contatos_exportacoes` — hoje só o
+// Wix é usado de verdade (pedido do cliente pra sincronizar sem duplicar a
+// cada exportação), mas a lista já é o ponto único pra adicionar outro
+// destino no futuro sem tocar em schema de novo.
+export const DESTINOS_EXPORTACAO: { value: string; label: string }[] = [
+  { value: "wix", label: "Wix" },
+]
