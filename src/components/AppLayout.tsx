@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTheme } from "./ThemeProvider";
 import { useAuth } from "./AuthProvider";
 import { useSolicitacoesPendentes } from "@/hooks/useSolicitacoesPendentes";
+import { useJanelasFechando } from "@/hooks/useJanelasFechando";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -46,6 +47,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { perfil } = useAuth();
   const solicitacoes = useSolicitacoesPendentes(perfil?.id);
+  useJanelasFechando(); // dispara toast pop-up quando uma conversa ativa está a 60/30/15min de fechar a janela de 24h
 
   const iniciais = perfil?.nome
     ? perfil.nome.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
