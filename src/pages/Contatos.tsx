@@ -12,7 +12,7 @@ import ContatoModal from "@/components/contatos/ContatoModal";
 import ImportarContatosModal from "@/components/contatos/ImportarContatosModal";
 import ExportarContatosModal from "@/components/contatos/ExportarContatosModal";
 import FiltroMultiSelect from "@/components/filtros/FiltroMultiSelect";
-import { FONTE_OPTIONS, QUALIFICACAO_POR_STATUS } from "@/lib/contatosOpcoes";
+import { FONTE_OPTIONS, QUALIFICACAO_POR_STATUS, DESTINOS_EXPORTACAO } from "@/lib/contatosOpcoes";
 import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
 
 type Visualizacao = "cards" | "lista";
@@ -48,7 +48,11 @@ const qualificacaoLabel: Record<string, string> = Object.fromEntries(QUALIFICACA
 
 interface ContatoComClientes extends Contato {
   clientes?: { id: string; nome_fantasia: string; cnpj: string }[];
+  exportacoes?: { destino: string }[];
 }
+
+const destinoLabel: Record<string, string> = Object.fromEntries(DESTINOS_EXPORTACAO.map(d => [d.value, d.label]));
+const exportadoBadge = "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300";
 
 const PAGE_SIZE = 50;
 
@@ -117,7 +121,7 @@ export default function Contatos() {
     const q = aplicarFiltros(
       supabase
         .from("contatos")
-        .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj))", { count: "exact" })
+        .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj)), contatos_exportacoes(destino)", { count: "exact" })
         .order("nome")
     );
 
@@ -130,6 +134,7 @@ export default function Contatos() {
         (data || []).map((c: any) => ({
           ...c,
           clientes: (c.contato_cliente || []).map((r: any) => r.clientes).filter(Boolean),
+          exportacoes: c.contatos_exportacoes || [],
         }))
       );
       setTotal(count || 0);
@@ -308,6 +313,15 @@ export default function Contatos() {
                       <p className="text-xs text-muted-foreground truncate">
                         {c.nome ? c.email : (c.cargo || "")}
                       </p>
+                      {c.exportacoes && c.exportacoes.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap mt-1">
+                          {[...new Set(c.exportacoes.map(e => e.destino))].map(destino => (
+                            <Badge key={destino} className={`text-[9px] h-4 px-1.5 ${exportadoBadge}`}>
+                              Exportado: {destinoLabel[destino] || destino}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm truncate">{c.whatsapp || c.telefone || "-"}</TableCell>
                     <TableCell className="overflow-hidden">
@@ -395,6 +409,11 @@ export default function Contatos() {
                         {qualificacaoLabel[c.qualificacao] || c.qualificacao}
                       </Badge>
                     )}
+                    {c.exportacoes && [...new Set(c.exportacoes.map(e => e.destino))].map(destino => (
+                      <Badge key={destino} className={`text-[10px] h-4 px-1.5 ${exportadoBadge}`}>
+                        Exportado: {destinoLabel[destino] || destino}
+                      </Badge>
+                    ))}
                   </div>
 
                   {c.clientes && c.clientes.length > 0 && (
