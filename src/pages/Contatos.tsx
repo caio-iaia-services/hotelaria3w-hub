@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon, UserCheck, Link2 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { UserRound, Search, Plus, Mail, Phone, Building2, Loader2, X, LayoutGrid, List as ListIcon, UserCheck, Link2, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
 import ContatoModal from "@/components/contatos/ContatoModal";
+import ImportarContatosModal from "@/components/contatos/ImportarContatosModal";
 import FiltroMultiSelect from "@/components/filtros/FiltroMultiSelect";
 import { FONTE_OPTIONS, QUALIFICACAO_POR_STATUS } from "@/lib/contatosOpcoes";
 import { useCanaisMarketingAtivos } from "@/hooks/useCanaisMarketingAtivos";
@@ -63,6 +65,8 @@ export default function Contatos() {
   const [filtroQualificacao, setFiltroQualificacao] = useState<string[]>([]);
   const { canais: canaisAtivos } = useCanaisMarketingAtivos();
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalImportar, setModalImportar] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<Contato | null>(null);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
   const [totalAtivos, setTotalAtivos] = useState(0);
@@ -94,18 +98,28 @@ export default function Contatos() {
     setFiltroQualificacao((prev) => prev.filter((v) => valoresValidos.includes(v)));
   }, [qualificacaoOptions]);
 
-  const carregar = useCallback(async () => {
-    setCarregando(true);
-    let q = supabase
-      .from("contatos")
-      .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj))", { count: "exact" })
-      .order("nome");
-
+  // Aplica busca + os 4 filtros multi-escolha numa query de contatos — usado
+  // tanto pra carregar a listagem (paginada) quanto pra exportar (sem paginação,
+  // pra baixar exatamente o que está filtrado na tela).
+  const aplicarFiltros = useCallback(<Q,>(base: Q): Q => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = base as any;
     if (buscaDebounced) q = q.or(`nome.ilike.%${buscaDebounced}%,email.ilike.%${buscaDebounced}%,cargo.ilike.%${buscaDebounced}%`);
     if (filtroStatus.length > 0) q = q.in("status", filtroStatus);
     if (filtroFonte.length > 0) q = q.in("origem", filtroFonte);
     if (filtroCanal.length > 0) q = q.in("canal_marketing_id", filtroCanal);
     if (filtroQualificacao.length > 0) q = q.in("qualificacao", filtroQualificacao);
+    return q;
+  }, [buscaDebounced, filtroStatus, filtroFonte, filtroCanal, filtroQualificacao]);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    const q = aplicarFiltros(
+      supabase
+        .from("contatos")
+        .select("*, contato_cliente(cliente_id, clientes(id, nome_fantasia, cnpj))", { count: "exact" })
+        .order("nome")
+    );
 
     const from = (pagina - 1) * PAGE_SIZE;
     const { data, count, error } = await q.range(from, from + PAGE_SIZE - 1);
@@ -121,9 +135,56 @@ export default function Contatos() {
       setTotal(count || 0);
     }
     setCarregando(false);
-  }, [buscaDebounced, filtroStatus, filtroFonte, filtroCanal, filtroQualificacao, pagina]);
+  }, [aplicarFiltros, pagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  async function exportarXLSX() {
+    setExportando(true);
+    try {
+      const LOTE = 1000;
+      let todos: ContatoComClientes[] = [];
+      let from = 0;
+
+      while (true) {
+        const q = aplicarFiltros(supabase.from("contatos").select("*"))
+          .order("nome")
+          .range(from, from + LOTE - 1);
+        const { data, error } = await q;
+        if (error) throw error;
+        todos = [...todos, ...(data || [])];
+        if ((data?.length ?? 0) < LOTE) break;
+        from += LOTE;
+      }
+
+      const canalNome: Record<string, string> = Object.fromEntries(canaisAtivos.map((c) => [c.id, c.nome]));
+      const rows = todos.map((c) => ({
+        "Nome":          c.nome || "",
+        "E-mail":        c.email || "",
+        "Telefone":      c.telefone || "",
+        "WhatsApp":      c.whatsapp || "",
+        "CPF":           c.cpf || "",
+        "Cargo":         c.cargo || "",
+        "Fonte":         c.origem || "",
+        "Canal":         c.canal_marketing_id ? (canalNome[c.canal_marketing_id] || "") : "",
+        "Status":        c.status === "inativo" ? "Inativo" : "Ativo",
+        "Qualificação":  qualificacaoLabel[c.qualificacao] || c.qualificacao || "",
+        "Observações":   c.observacoes || "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Contatos");
+      const hoje = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `contatos_3w_${hoje}.xlsx`);
+
+      toast({ title: `${rows.length} contato${rows.length !== 1 ? "s" : ""} exportado${rows.length !== 1 ? "s" : ""} com sucesso!` });
+    } catch (err: any) {
+      toast({ title: "Erro ao exportar", description: err.message, variant: "destructive" });
+    } finally {
+      setExportando(false);
+    }
+  }
 
   const carregarMetricas = useCallback(async () => {
     const { count: ativos } = await supabase
@@ -184,6 +245,13 @@ export default function Contatos() {
                 <ListIcon size={15} />
               </button>
             </div>
+            <Button variant="outline" onClick={exportarXLSX} disabled={exportando} className="gap-2">
+              {exportando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              Exportar
+            </Button>
+            <Button variant="outline" onClick={() => setModalImportar(true)} className="gap-2">
+              <Upload size={16} /> Importar
+            </Button>
             <Button onClick={abrirNovo}>
               <Plus size={16} className="mr-2" /> Novo Contato
             </Button>
@@ -421,6 +489,12 @@ export default function Contatos() {
         onClose={() => { setModalOpen(false); setContatoSelecionado(null); }}
         contato={contatoSelecionado}
         onSaved={() => { carregar(); carregarMetricas(); }}
+      />
+
+      <ImportarContatosModal
+        open={modalImportar}
+        onClose={() => setModalImportar(false)}
+        onImportado={() => { carregar(); carregarMetricas(); }}
       />
     </div>
   );
