@@ -208,12 +208,13 @@ export function NovaTarefaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col gap-3 p-5">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{editando ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        {/* Corpo rolável: o cabeçalho e o rodapé (Salvar) ficam sempre visíveis */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-1 px-1 -mx-1">
           <div className="space-y-1.5">
             <Label>Tarefa *</Label>
             <Input
@@ -328,12 +329,12 @@ export function NovaTarefaModal({
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               placeholder="Detalhes, contexto ou combinados sobre a tarefa..."
-              rows={3}
+              rows={2}
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 gap-2 sm:gap-0">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={salvando}>
             Cancelar
           </Button>
