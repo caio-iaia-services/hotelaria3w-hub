@@ -827,7 +827,7 @@ Estruture a análise em:
                 <div key={g.gestao} className="bg-card border border-border/50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: GESTAO_COR[g.gestao] }} />
-                    <p className="font-semibold">{g.gestao === "G1" ? "Gestão 1 — Fabiano" : "Gestão 4 — Alex"}</p>
+                    <p className="font-semibold">{g.gestao === "G1" ? "Gestão 1 — Caline" : "Gestão 4 — Alex"}</p>
                   </div>
                   <div className="space-y-2.5">
                     {[

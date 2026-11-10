@@ -8,7 +8,7 @@ import { X, MessageSquare, Users, Activity, Inbox } from "lucide-react";
 
 const CANAIS = [
   { key: "IA", label: "Recepção", cor: "#164B6E" },
-  { key: "G1", label: "Fabiano (G1)", cor: "#2563eb" },
+  { key: "G1", label: "Caline (G1)", cor: "#2563eb" },
   { key: "G4", label: "Alex (G4)", cor: "#059669" },
   { key: "ADM", label: "Celso (Adm)", cor: "#ea580c" },
   { key: "FORNECEDORES", label: "Fornecedores", cor: "#7c3aed" },

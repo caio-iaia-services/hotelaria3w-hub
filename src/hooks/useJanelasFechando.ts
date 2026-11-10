@@ -24,7 +24,7 @@ const STORAGE_KEY = "3w_janelas_notificadas_v1";
 // Nomes de exibição por canal — mesmos gestores do painel em Atendimento.tsx
 // (duplicado aqui de propósito: importar de Atendimento.tsx puxaria a página
 // inteira pro bundle inicial do AppLayout).
-const NOME_CANAL: Record<string, string> = { G1: "Fabiano", G4: "Alex", ADM: "Celso", IA: "Recepção" };
+const NOME_CANAL: Record<string, string> = { G1: "Caline", G4: "Alex", ADM: "Celso", IA: "Recepção" };
 
 interface LinhaJanela {
   chat_id: string;

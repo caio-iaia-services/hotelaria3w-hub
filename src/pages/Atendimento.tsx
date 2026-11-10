@@ -103,14 +103,14 @@ interface TagAtendimento {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CANAIS = [
   { key: "IA",  label: "Recepção",      cor: "text-[#164B6E]", bg: "bg-[#164B6E]", border: "border-[#164B6E]/30" },
-  { key: "G1",  label: "Fabiano (G1)",  cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
+  { key: "G1",  label: "Caline (G1)",   cor: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200" },
   { key: "G4",  label: "Alex (G4)",     cor: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-200" },
   { key: "ADM", label: "Celso (Adm)",   cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 ];
 
 // Telefones dos gestores — mesmos números configurados no n8n (EVOLUTION_CONFIG.gestores)
 const GESTORES_TELEFONE: Record<string, { telefone: string; nome: string }> = {
-  G1:  { telefone: "554196873344",  nome: "Fabiano" },
+  G1:  { telefone: "5547996831783", nome: "Caline" },
   G4:  { telefone: "5511944939004", nome: "Alex" },
   ADM: { telefone: "5511934512879", nome: "Celso" },
 };
@@ -348,7 +348,7 @@ function BolhaMsg({ msg }: { msg: Mensagem }) {
 
 const LABEL_CANAL: Record<string, string> = {
   IA:  "Recepção",
-  G1:  "Fabiano (G1)",
+  G1:  "Caline (G1)",
   G4:  "Alex (G4)",
   ADM: "Celso (Adm)",
 };
@@ -673,7 +673,7 @@ function ModalMensagensRapidas({ isOpen, onClose, onSaved }: { isOpen: boolean; 
                 className="h-8 text-xs rounded-md border border-input bg-background px-2 flex-1"
               >
                 <option value="">Global (todos os canais)</option>
-                <option value="G1">Fabiano (G1)</option>
+                <option value="G1">Caline (G1)</option>
                 <option value="G4">Alex (G4)</option>
                 <option value="ADM">Celso (Adm)</option>
                 <option value="FORNECEDORES">Fornecedores</option>
