@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useProdutosCastorBusca, ProdutoCastor, MedidaPreco } from '@/hooks/useProdutosCastor'
+import { useTabelasCastor } from '@/hooks/useTabelasCastor'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,10 +14,9 @@ function formatCurrency(value: number) {
 
 const MEDIDA_PADRAO: MedidaPreco = { medida: '88x198', preco: 1348.00 }
 
-// Números de referência das planilhas do catálogo Castor (prefixo de 4 dígitos da lista, ex.: 5140).
-// Campo interno: não vai para o PDF/e-mail do cliente.
-const TABELAS_CASTOR = ['5140']
-const TABELA_PADRAO = TABELAS_CASTOR[0]
+// Tabela = nº de referência da planilha do catálogo Castor (4 dígitos, ex.: 5140).
+// Campo interno: não vai para o PDF/e-mail do cliente. A lista vem das tabelas importadas
+// em Fornecedores > Castor > Orçamento (a mais recente é o padrão).
 
 function parsePrice(value: string | number | null | undefined): number {
   if (value === null || value === undefined) return 0
@@ -69,6 +69,8 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
   const medidasBackfillFeita = useRef(false)
 
   const isCastor = tipoLayout === 'castor'
+  const { tabelas: TABELAS_CASTOR } = useTabelasCastor(isCastor)
+  const TABELA_PADRAO = TABELAS_CASTOR[0]
   const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
   const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
 

@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
+import { CastorTabelaUpload } from "@/components/fornecedores/CastorTabelaUpload";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Fornecedor {
@@ -688,6 +689,7 @@ export default function Fornecedores() {
     currentMarketingPreview: string | null,
     onMarketingChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
     onMarketingRemove: () => void,
+    isCastor: boolean = false,
   ) => (
     <Tabs defaultValue="geral" className="w-full">
       <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -952,6 +954,8 @@ export default function Fornecedores() {
           <Textarea {...reg("termos_fabricante")} placeholder="Termos legais/comerciais do fornecedor que aparecem no orçamento. Deixe vazio se o fornecedor não possuir termos próprios." rows={5} />
           <p className="text-xs text-muted-foreground mt-1">Se vazio, o bloco de termos do fabricante não será exibido no orçamento.</p>
         </div>
+
+        {isCastor && <CastorTabelaUpload />}
 
         <div className="space-y-2">
           <Label>Imagem de Marketing</Label>
@@ -1237,7 +1241,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); })}
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); }, /castor/i.test(modalEditar?.nome_fantasia || ""))}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button type="button" variant="destructive" size="sm" onClick={() => modalEditar && deletar(modalEditar.id)}>
                 <Trash2 size={14} className="mr-1" /> Deletar
