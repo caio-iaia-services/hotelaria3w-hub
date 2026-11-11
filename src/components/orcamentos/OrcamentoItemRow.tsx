@@ -138,10 +138,10 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
       <div className={`grid gap-3 ${tipoLayout === 'castor' ? 'grid-cols-12' : 'grid-cols-10'}`}>
         {/* TABELA (nº de referência da planilha do catálogo Castor) - apenas Castor */}
         {tipoLayout === 'castor' && (
-          <div className="col-span-1">
+          <div className="col-span-2">
             <Label>Tabela</Label>
             <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
               value={item.tabela || TABELA_PADRAO}
               onChange={(e) => onUpdate(item.id, 'tabela', e.target.value)}
             >
@@ -254,7 +254,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* PREÇO UNITÁRIO */}
-        <div className="col-span-3">
+        <div className="col-span-2">
           <Label>Preço Unitário *</Label>
           <Input
             placeholder="R$ 0,00"
