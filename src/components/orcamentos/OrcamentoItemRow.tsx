@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useProdutosCastorBusca, ProdutoCastor, MedidaPreco } from '@/hooks/useProdutosCastor'
 import { useTabelasCastor } from '@/hooks/useTabelasCastor'
+import { calcularPrecoReal, regraPorLocal, REGRA_PADRAO } from '@/lib/castorPreco'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,7 +42,11 @@ interface ItemData {
   medidas?: string
   especificacoes: string
   quantidade: number | string
-  preco_unitario: number | string
+  preco_unitario: number | string // Castor: preço unitário REAL (o que vai para o cliente)
+  // Campos internos Castor (não vão para a proposta nem são salvos no orçamento)
+  preco_referencia?: number | string
+  desconto_pct?: number | string
+  acrescimo_pct?: number | string
   total: number
 }
 
@@ -50,11 +55,40 @@ interface Props {
   index: number
   canRemove: boolean
   tipoLayout?: string | null
+  clienteUF?: string | null
+  clienteCidade?: string | null
   onUpdate: (id: string, campo: string, valor: string | number) => void
   onRemove: (id: string) => void
 }
 
-export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate, onRemove }: Props) {
+// Campo de valor em R$ (mostra formatado; edita como texto)
+function CampoMoeda({ label, value, onChange, interno = false }: {
+  label: string
+  value: string | number | null | undefined
+  onChange: (texto: string) => void
+  interno?: boolean
+}) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState('')
+  const num = parsePrice(value)
+  return (
+    <div>
+      <Label>{label}{interno && <span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span>}</Label>
+      <Input
+        placeholder="R$ 0,00"
+        className={interno ? 'bg-muted/50' : undefined}
+        value={editando ? texto : (num > 0 ? formatCurrency(num) : (value ? String(value) : ''))}
+        onFocus={() => { setEditando(true); setTexto(num > 0 ? String(num).replace('.', ',') : String(value || '')) }}
+        onChange={(e) => { setTexto(e.target.value); onChange(e.target.value) }}
+        onBlur={() => setEditando(false)}
+      />
+    </div>
+  )
+}
+
+const fmtPct = (n: number) => String(n).replace('.', ',')
+
+export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF, clienteCidade, onUpdate, onRemove }: Props) {
   const [precoEditando, setPrecoEditando] = useState(false)
   const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
@@ -71,6 +105,13 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
   const isCastor = tipoLayout === 'castor'
   const { tabelas: TABELAS_CASTOR } = useTabelasCastor(isCastor)
   const TABELA_PADRAO = TABELAS_CASTOR[0]
+
+  // Região do cliente → desconto/acréscimo (tabela de controle Castor de 07/10/2026)
+  const regraRegiao = regraPorLocal(clienteUF, clienteCidade)
+  const regra = regraRegiao ?? REGRA_PADRAO
+  const descontoTexto = item.desconto_pct !== undefined && item.desconto_pct !== '' ? String(item.desconto_pct) : fmtPct(regra.desconto)
+  const acrescimoTexto = item.acrescimo_pct !== undefined && item.acrescimo_pct !== '' ? String(item.acrescimo_pct) : fmtPct(regra.acrescimo)
+  const regraAnterior = useRef(regra.tabela)
   const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
   const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
 
@@ -121,9 +162,48 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
     onUpdate(item.id, 'medidas', value)
     const found = [...medidas, MEDIDA_PADRAO].find(m => m.medida === value)
     if (found) {
-      onUpdate(item.id, 'preco_unitario', found.preco)
+      if (isCastor) {
+        // preço da tabela vira a referência; desconto/acréscimo vêm da região do cliente
+        onUpdate(item.id, 'preco_referencia', found.preco)
+        aplicarRegra(found.preco)
+      } else {
+        onUpdate(item.id, 'preco_unitario', found.preco)
+      }
     }
   }
+
+  function aplicarRegra(referencia: number) {
+    onUpdate(item.id, 'desconto_pct', fmtPct(regra.desconto))
+    onUpdate(item.id, 'acrescimo_pct', fmtPct(regra.acrescimo))
+    onUpdate(item.id, 'preco_unitario', calcularPrecoReal(referencia, regra.desconto, regra.acrescimo))
+  }
+
+  function mudouReferencia(texto: string) {
+    onUpdate(item.id, 'preco_referencia', texto)
+    const ref = parsePrice(texto)
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(acrescimoTexto)))
+  }
+
+  function mudouDesconto(texto: string) {
+    onUpdate(item.id, 'desconto_pct', texto)
+    const ref = parsePrice(item.preco_referencia)
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(texto), parsePrice(acrescimoTexto)))
+  }
+
+  function mudouAcrescimo(texto: string) {
+    onUpdate(item.id, 'acrescimo_pct', texto)
+    const ref = parsePrice(item.preco_referencia)
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(texto)))
+  }
+
+  // Se o estado do cliente mudar com item já calculado, reaplica a regra da nova região
+  useEffect(() => {
+    if (regraAnterior.current === regra.tabela) return
+    regraAnterior.current = regra.tabela
+    const ref = parsePrice(item.preco_referencia)
+    if (isCastor && ref > 0) aplicarRegra(ref)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regra.tabela])
 
   const precoNumerico = parsePrice(item.preco_unitario)
 
@@ -189,7 +269,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* DESCRIÇÃO com autocomplete */}
-        <div className={tipoLayout === 'castor' ? 'col-span-3 relative' : 'col-span-5 relative'} ref={descricaoRef}>
+        <div className={tipoLayout === 'castor' ? 'col-span-4 relative' : 'col-span-5 relative'} ref={descricaoRef}>
           <Label>Descrição *</Label>
           <Input
             placeholder="Descrição do produto"
@@ -225,7 +305,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
 
         {/* MEDIDAS dropdown - apenas Castor */}
         {tipoLayout === 'castor' && (
-          <div className="col-span-2">
+          <div className="col-span-3">
             <Label>Medidas</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
@@ -256,6 +336,30 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* PREÇO UNITÁRIO */}
+        {isCastor ? (
+          <>
+            <div className="col-span-3">
+              <CampoMoeda label="Preço unitário referência" interno value={item.preco_referencia} onChange={mudouReferencia} />
+            </div>
+            <div className="col-span-3">
+              <Label>Descontos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+              <Input className="bg-muted/50" placeholder="0" value={descontoTexto} onChange={(e) => mudouDesconto(e.target.value)} />
+            </div>
+            <div className="col-span-3">
+              <Label>Acréscimos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+              <Input className="bg-muted/50" placeholder="0" value={acrescimoTexto} onChange={(e) => mudouAcrescimo(e.target.value)} />
+            </div>
+            <div className="col-span-3">
+              <CampoMoeda label="Preço unitário real *" value={item.preco_unitario} onChange={(t) => onUpdate(item.id, 'preco_unitario', t)} />
+            </div>
+            <p className="col-span-12 text-xs text-muted-foreground -mt-1">
+              {regraRegiao
+                ? <>Região do cliente: <b>{regraRegiao.regiao}</b> (tabela {regraRegiao.tabela}) — desconto {fmtPct(regraRegiao.desconto)}% · acréscimo {fmtPct(regraRegiao.acrescimo)}%.</>
+                : <>Estado do cliente não identificado — usando a tabela padrão (sem ajuste).</>}
+              {' '}Referência, descontos e acréscimos são internos; só o preço unitário real vai para o orçamento.
+            </p>
+          </>
+        ) : (
         <div className="col-span-2">
           <Label>Preço Unitário *</Label>
           <Input
@@ -275,6 +379,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
             onBlur={() => setPrecoEditando(false)}
           />
         </div>
+        )}
 
         {/* ESPECIFICAÇÕES */}
         <div className={tipoLayout === 'castor' ? 'col-span-12' : 'col-span-10'}>

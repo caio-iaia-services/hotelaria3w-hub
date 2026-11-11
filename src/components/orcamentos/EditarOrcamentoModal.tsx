@@ -591,6 +591,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                     index={index}
                     canRemove={itens.length > 1}
                     tipoLayout={tipoLayout}
+                    clienteUF={clienteAtual?.estado ?? (orcamento as any)?.cliente_estado}
+                    clienteCidade={clienteAtual?.cidade ?? (orcamento as any)?.cliente_cidade}
                     onUpdate={atualizarItem}
                     onRemove={removerItem}
                   />

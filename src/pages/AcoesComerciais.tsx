@@ -1409,6 +1409,8 @@ export default function AcoesComerciais() {
                     index={index}
                     canRemove={itensOrcamento.length > 1}
                     tipoLayout={fornecedorSelecionado?.tipo_layout}
+                    clienteUF={clienteCompleto?.estado}
+                    clienteCidade={clienteCompleto?.cidade}
                     onUpdate={(id, campo, valor) => atualizarItem(Number(id), campo, valor)}
                     onRemove={(id) => removerItem(Number(id))}
                   />
