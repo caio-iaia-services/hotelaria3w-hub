@@ -13,6 +13,11 @@ function formatCurrency(value: number) {
 
 const MEDIDA_PADRAO: MedidaPreco = { medida: '88x198', preco: 1348.00 }
 
+// Números de referência das planilhas do catálogo Castor (prefixo de 4 dígitos da lista, ex.: 5140).
+// Campo interno: não vai para o PDF/e-mail do cliente.
+const TABELAS_CASTOR = ['5140']
+const TABELA_PADRAO = TABELAS_CASTOR[0]
+
 function parsePrice(value: string | number | null | undefined): number {
   if (value === null || value === undefined) return 0
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -30,6 +35,7 @@ function parsePrice(value: string | number | null | undefined): number {
 
 interface ItemData {
   id: string
+  tabela?: string
   codigo: string
   descricao: string
   medidas?: string
@@ -130,6 +136,22 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         )}
       </div>
       <div className={`grid gap-3 ${tipoLayout === 'castor' ? 'grid-cols-12' : 'grid-cols-10'}`}>
+        {/* TABELA (nº de referência da planilha do catálogo Castor) - apenas Castor */}
+        {tipoLayout === 'castor' && (
+          <div className="col-span-1">
+            <Label>Tabela</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              value={item.tabela || TABELA_PADRAO}
+              onChange={(e) => onUpdate(item.id, 'tabela', e.target.value)}
+            >
+              {TABELAS_CASTOR.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* CÓDIGO com autocomplete */}
         <div className="col-span-2 relative" ref={codigoRef}>
           <Label>Código</Label>
@@ -165,7 +187,7 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, onUpdate,
         </div>
 
         {/* DESCRIÇÃO com autocomplete */}
-        <div className={tipoLayout === 'castor' ? 'col-span-4 relative' : 'col-span-5 relative'} ref={descricaoRef}>
+        <div className={tipoLayout === 'castor' ? 'col-span-3 relative' : 'col-span-5 relative'} ref={descricaoRef}>
           <Label>Descrição *</Label>
           <Input
             placeholder="Descrição do produto"
