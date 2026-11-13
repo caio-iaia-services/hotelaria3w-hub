@@ -26,6 +26,7 @@ import {
   resolverTermosFornecedor,
 } from "@/lib/fornecedorTerms";
 import { OrcamentoItemRow } from "@/components/orcamentos/OrcamentoItemRow";
+import { paraNumero } from "@/lib/numero";
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 interface ItemOrcamento {
@@ -624,10 +625,8 @@ export function OrcamentoModal({ card, open, onClose, onGerado }: OrcamentoModal
           descricao: item.descricao,
           medidas: item.medidas || null,
           especificacoes: item.especificacoes || null,
-          quantidade:
-            parseFloat(String(item.quantidade).replace(/\./g, "").replace(",", ".")) || 0,
-          preco_unitario:
-            parseFloat(String(item.preco_unitario).replace(/\./g, "").replace(",", ".")) || 0,
+          quantidade: paraNumero(item.quantidade),
+          preco_unitario: paraNumero(item.preco_unitario),
           total: isNaN(item.total) ? 0 : Number(item.total),
           ordem: index,
         }));
