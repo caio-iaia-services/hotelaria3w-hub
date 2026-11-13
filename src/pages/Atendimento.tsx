@@ -110,7 +110,7 @@ const CANAIS = [
 
 // Telefones dos gestores — mesmos números configurados no n8n (EVOLUTION_CONFIG.gestores)
 const GESTORES_TELEFONE: Record<string, { telefone: string; nome: string }> = {
-  G1:  { telefone: "5547996831783", nome: "Caline" },
+  G1:  { telefone: "554796831739", nome: "Caline" },
   G4:  { telefone: "5511944939004", nome: "Alex" },
   ADM: { telefone: "5511934512879", nome: "Celso" },
 };
