@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { PedidoEnvioFornecedor } from "@/components/fornecedores/PedidoEnvioFornecedor";
 import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
@@ -269,6 +270,10 @@ export default function Fornecedores() {
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
   const [contatosEdit, setContatosEdit] = useState<Contato[]>([]);
+  const [pedidoEmails, setPedidoEmails] = useState<string[]>([]);
+  const [pedidoWhatsapps, setPedidoWhatsapps] = useState<string[]>([]);
+  const [pedidoEmailsEdit, setPedidoEmailsEdit] = useState<string[]>([]);
+  const [pedidoWhatsappsEdit, setPedidoWhatsappsEdit] = useState<string[]>([]);
   const [arquivosEdit, setArquivosEdit] = useState<ArquivoUpload[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -525,12 +530,16 @@ export default function Fornecedores() {
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
         imagem_template_url: imagemMarketingUrl || dados.imagem_template_url || null,
+        // só envia as colunas de envio de pedidos quando preenchidas (compatível com banco sem a migração)
+        ...(pedidoEmails.length || pedidoWhatsapps.length ? { pedido_emails: pedidoEmails, pedido_whatsapps: pedidoWhatsapps } : {}),
       });
       if (error) throw error;
       toast({ title: "Fornecedor cadastrado com sucesso!" });
       setModalNovo(false);
       resetNovo();
       setContatos([]);
+      setPedidoEmails([]);
+      setPedidoWhatsapps([]);
       setArquivos([]);
       setLogoFile(null);
       setLogoPreview(null);
@@ -586,6 +595,8 @@ export default function Fornecedores() {
       ? (typeof fc.contatos === 'string' ? JSON.parse(fc.contatos) : fc.contatos)
       : [];
     setContatosEdit(existingContatos);
+    setPedidoEmailsEdit(((fc as any).pedido_emails as string[]) || []);
+    setPedidoWhatsappsEdit(((fc as any).pedido_whatsapps as string[]) || []);
     setArquivosEdit([]);
     setLogoFileEdit(null);
     setLogoPreviewEdit(fc.logotipo_url || null);
@@ -640,6 +651,8 @@ export default function Fornecedores() {
         condicoes_pagamento_padrao: dados.condicoes_pagamento_padrao || null,
         termos_fabricante: dados.termos_fabricante || null,
         imagem_template_url: imagemMarketingUrl || null,
+        ...(pedidoEmailsEdit.length || pedidoWhatsappsEdit.length || (modalEditar as any).pedido_emails?.length || (modalEditar as any).pedido_whatsapps?.length
+          ? { pedido_emails: pedidoEmailsEdit, pedido_whatsapps: pedidoWhatsappsEdit } : {}),
       }).eq("id", modalEditar.id);
       if (error) throw error;
       toast({ title: "Fornecedor atualizado com sucesso!" });
@@ -690,12 +703,17 @@ export default function Fornecedores() {
     onMarketingChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
     onMarketingRemove: () => void,
     isCastor: boolean = false,
+    pedEmails: string[] = [],
+    setPedEmails: (v: string[]) => void = () => {},
+    pedWhats: string[] = [],
+    setPedWhats: (v: string[]) => void = () => {},
   ) => (
     <Tabs defaultValue="geral" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 mb-4">
+      <TabsList className="grid w-full grid-cols-4 mb-4">
         <TabsTrigger value="geral">Dados Gerais</TabsTrigger>
         <TabsTrigger value="contatos">Contatos</TabsTrigger>
         <TabsTrigger value="orcamento">Orçamento</TabsTrigger>
+        <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
       </TabsList>
 
       {/* ── ABA DADOS GERAIS ── */}
@@ -924,6 +942,11 @@ export default function Fornecedores() {
         {contatosList.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato adicionado</p>
         )}
+      </TabsContent>
+
+      {/* ── ABA PEDIDOS (destinatários do envio automático) ── */}
+      <TabsContent value="pedidos" className="space-y-4 mt-0">
+        <PedidoEnvioFornecedor emails={pedEmails} whatsapps={pedWhats} onEmails={setPedEmails} onWhatsapps={setPedWhats} />
       </TabsContent>
 
       <TabsContent value="orcamento" className="space-y-4 mt-0">
@@ -1224,7 +1247,7 @@ export default function Fornecedores() {
             <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={subNovo(salvarNovo)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); }, imagemMarketingPreview, (e) => handleLogoUpload(e, setImagemMarketingFile, setImagemMarketingPreview), () => { setImagemMarketingFile(null); setImagemMarketingPreview(null); })}
+            {renderFormFields(regNovo, setNovo, statusNovoValue, contatos, setContatos, arquivos, setArquivos, gestaoNovoValue, segmentoNovoValue, estadoNovoValue, cidadeNovoValue, "upload-arquivos-novo", logoPreview, (e) => handleLogoUpload(e, setLogoFile, setLogoPreview), () => { setLogoFile(null); setLogoPreview(null); }, imagemMarketingPreview, (e) => handleLogoUpload(e, setImagemMarketingFile, setImagemMarketingPreview), () => { setImagemMarketingFile(null); setImagemMarketingPreview(null); }, false, pedidoEmails, setPedidoEmails, pedidoWhatsapps, setPedidoWhatsapps)}
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => { setModalNovo(false); resetNovo(); }} disabled={salvando}>Cancelar</Button>
               <Button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar Fornecedor"}</Button>
@@ -1241,7 +1264,7 @@ export default function Fornecedores() {
             <DialogDescription>Atualize os dados do fornecedor</DialogDescription>
           </DialogHeader>
           <form onSubmit={subEdit(salvarEdicao)} onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') e.preventDefault(); }} className="space-y-4 pt-2">
-            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); }, /castor/i.test(modalEditar?.nome_fantasia || ""))}
+            {renderFormFields(regEdit, setEdit, statusEditValue, contatosEdit, setContatosEdit, arquivosEdit, setArquivosEdit, gestaoEditValue, segmentoEditValue, estadoEditValue, cidadeEditValue, "upload-arquivos-edit", logoPreviewEdit, (e) => handleLogoUpload(e, setLogoFileEdit, setLogoPreviewEdit), () => { setLogoFileEdit(null); setLogoPreviewEdit(null); }, imagemMarketingPreviewEdit, (e) => handleLogoUpload(e, setImagemMarketingFileEdit, setImagemMarketingPreviewEdit), () => { setImagemMarketingFileEdit(null); setImagemMarketingPreviewEdit(null); }, /castor/i.test(modalEditar?.nome_fantasia || ""), pedidoEmailsEdit, setPedidoEmailsEdit, pedidoWhatsappsEdit, setPedidoWhatsappsEdit)}
             <DialogFooter className="pt-2 flex-row justify-between">
               <Button type="button" variant="destructive" size="sm" onClick={() => modalEditar && deletar(modalEditar.id)}>
                 <Trash2 size={14} className="mr-1" /> Deletar

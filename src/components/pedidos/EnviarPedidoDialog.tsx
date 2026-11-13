@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { PedidoDados, PedidoItem } from '@/lib/pedidoCastor'
+import { emailValido, whatsappValido } from '@/components/fornecedores/PedidoEnvioFornecedor'
 import { carregarPedido, dadosDoPedidoRow, atualizarStatusPedido } from '@/lib/pedidoCastorDb'
 import { gerarPedidoPDF, gerarPedidoXlsx, MAX_ITENS_PLANILHA } from '@/lib/pedidoCastorExport'
 import {
@@ -20,6 +21,25 @@ import {
 
 const db: any = supabase // tabelas novas, fora de integrations/supabase/types.ts
 const EMAIL_COMERCIAL = 'comercial1@3whotelaria.com.br'
+type Modo = 'auto' | 'manual'
+
+function ModoDestino({ valor, onChange, temCadastro }: { valor: Modo; onChange: (m: Modo) => void; temCadastro: boolean }) {
+  const base = 'flex-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors'
+  const ativo = 'bg-[#1a4168] text-white border-[#1a4168]'
+  const inativo = 'bg-background text-foreground hover:bg-muted'
+  return (
+    <div className="flex gap-2" role="group" aria-label="Origem dos destinatários">
+      <button type="button" aria-pressed={valor === 'auto'} disabled={!temCadastro} onClick={() => onChange('auto')}
+        className={`${base} ${valor === 'auto' ? ativo : inativo} disabled:opacity-50 disabled:cursor-not-allowed`}>
+        Automático (cadastro do fornecedor)
+      </button>
+      <button type="button" aria-pressed={valor === 'manual'} onClick={() => onChange('manual')} className={`${base} ${valor === 'manual' ? ativo : inativo}`}>
+        Manual
+      </button>
+    </div>
+  )
+}
+
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 interface Props {
@@ -39,6 +59,13 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
   const [meta, setMeta] = useState<{ orcamentoId: string; cardId: string | null } | null>(null)
   const [canal, setCanal] = useState<'email' | 'whatsapp'>('email')
 
+  const [emailsCadastro, setEmailsCadastro] = useState<string[]>([])
+  const [zapsCadastro, setZapsCadastro] = useState<string[]>([])
+  const [modoEmail, setModoEmail] = useState<Modo>('manual')
+  const [modoZap, setModoZap] = useState<Modo>('manual')
+  const [zapsMarcados, setZapsMarcados] = useState<string[]>([])
+  const [copiaComercial, setCopiaComercial] = useState(true)
+  const [prontos, setProntos] = useState<{ numero: string; url: string }[] | null>(null)
   const [destinatarios, setDestinatarios] = useState('')
   const [assunto, setAssunto] = useState('')
   const [msgEmail, setMsgEmail] = useState('')
@@ -56,6 +83,7 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
     setAnexos([])
     setIncluirPlanilha(false)
     setCanal('email')
+    setProntos(null)
     ;(async () => {
       try {
         const { pedido, itens: its } = await carregarPedido(pedidoId)
@@ -63,7 +91,7 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         const { data: cab } = await db.from('pedidos_castor').select('fornecedor_id, orcamento_id').eq('id', pedidoId).maybeSingle()
         const [forn, orc] = await Promise.all([
           cab?.fornecedor_id
-            ? supabase.from('fornecedores').select('email, whatsapp, telefone').eq('id', cab.fornecedor_id).maybeSingle().then(r => r.data as any)
+            ? supabase.from('fornecedores').select('email, whatsapp, telefone, pedido_emails, pedido_whatsapps').eq('id', cab.fornecedor_id).maybeSingle().then(r => r.data as any)
             : Promise.resolve(null),
           cab?.orcamento_id
             ? supabase.from('orcamentos').select('card_id').eq('id', cab.orcamento_id).maybeSingle().then(r => r.data as any)
@@ -73,7 +101,15 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         setDados(d)
         setItens(its)
         setMeta({ orcamentoId: cab?.orcamento_id || pedido.orcamento_id, cardId: orc?.card_id || null })
-        setDestinatarios([forn?.email, EMAIL_COMERCIAL].filter(Boolean).join(', '))
+        const ems: string[] = (forn?.pedido_emails as string[]) || []
+        const zps: string[] = (forn?.pedido_whatsapps as string[]) || []
+        setEmailsCadastro(ems)
+        setZapsCadastro(zps)
+        setModoEmail(ems.length ? 'auto' : 'manual')
+        setModoZap(zps.length ? 'auto' : 'manual')
+        setZapsMarcados(zps)
+        setCopiaComercial(true)
+        setDestinatarios(forn?.email || '')
         setAssunto(`Pedido ${d.numero} - ${d.razao_social} - 3W Hotelaria`)
         setMsgEmail(mensagemEmailPadrao(d, its, false))
         setTelefone(String(forn?.whatsapp || forn?.telefone || ''))
@@ -127,7 +163,12 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
     setEnviando(true)
     try {
       if (canal === 'email') {
-        if (!destinatarios.trim()) throw new Error('Informe ao menos um destinatário')
+        const lista = modoEmail === 'auto' ? [...emailsCadastro] : destinatarios.split(/[,;\s]+/).filter(Boolean)
+        if (copiaComercial && !lista.includes(EMAIL_COMERCIAL)) lista.push(EMAIL_COMERCIAL)
+        if (lista.length === 0) throw new Error('Informe ao menos um destinatário')
+        const invalido = lista.find(e => !emailValido(e))
+        if (invalido) throw new Error(`E-mail inválido: ${invalido}`)
+        const destinatariosFinal = lista.join(', ')
         if (totalMB > LIMITE_EMAIL_MB) throw new Error(`Os anexos somam ${totalMB.toFixed(1)} MB (limite de ${LIMITE_EMAIL_MB} MB por e-mail). Remova algum arquivo ou envie por WhatsApp.`)
         toast.info('Gerando PDF do pedido...')
         const pdfPedido = await gerarPedidoPDF(dados, itens)
@@ -145,13 +186,13 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         await enviarEmailPedido({
           orcamentoId: meta.orcamentoId,
           numero: dados.numero,
-          destinatarios: destinatarios,
+          destinatarios: destinatariosFinal,
           assunto,
           mensagem,
           pdf: pdfFinal,
           fromEmail: user?.email || 'sac@3whotelaria.com.br',
         })
-        await registrar(`Pedido ${dados.numero} enviado por e-mail para ${destinatarios}`)
+        await registrar(`Pedido ${dados.numero} enviado por e-mail para ${destinatariosFinal}`)
         toast.success('Pedido enviado por e-mail')
       } else {
         const pdfPedido = await gerarPedidoPDF(dados, itens)
@@ -163,9 +204,20 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         }
         toast.info('Hospedando arquivos...')
         const links = await hospedarArquivos(arquivos)
-        const url = linkWhatsapp(telefone, acrescentarLinks(msgZap, links, 'Arquivos:'))
-        window.open(url, '_blank')
-        await registrar(`Pedido ${dados.numero} enviado por WhatsApp${telefone ? ` para ${telefone}` : ''}`)
+        const texto = acrescentarLinks(msgZap, links, 'Arquivos:')
+        const numeros = modoZap === 'auto' ? zapsMarcados : telefone.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean)
+        if (modoZap === 'auto' && numeros.length === 0) throw new Error('Selecione ao menos um número de WhatsApp')
+        const invalido = numeros.find(n => !whatsappValido(n))
+        if (invalido) throw new Error(`Número de WhatsApp inválido: ${invalido}`)
+        await registrar(`Pedido ${dados.numero} enviado por WhatsApp${numeros.length ? ` para ${numeros.join(', ')}` : ''}`)
+        if (numeros.length > 1) {
+          // vários números: o navegador só abre uma janela por clique — cada número vira um botão
+          setProntos(numeros.map(n => ({ numero: n, url: linkWhatsapp(n, texto) })))
+          toast.success('Arquivos prontos. Clique em cada número para abrir o WhatsApp.')
+          onSent?.()
+          return
+        }
+        window.open(linkWhatsapp(numeros[0] || '', texto), '_blank')
         toast.success('WhatsApp aberto com os links do pedido', { description: 'Confirme o envio na janela do WhatsApp.' })
       }
       onSent?.()
@@ -203,22 +255,68 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
               </TabsList>
 
               <TabsContent value="email" className="space-y-3 pt-3">
-                <div>
+                <div className="space-y-2">
                   <Label>Destinatários</Label>
-                  <Input value={destinatarios} onChange={e => setDestinatarios(e.target.value)} placeholder="email1@..., email2@..." />
-                  <p className="mt-1 text-xs text-muted-foreground">Separe por vírgula. Vem preenchido com o e-mail do fornecedor Castor e o comercial da 3W.</p>
+                  <ModoDestino valor={modoEmail} onChange={setModoEmail} temCadastro={emailsCadastro.length > 0} />
+                  {modoEmail === 'auto' ? (
+                    <ul className="rounded-md border bg-muted/30 p-2 text-sm space-y-1" aria-label="E-mails cadastrados">
+                      {emailsCadastro.map(e => <li key={e} className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" />{e}</li>)}
+                    </ul>
+                  ) : (
+                    <Input value={destinatarios} onChange={e => setDestinatarios(e.target.value)} placeholder="email1@..., email2@..." aria-label="Destinatários manuais" />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {modoEmail === 'auto' ? 'Todos os e-mails de pedidos cadastrados no fornecedor (Fornecedores › Pedidos).' : 'Separe por vírgula.'}
+                    {emailsCadastro.length === 0 && ' Este fornecedor ainda não tem e-mails de pedidos cadastrados.'}
+                  </p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={copiaComercial} onCheckedChange={v => setCopiaComercial(!!v)} aria-label="Enviar cópia ao comercial" />
+                    Enviar cópia para {EMAIL_COMERCIAL}
+                  </label>
                 </div>
                 <div><Label>Assunto</Label><Input value={assunto} onChange={e => setAssunto(e.target.value)} /></div>
                 <div><Label>Mensagem</Label><Textarea rows={9} value={msgEmail} onChange={e => setMsgEmail(e.target.value)} /></div>
               </TabsContent>
 
               <TabsContent value="whatsapp" className="space-y-3 pt-3">
-                <div>
-                  <Label>Número do WhatsApp</Label>
-                  <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
-                  <p className="mt-1 text-xs text-muted-foreground">Abre o WhatsApp com a mensagem e os links do PDF e dos anexos. Deixe em branco para escolher o contato lá.</p>
+                <div className="space-y-2">
+                  <Label>Números do WhatsApp</Label>
+                  <ModoDestino valor={modoZap} onChange={setModoZap} temCadastro={zapsCadastro.length > 0} />
+                  {modoZap === 'auto' ? (
+                    <div className="rounded-md border bg-muted/30 p-2 space-y-1.5" aria-label="WhatsApp cadastrados">
+                      {zapsCadastro.map(n => (
+                        <label key={n} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={zapsMarcados.includes(n)}
+                            onCheckedChange={v => setZapsMarcados(p => (v ? [...new Set([...p, n])] : p.filter(x => x !== n)))}
+                            aria-label={`Enviar para ${n}`}
+                          />
+                          {n}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999, (11) 98888-7777" aria-label="Números manuais" />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {modoZap === 'auto' ? 'Números de pedidos cadastrados no fornecedor (Fornecedores › Pedidos). Desmarque os que não devem receber.' : 'Separe vários números por vírgula. Em branco, você escolhe o contato no WhatsApp.'}
+                    {zapsCadastro.length === 0 && ' Este fornecedor ainda não tem WhatsApp de pedidos cadastrado.'}
+                  </p>
                 </div>
                 <div><Label>Mensagem</Label><Textarea rows={8} value={msgZap} onChange={e => setMsgZap(e.target.value)} /></div>
+                {prontos && (
+                  <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 space-y-2">
+                    <p className="text-sm font-medium text-emerald-900">Arquivos hospedados. Abra o WhatsApp de cada número:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {prontos.map(p => (
+                        <a key={p.numero} href={p.url} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
+                          <MessageCircle className="h-4 w-4" /> {p.numero}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 

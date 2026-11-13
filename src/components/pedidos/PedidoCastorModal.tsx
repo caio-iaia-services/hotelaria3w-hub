@@ -28,6 +28,7 @@ interface Props {
 }
 
 const AZUL = 'text-[#1a4168]'
+const OUTROS = '__outros__'
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -98,6 +99,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
   const [salvando, setSalvando] = useState(false)
   const [exportando, setExportando] = useState<'pdf' | 'xlsx' | null>(null)
   const [enviarId, setEnviarId] = useState<string | null>(null)
+  const [prazoOutros, setPrazoOutros] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -108,6 +110,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
     setDados(null)
     setItens([])
     setIdSalvo(null)
+    setPrazoOutros(false)
     ;(async () => {
       try {
         let oId = orcamentoId || null
@@ -131,6 +134,8 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
           setDados(resto as PedidoDados)
           setItens(its)
           setIdSalvo(id)
+          const prazoSalvo = String((resto as any).prazo_entrega || '')
+          setPrazoOutros(!!prazoSalvo && !opcoesPrazoEntrega(c.orcamento.prazo_entrega).includes(prazoSalvo))
         } else {
           if (!['aprovado', 'consolidado'].includes(String(c.orcamento.status))) {
             throw new Error('O pedido só pode ser criado a partir de um orçamento aprovado. Marque o orçamento como Aprovado primeiro.')
@@ -160,10 +165,8 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
 
   const opcoesPrazo = useMemo(() => {
     if (!ctx) return []
-    const base = opcoesPrazoEntrega(ctx.orcamento.prazo_entrega)
-    if (dados && dados.prazo_entrega && !base.includes(dados.prazo_entrega)) base.push(dados.prazo_entrega)
-    return base
-  }, [ctx, dados?.prazo_entrega]) // eslint-disable-line react-hooks/exhaustive-deps
+    return opcoesPrazoEntrega(ctx.orcamento.prazo_entrega)
+  }, [ctx])
 
   const totais = useMemo(() => (dados ? calcularTotais(itens, dados) : null), [itens, dados])
 
@@ -173,6 +176,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
   async function salvar(): Promise<string | null> {
     if (!dados || !ctx) return null
     if (!dados.numero.trim()) { toast.error('Informe o número do pedido'); return null }
+    if (prazoOutros && !dados.prazo_entrega.trim()) { toast.error('Informe o prazo de entrega combinado'); return null }
     setSalvando(true)
     try {
       const id = await salvarPedido({ pedidoId: idSalvo, orcamento: ctx.orcamento, dados, itens })
@@ -262,12 +266,28 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
                   </Select>
                 </Campo>
                 <Campo label="Prazo de Entrega" className="col-span-2">
-                  <Select value={dados.prazo_entrega} onValueChange={v => setD('prazo_entrega', v)}>
+                  <Select
+                    value={prazoOutros ? OUTROS : dados.prazo_entrega}
+                    onValueChange={v => {
+                      if (v === OUTROS) { setPrazoOutros(true); setD('prazo_entrega', '') }
+                      else { setPrazoOutros(false); setD('prazo_entrega', v) }
+                    }}
+                  >
                     <SelectTrigger aria-label="Prazo de entrega" className="font-semibold"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {opcoesPrazo.map(o => <SelectItem key={o} value={o}>{/^\d+$/.test(o) ? `${o} dias` : o}</SelectItem>)}
+                      <SelectItem value={OUTROS}>Outros (prazo combinado)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {prazoOutros && (
+                    <Input
+                      className="mt-2"
+                      aria-label="Prazo combinado"
+                      placeholder="Prazo combinado (ex.: 50, 20/40 dias, a combinar)"
+                      value={dados.prazo_entrega}
+                      onChange={e => setD('prazo_entrega', e.target.value)}
+                    />
+                  )}
                 </Campo>
               </div>
             </Secao>
