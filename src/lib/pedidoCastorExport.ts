@@ -1,7 +1,7 @@
 // Exportação do Pedido Castor: PDF (design 3W) e planilha editável (modelo Castor com fórmulas vivas).
 
 import {
-  PedidoDados, PedidoItem, calcularTotais, num, totalSemDescItem, totalComDescItem,
+  PedidoDados, PedidoItem, calcularTotais, codigoCastor, num, totalSemDescItem, totalComDescItem,
 } from './pedidoCastor'
 
 export const MAX_ITENS_PLANILHA = 19 // linhas 26..44 do modelo
@@ -149,7 +149,7 @@ export async function gerarPedidoXlsx(dados: PedidoDados, itens: PedidoItem[]): 
       d3: it ? num(it.desconto3_pct) / 100 : 0,
     }
     // código: um dígito por coluna (A..G do modelo: C,D,E,F,G)
-    const digitos = (it?.codigo || '').replace(/\D/g, '').slice(-5).split('')
+    const digitos = codigoCastor(it?.codigo).replace(/\D/g, '').slice(-5).split('')
     const desloc = 5 - digitos.length
     ;['C', 'D', 'E', 'F', 'G'].forEach((col, k) => set(`${col}${r}`, k >= desloc ? Number(digitos[k - desloc]) : null))
     set(`A${r}`, it ? r - PRIMEIRA + 1 : null)

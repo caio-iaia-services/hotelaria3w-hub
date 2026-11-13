@@ -11,7 +11,7 @@ import { EnviarPedidoDialog } from '@/components/pedidos/EnviarPedidoDialog'
 import { PedidoCastorModal } from '@/components/pedidos/PedidoCastorModal'
 import { STATUS_PEDIDO, atualizarStatusPedido, carregarPedido, dadosDoPedidoRow, excluirPedido, MSG_MIGRACAO } from '@/lib/pedidoCastorDb'
 import { baixarPedidoPDF, baixarPedidoXlsx, MAX_ITENS_PLANILHA } from '@/lib/pedidoCastorExport'
-import { moeda, dataBR, num } from '@/lib/pedidoCastor'
+import { moeda, dataBR, num, tabelaDoPedido } from '@/lib/pedidoCastor'
 
 const db: any = supabase // tabela nova, ainda fora de integrations/supabase/types.ts
 
@@ -153,7 +153,7 @@ export default function Pedidos() {
                     <p className="text-xs text-muted-foreground">{l.cnpj}</p>
                   </TableCell>
                   <TableCell className="text-sm">{dataBR(l.data_pedido)}</TableCell>
-                  <TableCell className="text-sm">{l.tabela}</TableCell>
+                  <TableCell className="text-sm">{tabelaDoPedido(l.tabela)}</TableCell>
                   <TableCell className="text-sm">{l.condicoes_pagamento}</TableCell>
                   <TableCell><span className="font-medium">{moeda(num(l.total))}</span></TableCell>
                   <TableCell>

@@ -3,7 +3,7 @@
 
 import React from 'react'
 import {
-  PedidoDados, PedidoItem, TotaisPedido, calcularTotais, numeroBR, pctBR, dataBR, moeda,
+  PedidoDados, PedidoItem, TotaisPedido, calcularTotais, codigoCastor, numeroBR, pctBR, dataBR, moeda,
 } from '@/lib/pedidoCastor'
 
 export const AZUL = '#1a4168'
@@ -101,7 +101,7 @@ function Rodape({ pagina, total }: { pagina: number; total: number }) {
 
 /** Código em 5 colunas (um dígito por célula, alinhado à direita), como no modelo Castor. */
 export function digitosCodigo(codigo: string): string[] {
-  const d = (codigo || '').replace(/\D/g, '').slice(-5).split('')
+  const d = codigoCastor(codigo).replace(/\D/g, '').slice(-5).split('')
   return [...Array(5 - d.length).fill(''), ...d]
 }
 

@@ -12,6 +12,18 @@ import { regraPorLocal, REGRA_PADRAO } from './castorPreco'
 
 export const VEND_REPRES_PADRAO = '463'
 
+/** O pedido sempre usa a tabela base de preços (5140); as tabelas 5141…5154 só definem desconto/acréscimo da região. */
+export const TABELA_PEDIDO = REGRA_PADRAO.tabela
+export function tabelaDoPedido(_valor?: string | null): string {
+  return TABELA_PEDIDO
+}
+
+/** Código Castor sempre com 5 dígitos: preserva o(s) zero(s) à esquerda (ex.: 8789 → 08789). */
+export function codigoCastor(codigo: unknown): string {
+  const c = String(codigo ?? '').trim()
+  return /^\d{1,5}$/.test(c) ? c.padStart(5, '0') : c
+}
+
 export interface PedidoItem {
   id: string
   codigo: string
@@ -193,7 +205,7 @@ export function itemDoOrcamento(it: Record<string, any>, estado?: string | null,
   const unit = arred(referencia * (1 + acr / 100))
   return {
     id: String(it.id ?? `i${indice}`),
-    codigo: String(it.codigo ?? '').trim(),
+    codigo: codigoCastor(it.codigo),
     descricao: descricaoPedidoItem(it),
     quantidade: num(it.quantidade) || 1,
     preco_unitario: unit,
@@ -241,14 +253,13 @@ export function dadosIniciaisPedido(
   const razao = s(c.razao_social) || s(orc.cliente_razao_social) || s(orc.cliente_nome)
   const enderecoCompleto = [endereco, bairro].filter(Boolean).join(', ')
   const opcoes = opcoesCondicoesPagamento(orc.condicoes_pagamento)
-  const regra = regraPorLocal(estado, cidade) ?? REGRA_PADRAO
   return {
     numero: s(orc.numero),
     data_pedido: dataAprovacaoOrcamento(orc, hoje),
     vend_repres: VEND_REPRES_PADRAO,
     cliente_numero: '',
     tpop: '',
-    tabela: s(tabelaItem) || regra.tabela,
+    tabela: tabelaDoPedido(tabelaItem),
     cod_mensagens: '',
     codigo_fat: '',
     razao_social: razao,

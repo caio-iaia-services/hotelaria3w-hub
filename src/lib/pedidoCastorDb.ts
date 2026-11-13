@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 const db: any = supabase
 import { getLocalDateString } from '@/lib/date'
 import {
-  PedidoDados, PedidoItem, calcularTotais, dadosIniciaisPedido, itemDoOrcamento, num,
+  PedidoDados, PedidoItem, calcularTotais, codigoCastor, tabelaDoPedido, dadosIniciaisPedido, itemDoOrcamento, num,
   totalComDescItem, totalSemDescItem,
 } from '@/lib/pedidoCastor'
 
@@ -101,9 +101,10 @@ export async function carregarPedido(pedidoId: string): Promise<{ pedido: Pedido
   for (const k of Object.keys(pedido) as (keyof PedidoRow)[]) {
     if ((pedido as any)[k] === null) (pedido as any)[k] = ''
   }
+  pedido.tabela = tabelaDoPedido(pedido.tabela) // pedidos salvos antes com tabela regional (ex.: 5141)
   const itens: PedidoItem[] = ((its as any[]) || []).map(r => ({
     id: String(r.id),
-    codigo: r.codigo || '',
+    codigo: codigoCastor(r.codigo),
     descricao: r.descricao || '',
     quantidade: num(r.quantidade),
     preco_unitario: num(r.preco_unitario),

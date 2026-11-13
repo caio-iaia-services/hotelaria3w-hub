@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   calcularTotais, itemDoOrcamento, opcoesCondicoesPagamento, opcoesPrazoEntrega, prazoPadrao,
-  dataAprovacaoOrcamento, descricaoPedidoItem, dadosIniciaisPedido, VEND_REPRES_PADRAO,
+  dataAprovacaoOrcamento, descricaoPedidoItem, dadosIniciaisPedido, VEND_REPRES_PADRAO, codigoCastor, tabelaDoPedido,
 } from '@/lib/pedidoCastor'
 
 const CONDICOES = 'ESTE VALOR É PARA PAGAMENTO À VISTA ANTECIPADO\n- para 30/60 acréscimo de 2,0%\n- para 30/60/90 acréscimo de 2,8%\n- para 30/60/90/120 acréscimo de 3,00%\nIMPORTANTE: quando o pagamento não é total e antecipado, o pedido estará sujeito à aprovação de crédito.'
@@ -66,5 +66,20 @@ describe('cabeçalho', () => {
   it('descrição: produto + especificação + medida', () => {
     expect(descricaoPedidoItem({ descricao: 'COLCHÃO X', especificacoes: 'COLC.PKT FACE 33', medidas: '158x198' }))
       .toBe('COLCHÃO X\n\nCOLC.PKT FACE 33 MEDIDA QUEEN 158X198')
+  })
+})
+
+describe('tabela e código do item', () => {
+  it('a tabela do pedido é sempre a base 5140, mesmo para cliente de BA (5141) ou item com tabela regional', () => {
+    const d = dadosIniciaisPedido({ numero: '1' }, [], { estado: 'BA', cidade: 'Lençóis' }, '2026-11-13', '5141')
+    expect(d.tabela).toBe('5140')
+    expect(tabelaDoPedido('5143')).toBe('5140')
+  })
+  it('código mantém o zero à esquerda (5 dígitos)', () => {
+    expect(codigoCastor('8789')).toBe('08789')
+    expect(codigoCastor('123')).toBe('00123')
+    expect(codigoCastor('87899')).toBe('87899')
+    expect(codigoCastor('08789')).toBe('08789')
+    expect(itemDoOrcamento({ codigo: '8789', preco_referencia: 100, quantidade: 1 }, 'SP', null).codigo).toBe('08789')
   })
 })
