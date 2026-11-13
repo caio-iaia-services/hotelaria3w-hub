@@ -311,6 +311,8 @@ export default function Orcamentos() {
 
   const buscarOrcamentos = useCallback(async () => {
     setLoading(true);
+    // Monta a consulta do zero (precisa poder repetir se a coluna numero_ordem ainda não existir)
+    const montarConsulta = () => {
     let query = supabase.from("orcamentos").select("*", { count: "exact" });
     if (statusAtivo !== "todos") query = query.eq("status", statusAtivo);
     if (filtros.busca) {
@@ -328,9 +330,20 @@ export default function Orcamentos() {
     } else if (filtros.gestao) {
       query = query.eq("gestao", filtros.gestao);
     }
+    return query;
+    };
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    const { data, count, error } = await query.order("numero", { ascending: false }).range(from, to);
+    // Ordem numérica decrescente (texto colocava "9999" acima de 0012912). Se a coluna numero_ordem
+    // ainda não existir no banco, cai para a data de criação (os números são sequenciais).
+    let resp = await montarConsulta()
+      .order("numero_ordem" as any, { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (resp.error && /numero_ordem/.test(resp.error.message || "")) {
+      resp = await montarConsulta().order("created_at", { ascending: false }).range(from, to);
+    }
+    const { data, count, error } = resp;
 
     if (!error) {
       let rows = (data || []) as any[];
@@ -1022,6 +1035,7 @@ export default function Orcamentos() {
         "pdf_url",
         "html_content",
         "arquivo_pdf",
+        "numero_ordem", // coluna gerada pelo banco: não pode ser inserida
       ];
       const novoPayload = { ...(original as Record<string, unknown>) };
       for (const campo of camposParaRemover) delete novoPayload[campo];
@@ -1048,6 +1062,11 @@ export default function Orcamentos() {
         preco_unitario: item.preco_unitario,
         total: item.total,
         ordem: item.ordem,
+        // campos internos Castor (tabela, referência, desconto, acréscimo)
+        tabela: item.tabela ?? null,
+        preco_referencia: item.preco_referencia ?? null,
+        desconto_pct: item.desconto_pct ?? null,
+        acrescimo_pct: item.acrescimo_pct ?? null,
       }));
       if (itensParaInserir.length > 0) {
         const { error: erroItensInsert } = await supabase.from("orcamento_itens").insert(itensParaInserir);
