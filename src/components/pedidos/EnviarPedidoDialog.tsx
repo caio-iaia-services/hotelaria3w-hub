@@ -61,7 +61,7 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
 
   const [emailsCadastro, setEmailsCadastro] = useState<string[]>([])
   const [zapsCadastro, setZapsCadastro] = useState<string[]>([])
-  const [modoEmail, setModoEmail] = useState<Modo>('manual')
+  const [emailsMarcados, setEmailsMarcados] = useState<string[]>([])
   const [modoZap, setModoZap] = useState<Modo>('manual')
   const [zapsMarcados, setZapsMarcados] = useState<string[]>([])
   const [copiaComercial, setCopiaComercial] = useState(true)
@@ -105,11 +105,11 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         const zps: string[] = (forn?.pedido_whatsapps as string[]) || []
         setEmailsCadastro(ems)
         setZapsCadastro(zps)
-        setModoEmail(ems.length ? 'auto' : 'manual')
+        setEmailsMarcados(ems)
         setModoZap(zps.length ? 'auto' : 'manual')
         setZapsMarcados(zps)
         setCopiaComercial(true)
-        setDestinatarios(forn?.email || '')
+        setDestinatarios('')
         setAssunto(`Pedido ${d.numero} - ${d.razao_social} - 3W Hotelaria`)
         setMsgEmail(mensagemEmailPadrao(d, its, false))
         setTelefone(String(forn?.whatsapp || forn?.telefone || ''))
@@ -163,7 +163,8 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
     setEnviando(true)
     try {
       if (canal === 'email') {
-        const lista = modoEmail === 'auto' ? [...emailsCadastro] : destinatarios.split(/[,;\s]+/).filter(Boolean)
+        const emailsExtras = destinatarios.split(/[,;\s]+/).filter(Boolean).map(e => e.toLowerCase())
+        const lista = [...new Set([...emailsMarcados, ...emailsExtras])]
         if (copiaComercial && !lista.includes(EMAIL_COMERCIAL)) lista.push(EMAIL_COMERCIAL)
         if (lista.length === 0) throw new Error('Informe ao menos um destinatário')
         const invalido = lista.find(e => !emailValido(e))
@@ -257,18 +258,27 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
               <TabsContent value="email" className="space-y-3 pt-3">
                 <div className="space-y-2">
                   <Label>Destinatários</Label>
-                  <ModoDestino valor={modoEmail} onChange={setModoEmail} temCadastro={emailsCadastro.length > 0} />
-                  {modoEmail === 'auto' ? (
-                    <ul className="rounded-md border bg-muted/30 p-2 text-sm space-y-1" aria-label="E-mails cadastrados">
-                      {emailsCadastro.map(e => <li key={e} className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" />{e}</li>)}
-                    </ul>
+                  {emailsCadastro.length > 0 ? (
+                    <div className="rounded-md border bg-muted/30 p-2 space-y-1.5" aria-label="E-mails cadastrados">
+                      {emailsCadastro.map(e => (
+                        <label key={e} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={emailsMarcados.includes(e)}
+                            onCheckedChange={v => setEmailsMarcados(p => (v ? [...new Set([...p, e])] : p.filter(x => x !== e)))}
+                            aria-label={`Enviar para ${e}`}
+                          />
+                          {e}
+                        </label>
+                      ))}
+                    </div>
                   ) : (
-                    <Input value={destinatarios} onChange={e => setDestinatarios(e.target.value)} placeholder="email1@..., email2@..." aria-label="Destinatários manuais" />
+                    <p className="text-xs text-muted-foreground">Este fornecedor ainda não tem e-mails de pedidos cadastrados (Fornecedores › Pedidos).</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {modoEmail === 'auto' ? 'Todos os e-mails de pedidos cadastrados no fornecedor (Fornecedores › Pedidos).' : 'Separe por vírgula.'}
-                    {emailsCadastro.length === 0 && ' Este fornecedor ainda não tem e-mails de pedidos cadastrados.'}
-                  </p>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Outros destinatários (opcional)</Label>
+                    <Input value={destinatarios} onChange={e => setDestinatarios(e.target.value)} placeholder="email1@..., email2@..." aria-label="Outros destinatários" />
+                    <p className="mt-1 text-xs text-muted-foreground">Separe por vírgula. Eles se somam aos e-mails marcados acima.</p>
+                  </div>
                   <label className="flex items-center gap-2 text-sm">
                     <Checkbox checked={copiaComercial} onCheckedChange={v => setCopiaComercial(!!v)} aria-label="Enviar cópia ao comercial" />
                     Enviar cópia para {EMAIL_COMERCIAL}
