@@ -104,7 +104,7 @@ export function mensagemEmailPadrao(dados: PedidoDados, itens: PedidoItem[], tem
     `Condição de pagamento: ${dados.condicoes_pagamento}\nPrazo de entrega: ${prazo}\n` +
     `Valor total: ${moeda(t.total)}\n\n` +
     (temComprovante ? 'O comprovante de pagamento segue anexado ao final do PDF do pedido.\n\n' : '') +
-    `Atenciosamente,\n\nEquipe Comercial\n3W Hotelaria - Hospitalidade com Excelência\nwww.3whotelaria.com.br\n(11) 5197-5779`
+    'Atenciosamente,'
   )
 }
 
@@ -131,6 +131,7 @@ export async function enviarEmailPedido(args: {
   destinatarios: string
   assunto: string
   mensagem: string
+  mensagemHtml?: string
   pdf: Blob
   fromEmail: string
 }) {
@@ -143,6 +144,9 @@ export async function enviarEmailPedido(args: {
       destinatarios: args.destinatarios,
       assunto: args.assunto,
       mensagem: args.mensagem,
+      // versão HTML (com a assinatura formatada); o fluxo do n8n deve usá-la como corpo do e-mail
+      mensagem_html: args.mensagemHtml,
+      html: args.mensagemHtml,
       pdf_base64: await blobParaBase64(args.pdf),
       filename: `Pedido_Castor_${args.numero}.pdf`,
       from_email: args.fromEmail,

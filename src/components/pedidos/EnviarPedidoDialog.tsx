@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { PedidoDados, PedidoItem } from '@/lib/pedidoCastor'
+import { assinaturaHtml, assinaturaTexto, mensagemParaHtml, responsavelDoEmail } from '@/lib/assinaturaEmail'
 import { emailValido, whatsappValido } from '@/components/fornecedores/PedidoEnvioFornecedor'
 import { carregarPedido, dadosDoPedidoRow, atualizarStatusPedido } from '@/lib/pedidoCastorDb'
 import { gerarPedidoPDF, gerarPedidoXlsx, MAX_ITENS_PLANILHA } from '@/lib/pedidoCastorExport'
@@ -50,7 +51,9 @@ interface Props {
 }
 
 export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
-  const { user } = useAuth() as any
+  const { user, perfil } = useAuth() as any
+  const emailRemetente: string = user?.email || 'comercial1@3whotelaria.com.br'
+  const responsavel = responsavelDoEmail(emailRemetente, perfil?.nome)
   const inputRef = useRef<HTMLInputElement>(null)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -189,7 +192,8 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
           numero: dados.numero,
           destinatarios: destinatariosFinal,
           assunto,
-          mensagem,
+          mensagem: `${mensagem.trim()}\n\n${assinaturaTexto(responsavel)}`,
+          mensagemHtml: mensagemParaHtml(mensagem, responsavel),
           pdf: pdfFinal,
           fromEmail: user?.email || 'sac@3whotelaria.com.br',
         })
@@ -286,6 +290,11 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
                 </div>
                 <div><Label>Assunto</Label><Input value={assunto} onChange={e => setAssunto(e.target.value)} /></div>
                 <div><Label>Mensagem</Label><Textarea rows={9} value={msgEmail} onChange={e => setMsgEmail(e.target.value)} /></div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Assinatura (adicionada automaticamente ao final)</Label>
+                  <div className="mt-1 rounded-md border bg-white p-4 overflow-x-auto" aria-label="Pré-visualização da assinatura"
+                    dangerouslySetInnerHTML={{ __html: assinaturaHtml(responsavel) }} />
+                </div>
               </TabsContent>
 
               <TabsContent value="whatsapp" className="space-y-3 pt-3">
