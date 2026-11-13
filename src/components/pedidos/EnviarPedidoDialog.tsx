@@ -110,7 +110,7 @@ export function EnviarPedidoDialog({ open, onClose, pedidoId, onSent }: Props) {
         setZapsMarcados(zps)
         setCopiaComercial(true)
         setDestinatarios('')
-        setAssunto(`Pedido ${d.numero} - ${d.razao_social} - 3W Hotelaria`)
+        setAssunto(`Pedido Fechado ${d.numero} - ${d.razao_social} - 3W Hotelaria`)
         setMsgEmail(mensagemEmailPadrao(d, its, false))
         setTelefone(String(forn?.whatsapp || forn?.telefone || ''))
         setMsgZap(mensagemWhatsappPadrao(d, its))
