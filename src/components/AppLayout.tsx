@@ -21,6 +21,7 @@ const pageTitles: Record<string, string> = {
   "/crm/outras": "Outras Categorias",
   "/oportunidades": "Oportunidades",
   "/orcamentos": "Orçamentos",
+  "/pedidos": "Pedidos",
   "/clientes": "Clientes",
   "/clientes/hotelaria": "Clientes - Hotelaria",
   "/clientes/gastronomia": "Clientes - Gastronomia",

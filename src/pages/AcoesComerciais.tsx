@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PedidoCastorModal } from "@/components/pedidos/PedidoCastorModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -438,6 +439,7 @@ export default function AcoesComerciais() {
 
   // Modal de orçamento
   const [modalOrcamento, setModalOrcamento] = useState(false);
+  const [pedidoOrcamentoId, setPedidoOrcamentoId] = useState<string | null>(null);
   const [itensOrcamento, setItensOrcamento] = useState<ItemOrcamento[]>([]);
   const [clienteCompleto, setClienteCompleto] = useState<ClienteCompleto | null>(null);
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<FornecedorLocal | null>(null);
@@ -578,6 +580,31 @@ export default function AcoesComerciais() {
     });
   }
 
+  // Pedido sempre nasce de um orçamento aprovado do card
+  async function abrirPedido() {
+    if (!cardSelecionado) return;
+    const { data, error } = await supabase
+      .from("orcamentos")
+      .select("id, numero, status, created_at")
+      .eq("card_id", cardSelecionado.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Erro ao buscar o orçamento do cliente", { description: error.message });
+      return;
+    }
+    const orcamentos = (data || []) as { id: string; numero: string; status: string }[];
+    if (orcamentos.length === 0) {
+      toast.info("Prepare e aprove um orçamento antes de fazer o pedido.");
+      return;
+    }
+    const aprovado = orcamentos.find((o) => o.status === "aprovado" || o.status === "consolidado");
+    if (!aprovado) {
+      toast.info(`O orçamento ${orcamentos[0].numero} ainda não foi aprovado. Marque-o como Aprovado em Orçamentos para fazer o pedido.`);
+      return;
+    }
+    setPedidoOrcamentoId(aprovado.id);
+  }
+
   async function executarAcao(acao: string, _cardId: string) {
     if (!cardSelecionado) return;
     switch (acao) {
@@ -585,7 +612,7 @@ export default function AcoesComerciais() {
         abrirModalOrcamento();
         break;
       case "fazer_pedido":
-        toast.info("Módulo de Pedidos em desenvolvimento");
+        await abrirPedido();
         break;
     }
   }
@@ -1635,6 +1662,12 @@ export default function AcoesComerciais() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PedidoCastorModal
+        open={!!pedidoOrcamentoId}
+        orcamentoId={pedidoOrcamentoId}
+        onClose={() => setPedidoOrcamentoId(null)}
+      />
     </div>
   );
 }

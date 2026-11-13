@@ -26,7 +26,9 @@ import {
   Loader2,
   Upload,
   Copy,
+  ShoppingCart,
 } from "lucide-react";
+import { PedidoCastorModal } from "@/components/pedidos/PedidoCastorModal";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import html2pdf from "html2pdf.js";
@@ -218,6 +220,7 @@ export default function Orcamentos() {
   const [modalEditar, setModalEditar] = useState(false);
   const [orcamentoEditarId, setOrcamentoEditarId] = useState<string | null>(null);
   const [duplicandoId, setDuplicandoId] = useState<string | null>(null);
+  const [pedidoOrcamentoId, setPedidoOrcamentoId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modalEnviar, setModalEnviar] = useState(false);
   const [orcamentoEnviar, setOrcamentoEnviar] = useState<Orcamento | null>(null);
@@ -299,7 +302,16 @@ export default function Orcamentos() {
     if (novoStatus === "enviado" && !orcamento.enviado_em) {
       updates.enviado_em = new Date().toISOString();
     }
-    const { error } = await supabase.from("orcamentos").update(updates).eq("id", orcamento.id);
+    // A data do pedido é a do dia em que o orçamento foi marcado como aprovado
+    if (novoStatus === "aprovado" && (statusAnterior as string) !== "consolidado") {
+      updates.aprovado_em = new Date().toISOString();
+    }
+    let { error } = await supabase.from("orcamentos").update(updates).eq("id", orcamento.id);
+    if (error && "aprovado_em" in updates && /aprovado_em/.test(error.message || "")) {
+      // banco sem a coluna ainda: grava só o status
+      delete updates.aprovado_em;
+      ({ error } = await supabase.from("orcamentos").update(updates).eq("id", orcamento.id));
+    }
     if (error) {
       setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: statusAnterior } : o));
       toast.error("Erro ao atualizar status", { description: error.message });
@@ -1743,6 +1755,17 @@ export default function Orcamentos() {
                           <Copy className="h-4 w-4" />
                         )}
                       </Button>
+                      {(orcamento.status === "aprovado" || (orcamento.status as string) === "consolidado") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[#1a4168]"
+                          title="Fazer pedido"
+                          onClick={() => setPedidoOrcamentoId(orcamento.id)}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1796,6 +1819,12 @@ export default function Orcamentos() {
           </div>
         </div>
       )}
+
+      <PedidoCastorModal
+        open={!!pedidoOrcamentoId}
+        orcamentoId={pedidoOrcamentoId}
+        onClose={() => setPedidoOrcamentoId(null)}
+      />
 
       {/* MODAL VISUALIZAR */}
       <Dialog open={modalVisualizar} onOpenChange={(open) => { if (!open) fecharModalVisualizar(); }}>

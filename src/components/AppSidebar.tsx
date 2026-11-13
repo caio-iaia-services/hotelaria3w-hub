@@ -21,6 +21,7 @@ import {
   UserCog,
   Brain,
   CalendarClock,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatsAbertos } from "@/hooks/useChatsAbertos";
@@ -92,6 +93,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
         { title: "Oportunidades", url: "/oportunidades", icon: Target, modulo: "oportunidades" },
         { title: "CRM", url: "/crm", icon: BarChart3, modulo: "crm", submenu: crmSubmenu },
         { title: "Orçamentos", url: "/orcamentos", icon: FileText, modulo: "orcamentos" },
+        { title: "Pedidos", url: "/pedidos", icon: ShoppingCart, modulo: "orcamentos" },
         { title: "Ações Comerciais", url: "/acoes-comerciais", icon: Zap, modulo: "acoes_comerciais" },
         { title: "Clientes", url: "/clientes", icon: Users, modulo: "clientes" },
         { title: "Contatos", url: "/contatos", icon: User, modulo: "contatos" },

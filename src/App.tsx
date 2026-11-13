@@ -23,6 +23,7 @@ const AcoesComerciais = lazy(() => import("./pages/AcoesComerciais"));
 const PlaceholderPage = lazy(() => import("./pages/PlaceholderPage"));
 const Fornecedores = lazy(() => import("./pages/Fornecedores"));
 const Orcamentos = lazy(() => import("./pages/Orcamentos"));
+const Pedidos = lazy(() => import("./pages/Pedidos"));
 const ConfiguracoesEmail = lazy(() => import("./pages/ConfiguracoesEmail"));
 const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios"));
 const Atendimento = lazy(() => import("./pages/Atendimento"));
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/acoes-comerciais" element={<Protected><AcoesComerciais /></Protected>} />
               <Route path="/fornecedores" element={<Protected><Fornecedores /></Protected>} />
               <Route path="/orcamentos" element={<Protected><Orcamentos /></Protected>} />
+              <Route path="/pedidos" element={<Protected><Pedidos /></Protected>} />
               <Route path="/admin/email" element={<Protected><ConfiguracoesEmail /></Protected>} />
               <Route path="/admin/usuarios" element={<Protected><AdminUsuarios /></Protected>} />
               <Route path="/atendimento" element={<Protected><Atendimento /></Protected>} />
