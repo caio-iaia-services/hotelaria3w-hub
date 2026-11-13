@@ -27,15 +27,19 @@ describe('regraPorLocal', () => {
   it('aceita nome do estado e rejeita desconhecido', () => {
     expect(normalizarUF('São Paulo')).toBe('SP')
     expect(regraPorLocal('Bahia')?.tabela).toBe('5141')
+    expect(normalizarUF('Bahia - BA')).toBe('BA')
+    expect(normalizarUF('Salvador/BA')).toBe('BA')
+    expect(normalizarUF('SAO PAULO')).toBe('SP')
+    expect(normalizarUF('Pernambuco ')).toBe('PE')
     expect(regraPorLocal('XX')).toBeNull()
     expect(regraPorLocal(null)).toBeNull()
   })
 })
 
-describe('calcularPrecoReal (relativa à 5140)', () => {
-  it('SP = referência', () => expect(calcularPrecoReal(1000, 28, 0)).toBe(1000))
-  it('BA: 1000 × 1,10 × 0,69 ÷ 0,72', () => expect(calcularPrecoReal(1000, 31, 10)).toBe(1054.17))
-  it('AM: acréscimo de 50%', () => expect(calcularPrecoReal(1000, 28, 50)).toBe(1500))
-  it('RS: 32,5% sem acréscimo', () => expect(calcularPrecoReal(1000, 32.5, 0)).toBe(937.5))
+describe('calcularPrecoReal (desconto e acréscimo direto sobre a referência)', () => {
+  it('SP: 28% de desconto', () => expect(calcularPrecoReal(1000, 28, 0)).toBe(720))
+  it('BA: 1000 × 1,10 × 0,69', () => expect(calcularPrecoReal(1000, 31, 10)).toBe(759))
+  it('AM: 1000 × 1,50 × 0,72', () => expect(calcularPrecoReal(1000, 28, 50)).toBe(1080))
+  it('RS: 32,5% sem acréscimo', () => expect(calcularPrecoReal(1000, 32.5, 0)).toBe(675))
   it('referência vazia/zero → 0', () => { expect(calcularPrecoReal(0, 28, 0)).toBe(0); expect(calcularPrecoReal(NaN, 28, 0)).toBe(0) })
 })

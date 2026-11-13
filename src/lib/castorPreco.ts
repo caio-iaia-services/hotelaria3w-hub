@@ -8,12 +8,9 @@ export interface RegraCastor {
   acrescimo: number // % de acréscimo sobre a tabela padrão
 }
 
-/** A tabela 5140 (lista "A-28.00 ATACADO") já vem com 28% de desconto embutido nos preços. */
-export const DESCONTO_EMBUTIDO_REFERENCIA = 28
-
-/** Regra aplicada quando o estado do cliente não é identificado: equivale à própria tabela de referência. */
+/** Regra aplicada quando o estado do cliente não é identificado: a da tabela padrão 5140 (28%, sem acréscimo). */
 export const REGRA_PADRAO: RegraCastor = {
-  tabela: '5140', regiao: 'Padrão (SP/PR/GO/DF/MS)', desconto: DESCONTO_EMBUTIDO_REFERENCIA, acrescimo: 0,
+  tabela: '5140', regiao: 'Padrão (SP/PR/GO/DF/MS)', desconto: 28, acrescimo: 0,
 }
 
 interface RegraUF extends RegraCastor { ufs: string[] }
@@ -47,11 +44,23 @@ function semAcento(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 }
 
+const UFS_VALIDAS = new Set(Object.values(NOMES_UF))
+
 export function normalizarUF(estado?: string | null): string | null {
   if (!estado) return null
   const t = estado.trim()
   if (/^[a-zA-Z]{2}$/.test(t)) return t.toUpperCase()
-  return NOMES_UF[semAcento(t)] ?? null
+  const nome = NOMES_UF[semAcento(t)]
+  if (nome) return nome
+  // formatos como "Bahia - BA", "BA - Salvador", "Salvador/BA", "BA."
+  for (const tok of t.split(/[^A-Za-zÀ-ÿ]+/)) {
+    if (/^[A-Za-z]{2}$/.test(tok) && UFS_VALIDAS.has(tok.toUpperCase())) return tok.toUpperCase()
+  }
+  for (const parte of t.split(/\s*[-/,]\s*/)) {
+    const n = NOMES_UF[semAcento(parte)]
+    if (n) return n
+  }
+  return null
 }
 
 /** Regra da região do cliente (por UF; Palmas/TO tem tabela própria). null se o estado não for identificado. */
@@ -67,13 +76,10 @@ export function regraPorLocal(estado?: string | null, cidade?: string | null): R
 
 const arred = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
-/**
- * Preço unitário real = referência × (1 + acréscimo) × (1 − desconto) ÷ (1 − desconto embutido na referência).
- * Para SP/PR/GO/DF/MS (28% / sem acréscimo) o resultado é a própria referência.
- */
+/** Preço unitário real = referência × (1 + acréscimo) × (1 − desconto). Ex.: 1000, 28%, 0% → 720,00. */
 export function calcularPrecoReal(referencia: number, descontoPct: number, acrescimoPct: number): number {
   if (!Number.isFinite(referencia) || referencia <= 0) return 0
-  const d = Number.isFinite(descontoPct) ? descontoPct : DESCONTO_EMBUTIDO_REFERENCIA
+  const d = Number.isFinite(descontoPct) ? descontoPct : 0
   const a = Number.isFinite(acrescimoPct) ? acrescimoPct : 0
-  return arred((referencia * (1 + a / 100) * (1 - d / 100)) / (1 - DESCONTO_EMBUTIDO_REFERENCIA / 100))
+  return arred(referencia * (1 + a / 100) * (1 - d / 100))
 }
