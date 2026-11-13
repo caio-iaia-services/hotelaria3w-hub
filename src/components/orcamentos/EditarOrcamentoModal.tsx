@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { camposInternosCastor, inserirItensOrcamento } from '@/lib/orcamentoItens'
 
 interface ItemLocal {
   id: string
@@ -24,6 +25,11 @@ interface ItemLocal {
   especificacoes: string
   quantidade: number | string
   preco_unitario: number | string
+  // Campos internos Castor (gravados só para consulta/edição; não vão para a proposta)
+  tabela?: string
+  preco_referencia?: number | string
+  desconto_pct?: number | string
+  acrescimo_pct?: number | string
   total: number
   isNew?: boolean
 }
@@ -212,6 +218,10 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         especificacoes: i.especificacoes || '',
         quantidade: i.quantidade,
         preco_unitario: i.preco_unitario,
+        tabela: i.tabela || undefined,
+        preco_referencia: i.preco_referencia ?? '',
+        desconto_pct: i.desconto_pct ?? '',
+        acrescimo_pct: i.acrescimo_pct ?? '',
         total: parseNum(i.total),
       })))
     }
@@ -448,10 +458,11 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
           preco_unitario: parseNum(item.preco_unitario),
           total: item.total,
           ordem: index,
+          ...(tipoLayout === 'castor' ? camposInternosCastor(item) : {}),
         }))
 
       if (itensParaInserir.length > 0) {
-        const { error: errItens } = await supabase.from('orcamento_itens').insert(itensParaInserir)
+        const { error: errItens } = await inserirItensOrcamento(supabase, itensParaInserir)
         if (errItens) throw errItens
       }
 

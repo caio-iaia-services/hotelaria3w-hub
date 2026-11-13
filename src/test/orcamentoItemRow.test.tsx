@@ -26,9 +26,9 @@ vi.mock('@/lib/supabase', () => ({
 
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
 
-function Wrapper({ uf, cidade }: { uf?: string | null; cidade?: string | null }) {
+function Wrapper({ uf, cidade, inicial }: { uf?: string | null; cidade?: string | null; inicial?: Record<string, any> }) {
   const [item, setItem] = useState<any>({
-    id: '1', codigo: '61976', descricao: 'BOX', especificacoes: '', quantidade: '1', preco_unitario: 0, total: 0, medidas: '',
+    id: '1', codigo: '61976', descricao: 'BOX', especificacoes: '', quantidade: '1', preco_unitario: 0, total: 0, medidas: '', ...inicial,
   })
   return (
     <OrcamentoItemRow
@@ -76,5 +76,22 @@ describe('OrcamentoItemRow Castor', () => {
     await escolherMedida()
     await waitFor(() => expect(valores().ref).not.toBe(''))
     expect(num(valores().real)).toBe(720)
+  })
+
+  it('edição: mostra os valores internos gravados', async () => {
+    render(<Wrapper uf="BA" inicial={{ medidas: '88x188', preco_unitario: 759, preco_referencia: 1000, desconto_pct: 31, acrescimo_pct: 10 }} />)
+    await waitFor(() => expect(valores().ref).toContain('1.000,00'))
+    const v = valores()
+    expect(v.desc).toBe('31')
+    expect(v.acr).toBe('10')
+    expect(num(v.real)).toBe(759)
+  })
+  it('edição de orçamento antigo (sem gravados): reconstrói a referência e mantém o real salvo', async () => {
+    render(<Wrapper uf="BA" inicial={{ medidas: '88x188', preco_unitario: 800, preco_referencia: '', desconto_pct: '', acrescimo_pct: '' }} />)
+    await waitFor(() => expect(valores().ref).toContain('1.000,00'))
+    const v = valores()
+    expect(v.desc).toBe('31')
+    expect(v.acr).toBe('10')
+    expect(num(v.real)).toBe(800)
   })
 })

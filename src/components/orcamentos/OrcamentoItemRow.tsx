@@ -109,8 +109,10 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
   // Região do cliente → desconto/acréscimo (tabela de controle Castor de 07/10/2026)
   const regraRegiao = regraPorLocal(clienteUF, clienteCidade)
   const regra = regraRegiao ?? REGRA_PADRAO
-  const descontoTexto = item.desconto_pct !== undefined && item.desconto_pct !== '' ? String(item.desconto_pct) : fmtPct(regra.desconto)
-  const acrescimoTexto = item.acrescimo_pct !== undefined && item.acrescimo_pct !== '' ? String(item.acrescimo_pct) : fmtPct(regra.acrescimo)
+  const pctTexto = (v: string | number | null | undefined, padrao: number) =>
+    v === undefined || v === null || v === '' ? fmtPct(padrao) : (typeof v === 'number' ? fmtPct(v) : v)
+  const descontoTexto = pctTexto(item.desconto_pct, regra.desconto)
+  const acrescimoTexto = pctTexto(item.acrescimo_pct, regra.acrescimo)
   const regraAnterior = useRef(regra.tabela)
   const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
   const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
@@ -133,6 +135,15 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
         const produto = data as unknown as ProdutoCastor
         setMedidas(produto.medidas_precos || [])
         setProdutoSelecionado(produto)
+        // Orçamento antigo (sem referência gravada): reconstrói pela tabela atual, sem mexer no preço real salvo
+        if (parsePrice(item.preco_referencia) <= 0 && item.medidas) {
+          const m = (produto.medidas_precos || []).find(x => x.medida === item.medidas)
+          if (m) {
+            onUpdate(item.id, 'preco_referencia', m.preco)
+            if (item.desconto_pct === undefined || item.desconto_pct === '') onUpdate(item.id, 'desconto_pct', fmtPct(regra.desconto))
+            if (item.acrescimo_pct === undefined || item.acrescimo_pct === '') onUpdate(item.id, 'acrescimo_pct', fmtPct(regra.acrescimo))
+          }
+        }
       })
   }, [isCastor, item.codigo, medidas.length])
 

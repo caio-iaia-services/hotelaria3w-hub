@@ -56,6 +56,7 @@ import {
   resolverTermosFornecedor,
 } from "@/lib/fornecedorTerms";
 import { OrcamentoItemRow } from "@/components/orcamentos/OrcamentoItemRow";
+import { camposInternosCastor, inserirItensOrcamento } from "@/lib/orcamentoItens";
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {
@@ -1110,9 +1111,10 @@ export default function AcoesComerciais() {
           preco_unitario: parseFloat(String(item.preco_unitario).replace(/\./g, "").replace(",", ".")) || 0,
           total: isNaN(item.total) ? 0 : Number(item.total),
           ordem: index,
+          ...(fornecedorSelecionado?.tipo_layout === "castor" ? camposInternosCastor(item as any) : {}),
         }));
 
-      const { error: erroItens } = await supabase.from("orcamento_itens").insert(itensParaInserir);
+      const { error: erroItens } = await inserirItensOrcamento(supabase, itensParaInserir);
       if (erroItens) throw erroItens;
 
       // 8. Registrar no log

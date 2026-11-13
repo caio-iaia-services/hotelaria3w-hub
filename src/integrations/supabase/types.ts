@@ -2925,6 +2925,10 @@ export type Database = {
           preco_unitario: number
           quantidade: number
           total: number
+          tabela: string | null
+          preco_referencia: number | null
+          desconto_pct: number | null
+          acrescimo_pct: number | null
         }
         Insert: {
           codigo?: string | null
@@ -2938,6 +2942,10 @@ export type Database = {
           preco_unitario: number
           quantidade: number
           total: number
+          tabela?: string | null
+          preco_referencia?: number | null
+          desconto_pct?: number | null
+          acrescimo_pct?: number | null
         }
         Update: {
           codigo?: string | null
@@ -2951,6 +2959,10 @@ export type Database = {
           preco_unitario?: number
           quantidade?: number
           total?: number
+          tabela?: string | null
+          preco_referencia?: number | null
+          desconto_pct?: number | null
+          acrescimo_pct?: number | null
         }
         Relationships: [
           {
