@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, X, Plus, Search, Building2, Loader2, Trash2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { montarOrBusca } from "@/lib/busca";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
 import type { Contato } from "@/lib/types";
@@ -137,12 +138,13 @@ export default function ContatoModal({ open, onClose, contato, clientePreVincula
   }
 
   const buscarClientes = useCallback(async (q: string) => {
-    if (q.length < 2) { setResultados([]); return; }
+    const filtro = montarOrBusca(q, { colunasTexto: ["nome_fantasia"], minimo: 2 });
+    if (!filtro) { setResultados([]); return; }
     setBuscando(true);
     const { data } = await supabase
       .from("clientes")
       .select("id, nome_fantasia, cnpj")
-      .or(`nome_fantasia.ilike.%${q}%,cnpj.ilike.%${q}%`)
+      .or(filtro)
       .limit(8);
     setResultados((data || []).filter(c => !clientes.find(v => v.id === c.id)));
     setBuscando(false);

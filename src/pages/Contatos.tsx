@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
+import { montarOrTexto } from "@/lib/busca";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
 import ContatoModal from "@/components/contatos/ContatoModal";
@@ -111,7 +112,8 @@ export default function Contatos() {
   const aplicarFiltros = useCallback(<Q,>(base: Q): Q => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = base as any;
-    if (buscaDebounced) q = q.or(`nome.ilike.%${buscaDebounced}%,email.ilike.%${buscaDebounced}%,cargo.ilike.%${buscaDebounced}%`);
+    const filtroBusca = buscaDebounced ? montarOrTexto(buscaDebounced, ["nome", "email", "cargo"]) : null;
+    if (filtroBusca) q = q.or(filtroBusca);
     if (filtroStatus.length > 0) q = q.in("status", filtroStatus);
     if (filtroFonte.length > 0) q = q.in("origem", filtroFonte);
     if (filtroCanal.length > 0) q = q.in("canal_marketing_id", filtroCanal);

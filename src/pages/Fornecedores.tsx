@@ -30,6 +30,7 @@ import { supabase } from "@/lib/supabase";
 import { supabase as cloudSupabase } from "@/integrations/supabase/client";
 import { CIDADES_POR_ESTADO } from "@/data/cidadesPorEstado";
 import { CastorTabelaUpload } from "@/components/fornecedores/CastorTabelaUpload";
+import { montarOrBusca } from "@/lib/busca";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Fornecedor {
@@ -425,11 +426,10 @@ export default function Fornecedores() {
       .from("fornecedores")
       .select("id, nome_fantasia, razao_social, cnpj, codigo, status, tipo, cidade, estado, email, telefone, gestao, logotipo_url, segmentos_atuacao", { count: "exact" });
 
-    if (debouncedBusca) {
-      const buscaDigits = debouncedBusca.replace(/\D/g, "");
-      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
-      query = query.or(`nome_fantasia.ilike.%${debouncedBusca}%,razao_social.ilike.%${debouncedBusca}%,${cnpjFilter}`);
-    }
+    const filtroBusca = debouncedBusca
+      ? montarOrBusca(debouncedBusca, { colunasTexto: ["nome_fantasia", "razao_social"], colunasNumero: ["cnpj", "codigo"], minimo: 2 })
+      : null;
+    if (filtroBusca) query = query.or(filtroBusca);
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.gestao.length > 0) {
       const gestaoFilters = filtros.gestao.map(g => `gestao.ilike.%${g}%`).join(",");

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { montarOrBusca, montarOrTexto } from "@/lib/busca";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -280,12 +281,13 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
       return;
     }
     const timer = setTimeout(async () => {
+      const filtro = montarOrBusca(buscaCliente, { colunasTexto: ["nome_fantasia", "razao_social"], minimo: 2 });
+      if (!filtro) { setResultadosBusca([]); return; }
       setBuscando(true);
-      const termoLimpo = buscaCliente.replace(/[.\-/]/g, "");
       const { data } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento, status, tipo")
-        .or(`nome_fantasia.ilike.%${buscaCliente}%,razao_social.ilike.%${buscaCliente}%,cnpj.ilike.%${termoLimpo}%`)
+        .or(filtro)
         .limit(5);
       setResultadosBusca((data || []) as unknown as Cliente[]);
       setBuscando(false);
@@ -316,11 +318,13 @@ export function PainelAtendimento({ chat, onCriarOportunidade }: PainelAtendimen
   useEffect(() => {
     if (buscaContato.length < 2) { setResultadosContato([]); return; }
     const timer = setTimeout(async () => {
+      const filtro = montarOrTexto(buscaContato, ["nome", "email"]);
+      if (!filtro) { setResultadosContato([]); return; }
       setBuscandoContato(true);
       const { data } = await supabase
         .from("contatos")
         .select("id, nome, email")
-        .or(`nome.ilike.%${buscaContato}%,email.ilike.%${buscaContato}%`)
+        .or(filtro)
         .limit(6);
       setResultadosContato((data || []).filter((c: any) => !contatosVinculados.find(v => v.id === c.id)));
       setBuscandoContato(false);

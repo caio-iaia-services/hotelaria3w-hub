@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { montarOrBusca } from "@/lib/busca";
 import type { Cliente } from "@/lib/types";
 import ImportarClientesModal from "@/components/clientes/ImportarClientesModal";
 import SelecionarSegmentoModal from "@/components/clientes/SelecionarSegmentoModal";
@@ -179,13 +180,10 @@ export default function Clientes() {
 
     let query = supabase.from("clientes").select("*", { count: "exact" });
 
-    if (debouncedBusca) {
-      const buscaDigits = debouncedBusca.replace(/\D/g, "");
-      const cnpjFilter = buscaDigits.length > 0 ? `cnpj.ilike.%${buscaDigits}%` : `cnpj.ilike.%${debouncedBusca}%`;
-      query = query.or(
-        `nome_fantasia.ilike.%${debouncedBusca}%,${cnpjFilter},cidade.ilike.%${debouncedBusca}%`
-      );
-    }
+    const filtroBusca = debouncedBusca
+      ? montarOrBusca(debouncedBusca, { colunasTexto: ["nome_fantasia", "cidade"], minimo: 2 })
+      : null;
+    if (filtroBusca) query = query.or(filtroBusca);
     if (filtros.status.length > 0) query = query.in("status", filtros.status);
     if (filtros.tipo.length > 0) query = query.in("tipo", filtros.tipo);
     if (filtros.segmento.length > 0) {

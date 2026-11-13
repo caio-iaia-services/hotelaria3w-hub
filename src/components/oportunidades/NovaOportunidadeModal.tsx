@@ -15,6 +15,7 @@ import { Search, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { type Cliente } from "@/lib/types";
 import { toast } from "sonner";
+import { montarOrBusca } from "@/lib/busca";
 import { useFornecedoresOperacoes } from "@/hooks/useFornecedoresOperacoes";
 
 interface NovaOportunidadeModalProps {
@@ -111,22 +112,40 @@ export function NovaOportunidadeModal({ open, onOpenChange, onSave, clientePreSe
       return;
     }
 
+    // Número → só CNPJ; texto → nome/razão/cidade. Termos curtos ou inválidos não buscam.
+    const filtro = montarOrBusca(busca, { colunasTexto: ["nome_fantasia", "razao_social", "cidade"] });
+    if (!filtro) {
+      setClientes([]);
+      return;
+    }
+
+    // Cada digitação cancela a busca anterior: resposta antiga nunca sobrescreve a nova.
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
-      // Remover pontuação para buscar CNPJ com ou sem máscara
-      const termoLimpo = busca.replace(/[.\-\/]/g, "");
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, email, telefone, cidade, estado, segmento_id, segmento, status, tipo")
-        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${termoLimpo}%,cidade.ilike.%${busca}%`)
-        .order("nome_fantasia", { ascending: true })
-        .limit(10);
+        .or(filtro)
+        .limit(10)
+        .abortSignal(controller.signal);
 
-      setClientes(data || []);
+      if (controller.signal.aborted) return;
+      if (error) {
+        console.warn("Erro na busca de clientes:", error);
+        toast.error("A busca demorou ou falhou. Tente novamente.");
+        setClientes([]);
+      } else {
+        // Sem ORDER BY no banco (forçava ordenar todos os resultados); ordena só os 10 retornados
+        setClientes([...(data || [])].sort((a, b) => (a.nome_fantasia || "").localeCompare(b.nome_fantasia || "", "pt-BR")));
+      }
       setLoading(false);
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [busca]);
 
   // Check CNPJ duplicado

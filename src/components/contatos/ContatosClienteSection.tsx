@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, X, Loader2, UserRound, Mail, Phone } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { montarOrTexto } from "@/lib/busca";
 import { toast } from "@/hooks/use-toast";
 import type { Contato } from "@/lib/types";
 import ContatoModal from "@/components/contatos/ContatoModal";
@@ -44,12 +45,13 @@ export default function ContatosClienteSection({ clienteId, clienteNome, cliente
   useEffect(() => { carregar(); }, [carregar]);
 
   const buscarContatos = useCallback(async (q: string) => {
-    if (q.length < 2) { setResultados([]); return; }
+    const filtro = montarOrTexto(q, ["nome", "email"]);
+    if (!filtro) { setResultados([]); return; }
     setBuscando(true);
     const { data } = await supabase
       .from("contatos")
       .select("*")
-      .or(`nome.ilike.%${q}%,email.ilike.%${q}%`)
+      .or(filtro)
       .limit(8);
     setResultados((data || []).filter(c => !contatos.find(v => v.id === c.id)));
     setBuscando(false);

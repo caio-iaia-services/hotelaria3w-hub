@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { montarOrBusca } from "@/lib/busca";
 import type { Database } from "@/integrations/supabase/types";
 import {
   CNAES_ALVO, SEGMENTO_LABEL, formatCnae, type Segmento,
@@ -147,13 +148,10 @@ export default function BuscarEmpresas() {
   }, [filtros.busca]);
 
   const aplicarFiltros = useCallback((query: any) => {
-    if (debouncedBusca) {
-      const digits = debouncedBusca.replace(/\D/g, "");
-      const cnpjTerm = digits.length > 0 ? digits : debouncedBusca;
-      query = query.or(
-        `razao_social.ilike.%${debouncedBusca}%,nome_fantasia.ilike.%${debouncedBusca}%,cnpj.ilike.%${cnpjTerm}%`
-      );
-    }
+    const filtroBusca = debouncedBusca
+      ? montarOrBusca(debouncedBusca, { colunasTexto: ["razao_social", "nome_fantasia"], minimo: 2 })
+      : null;
+    if (filtroBusca) query = query.or(filtroBusca);
     if (filtros.segmento.length) query = query.in("segmento", filtros.segmento);
     if (filtros.cnae.length) query = query.in("cnae_principal", filtros.cnae);
     if (filtros.situacao.length) query = query.in("situacao_cadastral", filtros.situacao);

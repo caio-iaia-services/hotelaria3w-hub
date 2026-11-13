@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { apiFetch } from "@/lib/apiFetch";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { montarOrBusca } from "@/lib/busca";
 import { useAuth } from "@/components/AuthProvider";
 import {
   MessageCircle, Send, RefreshCw, Pause, Play,
@@ -1515,11 +1516,13 @@ function ModalNovaConversa({
   useEffect(() => {
     if (busca.length < 2) { setResultados([]); setMostrarDropdown(false); return; }
     const timer = setTimeout(async () => {
+      const filtro = montarOrBusca(busca, { colunasTexto: ["nome_fantasia", "razao_social"], minimo: 2 });
+      if (!filtro) { setResultados([]); setMostrarDropdown(false); return; }
       setBuscando(true);
       const { data } = await supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj, telefone")
-        .or(`nome_fantasia.ilike.%${busca}%,razao_social.ilike.%${busca}%,cnpj.ilike.%${busca}%`)
+        .or(filtro)
         .eq("status", "ativo")
         .limit(8);
       setResultados((data as ClienteBusca[]) ?? []);
