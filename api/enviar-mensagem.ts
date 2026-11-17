@@ -21,6 +21,21 @@ const RE_ENGAGEMENT_ERROR_CODE = 131047;
 const FALLBACK_TEMPLATE_NAME = process.env.META_FALLBACK_TEMPLATE || "tudo_bem";
 const FALLBACK_TEMPLATE_LANG = process.env.META_FALLBACK_TEMPLATE_LANG || "pt_BR";
 
+// Template de notificação de handoff (categoria Utility, aprovado no Meta Business).
+// Corpo esperado, com 3 variáveis: {{1}} nome do cliente, {{2}} telefone do cliente,
+// {{3}} resumo da conversa.
+const HANDOFF_TEMPLATE_NAME = process.env.META_HANDOFF_TEMPLATE || "handoff_atendimento";
+
+// Parâmetros de template da Meta não aceitam quebra de linha, tab nem mais de 4
+// espaços seguidos, e o corpo todo tem limite de tamanho.
+function sanitizarParametroTemplate(valor: unknown, max: number): string {
+  const s = String(valor ?? "")
+    .replace(/[\r\n\t]+/g, " | ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+  return (s.length > max ? s.slice(0, max - 1) + "…" : s) || "-";
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -44,7 +59,7 @@ export default async function handler(req: Request): Promise<Response> {
     const body = await req.json();
     console.log("[enviar-mensagem] payload →", JSON.stringify(body));
 
-    const { telefone_cliente, mensagem, arquivo_url, tipo_midia, template } = body;
+    const { telefone_cliente, mensagem, arquivo_url, tipo_midia, template, handoff_params } = body;
 
     // Sanitiza: remove tudo que não é dígito, garante DDI 55 (Meta exige código do país, sem "+")
     const telRaw = String(telefone_cliente || "").replace(/\D/g, "");
@@ -131,6 +146,42 @@ export default async function handler(req: Request): Promise<Response> {
       // Fora da janela de 24h: tenta reabrir a conversa com um template aprovado
       // (só cobre mensagem de texto — mídia fora da janela ainda falha, sem template com mídia hoje).
       if (errorCode === RE_ENGAGEMENT_ERROR_CODE && payload.type !== "template") {
+        // Handoff pro gestor: se o n8n mandou handoff_params, tenta primeiro o
+        // template de handoff (entrega o conteúdo real mesmo com a janela fechada).
+        // Se ele ainda não foi aprovado/falhar, cai no template genérico abaixo.
+        if (Array.isArray(handoff_params) && handoff_params.length > 0) {
+          const handoffPayload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: telDigits,
+            type: "template",
+            template: {
+              name: HANDOFF_TEMPLATE_NAME,
+              language: { code: FALLBACK_TEMPLATE_LANG },
+              components: [
+                {
+                  type: "body",
+                  parameters: handoff_params.map((p: unknown, i: number) => ({
+                    type: "text",
+                    text: sanitizarParametroTemplate(p, i === handoff_params.length - 1 ? 900 : 120),
+                  })),
+                },
+              ],
+            },
+          };
+          console.log(`[enviar-mensagem] fora da janela de 24h → template de handoff "${HANDOFF_TEMPLATE_NAME}"`);
+          metaRes = await enviar(handoffPayload);
+          text = await metaRes.text();
+          console.log(`[enviar-mensagem] Meta (template handoff) status=${metaRes.status} body=${text}`);
+          if (metaRes.ok) {
+            return new Response(
+              JSON.stringify({ ok: true, status: metaRes.status, body: text, viaTemplate: true, template: HANDOFF_TEMPLATE_NAME }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          console.error(`[enviar-mensagem] template de handoff falhou — usando template genérico`);
+        }
+
         const templatePayload = {
           messaging_product: "whatsapp",
           recipient_type: "individual",
