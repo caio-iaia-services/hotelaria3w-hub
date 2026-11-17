@@ -14,8 +14,13 @@ export const VEND_REPRES_PADRAO = '463'
 
 /** O pedido sempre usa a tabela base de preços (5140); as tabelas 5141…5154 só definem desconto/acréscimo da região. */
 export const TABELA_PEDIDO = REGRA_PADRAO.tabela
-export function tabelaDoPedido(_valor?: string | null): string {
-  return TABELA_PEDIDO
+const TABELAS_REGIONAIS = new Set(['5141', '5142', '5143', '5144', '5146', '5147', '5148', '5149', '5150', '5151', '5152', '5153', '5154'])
+
+/** Tabela inicial do pedido: a do orçamento, exceto as regionais (5141…5154, só definem desconto/acréscimo) → base 5140. */
+export function tabelaDoPedido(valor?: string | null): string {
+  const v = String(valor ?? '').trim()
+  if (!v || TABELAS_REGIONAIS.has(v)) return TABELA_PEDIDO
+  return v
 }
 
 /** Código Castor sempre com 5 dígitos: preserva o(s) zero(s) à esquerda (ex.: 8789 → 08789). */

@@ -105,6 +105,9 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
   const isCastor = tipoLayout === 'castor'
   const { tabelas: TABELAS_CASTOR } = useTabelasCastor(isCastor)
   const TABELA_PADRAO = TABELAS_CASTOR[0]
+  // Tabela fora da lista importada (ou escolhida em "Outra…"): mostra campo para digitar
+  const [tabelaOutra, setTabelaOutra] = useState(false)
+  const tabelaCustom = tabelaOutra || (!!item.tabela && !TABELAS_CASTOR.includes(item.tabela))
 
   // Região do cliente → desconto/acréscimo (tabela de controle Castor de 07/10/2026)
   const regraRegiao = regraPorLocal(clienteUF, clienteCidade)
@@ -234,14 +237,34 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
           <div className="col-span-2">
             <Label>Tabela</Label>
             <select
+              aria-label="Tabela do item"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-              value={item.tabela || TABELA_PADRAO}
-              onChange={(e) => onUpdate(item.id, 'tabela', e.target.value)}
+              value={tabelaCustom ? '__outra__' : (item.tabela || TABELA_PADRAO)}
+              onChange={(e) => {
+                if (e.target.value === '__outra__') {
+                  setTabelaOutra(true)
+                  onUpdate(item.id, 'tabela', '')
+                } else {
+                  setTabelaOutra(false)
+                  onUpdate(item.id, 'tabela', e.target.value)
+                }
+              }}
             >
               {TABELAS_CASTOR.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
+              <option value="__outra__">Outra…</option>
             </select>
+            {tabelaCustom && (
+              <Input
+                className="mt-1"
+                aria-label="Tabela (digite)"
+                placeholder="Nº da tabela"
+                maxLength={10}
+                value={item.tabela || ''}
+                onChange={(e) => onUpdate(item.id, 'tabela', e.target.value.trim())}
+              />
+            )}
           </div>
         )}
 

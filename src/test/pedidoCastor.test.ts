@@ -74,6 +74,8 @@ describe('tabela e código do item', () => {
     const d = dadosIniciaisPedido({ numero: '1' }, [], { estado: 'BA', cidade: 'Lençóis' }, '2026-11-13', '5141')
     expect(d.tabela).toBe('5140')
     expect(tabelaDoPedido('5143')).toBe('5140')
+    expect(tabelaDoPedido('')).toBe('5140')
+    expect(tabelaDoPedido('9999')).toBe('9999') // tabela digitada no orçamento é respeitada
   })
   it('código mantém o zero à esquerda (5 dígitos)', () => {
     expect(codigoCastor('8789')).toBe('08789')

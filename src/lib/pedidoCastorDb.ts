@@ -101,7 +101,6 @@ export async function carregarPedido(pedidoId: string): Promise<{ pedido: Pedido
   for (const k of Object.keys(pedido) as (keyof PedidoRow)[]) {
     if ((pedido as any)[k] === null) (pedido as any)[k] = ''
   }
-  pedido.tabela = tabelaDoPedido(pedido.tabela) // pedidos salvos antes com tabela regional (ex.: 5141)
   const itens: PedidoItem[] = ((its as any[]) || []).map(r => ({
     id: String(r.id),
     codigo: codigoCastor(r.codigo),

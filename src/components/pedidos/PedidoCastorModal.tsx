@@ -247,7 +247,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
                 <Campo label="Pedido Nº"><Input value={dados.numero} onChange={e => setD('numero', e.target.value)} /></Campo>
                 <Campo label="Data (aprovação do orçamento)"><Auto value={dataBR(dados.data_pedido)} /></Campo>
                 <Campo label="Vend. Repres."><Auto value={dados.vend_repres} /></Campo>
-                <Campo label="Tabela"><Auto value={dados.tabela} /></Campo>
+                <Campo label="Tabela"><Input aria-label="Tabela" maxLength={10} value={dados.tabela} onChange={e => setD('tabela', e.target.value.trim())} /></Campo>
                 <Campo label="Cliente Nº"><Input value={dados.cliente_numero} onChange={e => setD('cliente_numero', e.target.value)} /></Campo>
                 <Campo label="TPOP"><Input value={dados.tpop} onChange={e => setD('tpop', e.target.value)} /></Campo>
                 <Campo label="Cod. Mensagens"><Input value={dados.cod_mensagens} onChange={e => setD('cod_mensagens', e.target.value)} /></Campo>
