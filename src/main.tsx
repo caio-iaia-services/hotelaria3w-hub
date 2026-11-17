@@ -17,6 +17,9 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { crashed: bo
   }
   componentDidCatch(e: Error, info: ErrorInfo) {
     console.error("[RootErrorBoundary] erro fatal:", e, info);
+    if (/dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(e?.message || "")) {
+      recarregarParaNovaVersao();
+    }
   }
   render() {
     if (this.state.crashed) {
@@ -60,6 +63,27 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { crashed: bo
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[unhandledrejection] Promise rejeitada sem catch:", event.reason);
   event.preventDefault(); // impede que o React dev mode desmonte o app
+});
+
+// ─── Versão nova publicada com a aba aberta ───────────────────────────────────
+// Depois de um deploy, os arquivos antigos (chunks das páginas) deixam de existir; quem estava
+// com o sistema aberto não consegue abrir nenhuma página. Recarrega uma vez para pegar a versão nova.
+function recarregarParaNovaVersao() {
+  try {
+    const ultima = Number(sessionStorage.getItem("3w-reload-versao") || 0);
+    if (Date.now() - ultima < 60_000) return; // evita loop de recarregamento
+    sessionStorage.setItem("3w-reload-versao", String(Date.now()));
+  } catch { /* sessionStorage indisponível: recarrega mesmo assim */ }
+  window.location.reload();
+}
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  recarregarParaNovaVersao();
+});
+window.addEventListener("error", (e) => {
+  if (/dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(e.message || "")) {
+    recarregarParaNovaVersao();
+  }
 });
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────

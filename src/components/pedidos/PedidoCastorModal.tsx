@@ -100,6 +100,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
   const [exportando, setExportando] = useState<'pdf' | 'xlsx' | null>(null)
   const [enviarId, setEnviarId] = useState<string | null>(null)
   const [prazoOutros, setPrazoOutros] = useState(false)
+  const [pagamentoOutros, setPagamentoOutros] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -111,6 +112,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
     setItens([])
     setIdSalvo(null)
     setPrazoOutros(false)
+    setPagamentoOutros(false)
     ;(async () => {
       try {
         let oId = orcamentoId || null
@@ -136,6 +138,8 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
           setIdSalvo(id)
           const prazoSalvo = String((resto as any).prazo_entrega || '')
           setPrazoOutros(!!prazoSalvo && !opcoesPrazoEntrega(c.orcamento.prazo_entrega).includes(prazoSalvo))
+          const pagSalvo = String((resto as any).condicoes_pagamento || '')
+          setPagamentoOutros(!!pagSalvo && !opcoesCondicoesPagamento(c.orcamento.condicoes_pagamento).some(o => o.valor === pagSalvo))
         } else {
           if (!['aprovado', 'consolidado'].includes(String(c.orcamento.status))) {
             throw new Error('O pedido só pode ser criado a partir de um orçamento aprovado. Marque o orçamento como Aprovado primeiro.')
@@ -156,12 +160,8 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
 
   const opcoesPagamento: OpcaoCondicao[] = useMemo(() => {
     if (!ctx) return []
-    const base = opcoesCondicoesPagamento(ctx.orcamento.condicoes_pagamento)
-    if (dados && dados.condicoes_pagamento && !base.some(o => o.valor === dados.condicoes_pagamento)) {
-      base.push({ valor: dados.condicoes_pagamento, rotulo: dados.condicoes_pagamento, acrescimo: dados.acrescimo_fin_pct })
-    }
-    return base
-  }, [ctx, dados?.condicoes_pagamento]) // eslint-disable-line react-hooks/exhaustive-deps
+    return opcoesCondicoesPagamento(ctx.orcamento.condicoes_pagamento)
+  }, [ctx])
 
   const opcoesPrazo = useMemo(() => {
     if (!ctx) return []
@@ -176,6 +176,7 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
   async function salvar(): Promise<string | null> {
     if (!dados || !ctx) return null
     if (!dados.numero.trim()) { toast.error('Informe o número do pedido'); return null }
+    if (pagamentoOutros && !dados.condicoes_pagamento.trim()) { toast.error('Informe a condição de pagamento diferenciada'); return null }
     if (prazoOutros && !dados.prazo_entrega.trim()) { toast.error('Informe o prazo de entrega combinado'); return null }
     setSalvando(true)
     try {
@@ -253,8 +254,14 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
                 <Campo label="Código Fat."><Input value={dados.codigo_fat} onChange={e => setD('codigo_fat', e.target.value)} /></Campo>
                 <Campo label="Condições de Pagamento" className="col-span-2">
                   <Select
-                    value={dados.condicoes_pagamento}
+                    value={pagamentoOutros ? OUTROS : dados.condicoes_pagamento}
                     onValueChange={v => {
+                      if (v === OUTROS) {
+                        setPagamentoOutros(true)
+                        setD('condicoes_pagamento', '')
+                        return
+                      }
+                      setPagamentoOutros(false)
                       const op = opcoesPagamento.find(o => o.valor === v)
                       setDados(p => (p ? { ...p, condicoes_pagamento: v, acrescimo_fin_pct: op ? op.acrescimo : p.acrescimo_fin_pct } : p))
                     }}
@@ -262,8 +269,18 @@ export function PedidoCastorModal({ open, onClose, orcamentoId, pedidoId, onSave
                     <SelectTrigger aria-label="Condições de pagamento" className="bg-[#fff4d6]/70 border-[#C8962E]/60 font-semibold"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {opcoesPagamento.map(o => <SelectItem key={o.valor} value={o.valor}>{o.rotulo}</SelectItem>)}
+                      <SelectItem value={OUTROS}>Outros (condição diferenciada)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {pagamentoOutros && (
+                    <Input
+                      className="mt-2"
+                      aria-label="Condição de pagamento diferenciada"
+                      placeholder="Condição diferenciada (ex.: 30/45/60, entrada + 2x)"
+                      value={dados.condicoes_pagamento}
+                      onChange={e => setD('condicoes_pagamento', e.target.value)}
+                    />
+                  )}
                 </Campo>
                 <Campo label="Prazo de Entrega" className="col-span-2">
                   <Select
