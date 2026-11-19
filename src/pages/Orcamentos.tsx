@@ -1077,6 +1077,8 @@ export default function Orcamentos() {
         // campos internos Castor (tabela, referência, desconto, acréscimo)
         tabela: item.tabela ?? null,
         preco_referencia: item.preco_referencia ?? null,
+        percentual_difal: item.percentual_difal ?? null,
+        preco_unitario_difal: item.preco_unitario_difal ?? null,
         desconto_pct: item.desconto_pct ?? null,
         acrescimo_pct: item.acrescimo_pct ?? null,
       }));

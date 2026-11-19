@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useProdutosCastorBusca, ProdutoCastor, MedidaPreco } from '@/hooks/useProdutosCastor'
 import { useTabelasCastor } from '@/hooks/useTabelasCastor'
-import { calcularPrecoReal, regraPorLocal, REGRA_PADRAO } from '@/lib/castorPreco'
+import { calcularPrecoReal, calcularPrecoComDifal, percentualDifal, regraPorLocal, REGRA_PADRAO, type InscricaoEstadual } from '@/lib/castorPreco'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,6 +45,7 @@ interface ItemData {
   preco_unitario: number | string // Castor: preço unitário REAL (o que vai para o cliente)
   // Campos internos Castor (não vão para a proposta nem são salvos no orçamento)
   preco_referencia?: number | string
+  percentual_difal?: number | string
   desconto_pct?: number | string
   acrescimo_pct?: number | string
   total: number
@@ -57,6 +58,7 @@ interface Props {
   tipoLayout?: string | null
   clienteUF?: string | null
   clienteCidade?: string | null
+  inscricaoEstadual?: InscricaoEstadual
   onUpdate: (id: string, campo: string, valor: string | number) => void
   onRemove: (id: string) => void
 }
@@ -88,7 +90,7 @@ function CampoMoeda({ label, value, onChange, interno = false }: {
 
 const fmtPct = (n: number) => String(n).replace('.', ',')
 
-export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF, clienteCidade, onUpdate, onRemove }: Props) {
+export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF, clienteCidade, inscricaoEstadual = '', onUpdate, onRemove }: Props) {
   const [precoEditando, setPrecoEditando] = useState(false)
   const [precoTexto, setPrecoTexto] = useState('')
   const [codigoBusca, setCodigoBusca] = useState('')
@@ -116,7 +118,12 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
     v === undefined || v === null || v === '' ? fmtPct(padrao) : (typeof v === 'number' ? fmtPct(v) : v)
   const descontoTexto = pctTexto(item.desconto_pct, regra.desconto)
   const acrescimoTexto = pctTexto(item.acrescimo_pct, regra.acrescimo)
+  // DIFAL: só quando o cliente NÃO tem inscrição estadual ativa (SP/MG/RS sempre 0%)
+  const difalPadrao = percentualDifal(inscricaoEstadual, clienteUF)
+  const difalTexto = pctTexto(item.percentual_difal, difalPadrao)
+  const precoDifalNum = calcularPrecoComDifal(parsePrice(item.preco_referencia), parsePrice(difalTexto))
   const regraAnterior = useRef(regra.tabela)
+  const difalAnterior = useRef(difalPadrao)
   const { resultados: resCodigo, loading: loadCodigo } = useProdutosCastorBusca(codigoBusca, 'codigo', isCastor)
   const { resultados: resDescricao, loading: loadDescricao } = useProdutosCastorBusca(descricaoBusca, 'descricao', isCastor)
 
@@ -189,35 +196,43 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
   function aplicarRegra(referencia: number) {
     onUpdate(item.id, 'desconto_pct', fmtPct(regra.desconto))
     onUpdate(item.id, 'acrescimo_pct', fmtPct(regra.acrescimo))
-    onUpdate(item.id, 'preco_unitario', calcularPrecoReal(referencia, regra.desconto, regra.acrescimo))
+    onUpdate(item.id, 'percentual_difal', fmtPct(difalPadrao))
+    onUpdate(item.id, 'preco_unitario', calcularPrecoReal(referencia, regra.desconto, regra.acrescimo, difalPadrao))
   }
 
   function mudouReferencia(texto: string) {
     onUpdate(item.id, 'preco_referencia', texto)
     const ref = parsePrice(texto)
-    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(acrescimoTexto)))
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(acrescimoTexto), parsePrice(difalTexto)))
   }
 
   function mudouDesconto(texto: string) {
     onUpdate(item.id, 'desconto_pct', texto)
     const ref = parsePrice(item.preco_referencia)
-    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(texto), parsePrice(acrescimoTexto)))
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(texto), parsePrice(acrescimoTexto), parsePrice(difalTexto)))
   }
 
   function mudouAcrescimo(texto: string) {
     onUpdate(item.id, 'acrescimo_pct', texto)
     const ref = parsePrice(item.preco_referencia)
-    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(texto)))
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(texto), parsePrice(difalTexto)))
   }
 
-  // Se o estado do cliente mudar com item já calculado, reaplica a regra da nova região
+  function mudouDifal(texto: string) {
+    onUpdate(item.id, 'percentual_difal', texto)
+    const ref = parsePrice(item.preco_referencia)
+    if (ref > 0) onUpdate(item.id, 'preco_unitario', calcularPrecoReal(ref, parsePrice(descontoTexto), parsePrice(acrescimoTexto), parsePrice(texto)))
+  }
+
+  // Se o estado do cliente ou a inscrição estadual mudar com item já calculado, reaplica região e DIFAL
   useEffect(() => {
-    if (regraAnterior.current === regra.tabela) return
+    if (regraAnterior.current === regra.tabela && difalAnterior.current === difalPadrao) return
     regraAnterior.current = regra.tabela
+    difalAnterior.current = difalPadrao
     const ref = parsePrice(item.preco_referencia)
     if (isCastor && ref > 0) aplicarRegra(ref)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regra.tabela])
+  }, [regra.tabela, difalPadrao])
 
   const precoNumerico = parsePrice(item.preco_unitario)
 
@@ -372,25 +387,34 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
         {/* PREÇO UNITÁRIO */}
         {isCastor ? (
           <>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <CampoMoeda label="Preço unitário referência" interno value={item.preco_referencia} onChange={mudouReferencia} />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
+              <Label>Percentual DIFAL (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+              <Input className="bg-muted/50" placeholder="0" value={difalTexto} onChange={(e) => mudouDifal(e.target.value)} />
+            </div>
+            <div className="col-span-2">
+              <Label>Preço unitário DIFAL<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+              <Input className="bg-muted/50" readOnly tabIndex={-1} placeholder="R$ 0,00" value={precoDifalNum > 0 ? formatCurrency(precoDifalNum) : ''} />
+            </div>
+            <div className="col-span-2">
               <Label>Descontos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" placeholder="0" value={descontoTexto} onChange={(e) => mudouDesconto(e.target.value)} />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <Label>Acréscimos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" placeholder="0" value={acrescimoTexto} onChange={(e) => mudouAcrescimo(e.target.value)} />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <CampoMoeda label="Preço unitário real *" value={item.preco_unitario} onChange={(t) => onUpdate(item.id, 'preco_unitario', t)} />
             </div>
             <p className="col-span-12 text-xs text-muted-foreground -mt-1">
               {regraRegiao
                 ? <>Região do cliente: <b>{regraRegiao.regiao}</b> (tabela {regraRegiao.tabela}) — desconto {fmtPct(regraRegiao.desconto)}% · acréscimo {fmtPct(regraRegiao.acrescimo)}%.</>
                 : <>Estado do cliente não identificado — usando a tabela padrão (sem ajuste).</>}
-              {' '}Referência, descontos e acréscimos são internos; só o preço unitário real vai para o orçamento.
+              {' '}{inscricaoEstadual === 'nao' ? `DIFAL aplicado: ${fmtPct(difalPadrao)}%. ` : inscricaoEstadual === 'sim' ? 'Cliente com inscrição estadual: sem DIFAL. ' : 'Informe a inscrição estadual do cliente para calcular o DIFAL. '}
+              Referência, DIFAL, descontos e acréscimos são internos; só o preço unitário real e o subtotal vão para o orçamento.
             </p>
           </>
         ) : (

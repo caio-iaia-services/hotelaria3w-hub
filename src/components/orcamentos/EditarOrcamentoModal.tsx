@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { camposInternosCastor, inserirItensOrcamento } from '@/lib/orcamentoItens'
+import { textoDifalPorInscricao, type InscricaoEstadual } from '@/lib/castorPreco'
+import { InscricaoEstadualSelect } from '@/components/orcamentos/InscricaoEstadualSelect'
 
 interface ItemLocal {
   id: string
@@ -28,6 +30,7 @@ interface ItemLocal {
   // Campos internos Castor (gravados só para consulta/edição; não vão para a proposta)
   tabela?: string
   preco_referencia?: number | string
+  percentual_difal?: number | string
   desconto_pct?: number | string
   acrescimo_pct?: number | string
   total: number
@@ -128,6 +131,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
   const [saving, setSaving] = useState(false)
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null)
   const [clienteAtual, setClienteAtual] = useState<ClienteAtual | null>(null)
+  const [inscricaoEstadual, setInscricaoEstadual] = useState<InscricaoEstadual>('')
   const [enderecoEntregaEditado, setEnderecoEntregaEditado] = useState('')
   const [itens, setItens] = useState<ItemLocal[]>([])
   const [tipoLayout, setTipoLayout] = useState<string | null>(null)
@@ -207,6 +211,8 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setImagensAdicionaisPreview([])
       setImagensAdicionaisFiles([])
       setTipoLayout((forn as any)?.tipo_layout || null)
+      const ieSalva = (o as any).inscricao_estadual_ativa
+      setInscricaoEstadual(ieSalva === true ? 'sim' : ieSalva === false ? 'nao' : '')
     }
 
     if (itensDb) {
@@ -220,6 +226,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         preco_unitario: i.preco_unitario,
         tabela: i.tabela || undefined,
         preco_referencia: i.preco_referencia ?? '',
+        percentual_difal: i.percentual_difal ?? '',
         desconto_pct: i.desconto_pct ?? '',
         acrescimo_pct: i.acrescimo_pct ?? '',
         total: parseNum(i.total),
@@ -252,6 +259,12 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
       setEnderecoEntregaEditado(montarEnderecoCliente(clienteAtual) || '')
     }
   }, [open, clienteAtual?.id, orcamento?.id, orcamento?.cliente_endereco])
+
+  function aoMudarInscricao(valor: InscricaoEstadual) {
+    setInscricaoEstadual(valor)
+    const texto = textoDifalPorInscricao(valor)
+    if (texto) setDados(p => ({ ...p, difal_texto: texto }))
+  }
 
   function atualizarItem(id: string, campo: string, valor: string | number) {
     setItens(prev => prev.map(item => {
@@ -370,6 +383,11 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         setSaving(false)
         return
       }
+      if (tipoLayout === 'castor' && !inscricaoEstadual) {
+        toast.error('Informe se o cliente tem Inscrição Estadual ativa (SIM ou NÃO)')
+        setSaving(false)
+        return
+      }
 
       let imagemMarketingUrl = imagemPreview
       if (imagemFile) {
@@ -413,6 +431,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
         observacoes: dados.observacoes,
         observacoes_gerais: dados.observacoes_gerais,
         difal_texto: dados.difal_texto,
+        ...(tipoLayout === 'castor' ? { inscricao_estadual_ativa: inscricaoEstadual === 'sim' } : {}),
         imagem_marketing_url: imagemMarketingUrl,
         cliente_nome: (clienteAtualDb as ClienteAtual | null)?.nome_fantasia || orcamento.cliente_nome,
         cliente_razao_social: (clienteAtualDb as ClienteAtual | null)?.razao_social || orcamento.cliente_razao_social,
@@ -591,6 +610,11 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
               </div>
             </div>
 
+            {/* INSCRIÇÃO ESTADUAL (obrigatória — Castor) */}
+            {tipoLayout === 'castor' && (
+              <InscricaoEstadualSelect value={inscricaoEstadual} onChange={aoMudarInscricao} />
+            )}
+
             {/* ITENS */}
             <div>
               <Label className="mb-3 block">Itens do Orçamento</Label>
@@ -604,6 +628,7 @@ export function EditarOrcamentoModal({ open, onOpenChange, orcamentoId, onSaved 
                     tipoLayout={tipoLayout}
                     clienteUF={clienteAtual?.estado ?? (orcamento as any)?.cliente_estado}
                     clienteCidade={clienteAtual?.cidade ?? (orcamento as any)?.cliente_cidade}
+                    inscricaoEstadual={inscricaoEstadual}
                     onUpdate={atualizarItem}
                     onRemove={removerItem}
                   />

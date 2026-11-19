@@ -1,7 +1,9 @@
+import { calcularPrecoComDifal } from '@/lib/castorPreco'
+
 // Campos internos do item de orçamento Castor (tabela, preço de referência, desconto e acréscimo).
 // São gravados só para o orçamento reabrir completo na edição — nunca entram no PDF/e-mail do cliente.
 
-const CAMPOS_INTERNOS = ['tabela', 'preco_referencia', 'desconto_pct', 'acrescimo_pct'] as const
+const CAMPOS_INTERNOS = ['tabela', 'preco_referencia', 'percentual_difal', 'preco_unitario_difal', 'desconto_pct', 'acrescimo_pct'] as const
 
 function numeroOuNull(v: unknown): number | null {
   if (v === undefined || v === null || v === '') return null
@@ -15,12 +17,17 @@ function numeroOuNull(v: unknown): number | null {
 export function camposInternosCastor(item: {
   tabela?: string
   preco_referencia?: number | string
+  percentual_difal?: number | string
   desconto_pct?: number | string
   acrescimo_pct?: number | string
 }) {
+  const ref = numeroOuNull(item.preco_referencia)
+  const difal = numeroOuNull(item.percentual_difal)
   return {
     tabela: item.tabela || null,
-    preco_referencia: numeroOuNull(item.preco_referencia),
+    preco_referencia: ref,
+    percentual_difal: difal,
+    preco_unitario_difal: ref && ref > 0 ? calcularPrecoComDifal(ref, difal ?? 0) : null,
     desconto_pct: numeroOuNull(item.desconto_pct),
     acrescimo_pct: numeroOuNull(item.acrescimo_pct),
   }

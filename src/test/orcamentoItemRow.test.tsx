@@ -25,14 +25,15 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 import { OrcamentoItemRow } from '@/components/orcamentos/OrcamentoItemRow'
+import { calcularPrecoReal } from '@/lib/castorPreco'
 
-function Wrapper({ uf, cidade, inicial }: { uf?: string | null; cidade?: string | null; inicial?: Record<string, any> }) {
+function Wrapper({ uf, cidade, inicial, ie }: { uf?: string | null; cidade?: string | null; inicial?: Record<string, any>; ie?: 'sim' | 'nao' | '' }) {
   const [item, setItem] = useState<any>({
     id: '1', codigo: '61976', descricao: 'BOX', especificacoes: '', quantidade: '1', preco_unitario: 0, total: 0, medidas: '', ...inicial,
   })
   return (
     <OrcamentoItemRow
-      item={item} index={0} canRemove={false} tipoLayout="castor" clienteUF={uf} clienteCidade={cidade}
+      item={item} index={0} canRemove={false} tipoLayout="castor" clienteUF={uf} clienteCidade={cidade} inscricaoEstadual={ie}
       onUpdate={(_id, campo, valor) => setItem((p: any) => ({ ...p, [campo]: valor }))}
       onRemove={() => {}}
     />
@@ -51,6 +52,8 @@ const valores = () => ({
   real: (screen.getByText(/Preço unitário real/).parentElement!.querySelector('input') as HTMLInputElement).value,
   desc: (screen.getByText(/Descontos/).parentElement!.querySelector('input') as HTMLInputElement).value,
   acr: (screen.getByText(/Acréscimos/).parentElement!.querySelector('input') as HTMLInputElement).value,
+  difal: (screen.getByText(/Percentual DIFAL/).parentElement!.querySelector('input') as HTMLInputElement).value,
+  comDifal: (screen.getByText(/Preço unitário DIFAL/).parentElement!.querySelector('input') as HTMLInputElement).value,
 })
 const num = (s: string) => parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.'))
 
@@ -93,5 +96,36 @@ describe('OrcamentoItemRow Castor', () => {
     expect(v.desc).toBe('31')
     expect(v.acr).toBe('10')
     expect(num(v.real)).toBe(800)
+  })
+
+  it('sem inscrição estadual (BA): DIFAL 13,5% entra na cadeia de preço', async () => {
+    render(<Wrapper uf="BA" ie="nao" />)
+    await escolherMedida()
+    await waitFor(() => expect(valores().difal).toBe('13,5'))
+    const v = valores()
+    expect(v.comDifal).toContain('1.135,00')
+    expect(num(v.real)).toBe(calcularPrecoReal(1000, 31, 10, 13.5))
+  })
+  it('com inscrição estadual: DIFAL 0 e preço igual ao fluxo anterior', async () => {
+    render(<Wrapper uf="BA" ie="sim" />)
+    await escolherMedida()
+    await waitFor(() => expect(valores().desc).toBe('31'))
+    expect(valores().difal).toBe('0')
+    expect(num(valores().real)).toBe(759)
+  })
+  it('sem inscrição em SP: DIFAL 0 (SP/MG/RS sempre 0%)', async () => {
+    render(<Wrapper uf="SP" ie="nao" />)
+    await escolherMedida()
+    await waitFor(() => expect(valores().desc).toBe('28'))
+    expect(valores().difal).toBe('0')
+    expect(num(valores().real)).toBe(720)
+  })
+  it('trocar a inscrição estadual recalcula os itens já preenchidos', async () => {
+    const { rerender } = render(<Wrapper uf="BA" ie="sim" />)
+    await escolherMedida()
+    await waitFor(() => expect(num(valores().real)).toBe(759))
+    rerender(<Wrapper uf="BA" ie="nao" />)
+    await waitFor(() => expect(valores().difal).toBe('13,5'))
+    expect(num(valores().real)).toBe(calcularPrecoReal(1000, 31, 10, 13.5))
   })
 })

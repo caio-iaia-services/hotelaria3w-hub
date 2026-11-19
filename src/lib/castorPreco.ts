@@ -76,10 +76,58 @@ export function regraPorLocal(estado?: string | null, cidade?: string | null): R
 
 const arred = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
-/** Preço unitário real = referência × (1 + acréscimo) × (1 − desconto). Ex.: 1000, 28%, 0% → 720,00. */
-export function calcularPrecoReal(referencia: number, descontoPct: number, acrescimoPct: number): number {
+/**
+ * DIFAL aproximado por estado de destino — "Tabela de Operações Interestaduais, origem SP" (Castor, 22/09/2026),
+ * coluna DIFAL APROXIMADO. Só vale para cliente SEM inscrição estadual ativa.
+ */
+const DIFAL_POR_UF: Record<string, number> = {
+  SC: 5, RS: 5, PR: 7.5, RJ: 10, ES: 10, GO: 12, MS: 10, DF: 13, MT: 10, PB: 13, BA: 13.5, SE: 13, AL: 13.5,
+  PE: 13.5, PI: 15.5, RN: 13, AM: 13, AP: 11, TO: 13, MA: 16, PA: 12, RO: 12.5, AC: 12, RR: 13, CE: 13, MG: 6,
+}
+
+/** Estados em que o DIFAL é sempre 0% (regra comercial), mesmo sem inscrição estadual. */
+const UFS_SEM_DIFAL = new Set(['SP', 'MG', 'RS'])
+
+export type InscricaoEstadual = 'sim' | 'nao' | ''
+
+/**
+ * Percentual de DIFAL do item:
+ *  - cliente COM inscrição estadual ativa → 0;
+ *  - SEM inscrição: SP, MG e RS → 0; demais estados → tabela (coluna DIFAL aproximado);
+ *  - inscrição não informada ou estado não identificado → 0.
+ */
+export function percentualDifal(inscricao: InscricaoEstadual | string | null | undefined, estado?: string | null): number {
+  if (inscricao !== 'nao') return 0
+  const uf = normalizarUF(estado)
+  if (!uf || UFS_SEM_DIFAL.has(uf)) return 0
+  return DIFAL_POR_UF[uf] ?? 0
+}
+
+/** Preço unitário com DIFAL = referência × (1 + DIFAL). Ex.: 100, 12% → 112,00. */
+export function calcularPrecoComDifal(referencia: number, difalPct: number): number {
+  if (!Number.isFinite(referencia) || referencia <= 0) return 0
+  const dif = Number.isFinite(difalPct) ? difalPct : 0
+  return arred(referencia * (1 + dif / 100))
+}
+
+/**
+ * Preço unitário real (valor mostrado ao cliente) =
+ *   referência × (1 + DIFAL) × (1 + acréscimo) × (1 − desconto).
+ * Sem DIFAL: ex.: 1000, 28%, 0% → 720,00. Com DIFAL 12%, desconto 10%, acréscimo 25%: 100 → 126,00.
+ */
+export function calcularPrecoReal(referencia: number, descontoPct: number, acrescimoPct: number, difalPct = 0): number {
   if (!Number.isFinite(referencia) || referencia <= 0) return 0
   const d = Number.isFinite(descontoPct) ? descontoPct : 0
   const a = Number.isFinite(acrescimoPct) ? acrescimoPct : 0
-  return arred(referencia * (1 + a / 100) * (1 - d / 100))
+  const dif = Number.isFinite(difalPct) ? difalPct : 0
+  return arred(referencia * (1 + dif / 100) * (1 + a / 100) * (1 - d / 100))
+}
+
+/** Texto do campo DIFAL do orçamento, conforme a resposta de Inscrição Estadual. */
+export function textoDifalPorInscricao(inscricao: InscricaoEstadual): string | null {
+  if (inscricao === 'sim')
+    return 'Este Orçamento tem como premissa que o Cliente "TEM INSCRIÇÃO ESTADUAL ATIVA" Caso não tenha, é indispensável que comunique o vendedor para os eventuais ajustes tributários.'
+  if (inscricao === 'nao')
+    return 'Este Orçamento tem como premissa que o Cliente "NÃO TEM INSCRIÇÃO ESTADUAL ATIVA". Caso não seja o caso, o Cliente deve passar a devida informação ao Vendedor.'
+  return null
 }

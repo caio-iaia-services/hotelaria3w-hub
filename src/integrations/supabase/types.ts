@@ -2927,6 +2927,8 @@ export type Database = {
           total: number
           tabela: string | null
           preco_referencia: number | null
+          percentual_difal: number | null
+          preco_unitario_difal: number | null
           desconto_pct: number | null
           acrescimo_pct: number | null
         }
@@ -2944,6 +2946,8 @@ export type Database = {
           total: number
           tabela?: string | null
           preco_referencia?: number | null
+          percentual_difal?: number | null
+          preco_unitario_difal?: number | null
           desconto_pct?: number | null
           acrescimo_pct?: number | null
         }
@@ -2961,6 +2965,8 @@ export type Database = {
           total?: number
           tabela?: string | null
           preco_referencia?: number | null
+          percentual_difal?: number | null
+          preco_unitario_difal?: number | null
           desconto_pct?: number | null
           acrescimo_pct?: number | null
         }

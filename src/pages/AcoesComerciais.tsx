@@ -59,6 +59,8 @@ import {
 import { OrcamentoItemRow } from "@/components/orcamentos/OrcamentoItemRow";
 import { camposInternosCastor, inserirItensOrcamento } from "@/lib/orcamentoItens";
 import { paraNumero } from "@/lib/numero";
+import { textoDifalPorInscricao, type InscricaoEstadual } from "@/lib/castorPreco";
+import { InscricaoEstadualSelect } from "@/components/orcamentos/InscricaoEstadualSelect";
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
 interface MetricCardProps {
@@ -442,6 +444,7 @@ export default function AcoesComerciais() {
   const [pedidoOrcamentoId, setPedidoOrcamentoId] = useState<string | null>(null);
   const [itensOrcamento, setItensOrcamento] = useState<ItemOrcamento[]>([]);
   const [clienteCompleto, setClienteCompleto] = useState<ClienteCompleto | null>(null);
+  const [inscricaoEstadual, setInscricaoEstadual] = useState<InscricaoEstadual>("");
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<FornecedorLocal | null>(null);
   const [fornecedoresDisponiveis, setFornecedoresDisponiveis] = useState<FornecedorLocal[]>([]);
   const [fornecedoresDb, setFornecedoresDb] = useState<{ nome_fantasia: string; gestao: string }[]>([]);
@@ -632,6 +635,7 @@ export default function AcoesComerciais() {
       .maybeSingle();
 
     setClienteCompleto(cliente as ClienteCompleto | null);
+    setInscricaoEstadual("");
 
     // Montar endereço de entrega a partir do cadastro do cliente
     const partes: string[] = [];
@@ -923,6 +927,11 @@ export default function AcoesComerciais() {
       return;
     }
 
+    if (fornecedorSelecionado?.tipo_layout === "castor" && !inscricaoEstadual) {
+      toast.error("Informe se o cliente tem Inscrição Estadual ativa (SIM ou NÃO)");
+      return;
+    }
+
     const itensInvalidos = itensOrcamento.filter((item) => {
       const qty = parseFloat(String(item.quantidade).replace(",", ".")) || 0;
       const price = parseFloat(String(item.preco_unitario).replace(",", ".")) || 0;
@@ -1066,6 +1075,7 @@ export default function AcoesComerciais() {
         observacoes: dadosOrcamento.observacoes,
         observacoes_gerais: dadosOrcamento.observacoes_gerais,
         difal_texto: dadosOrcamento.difal_texto,
+        ...(fornecedorSelecionado?.tipo_layout === "castor" ? { inscricao_estadual_ativa: inscricaoEstadual === "sim" } : {}),
         termos_3w: termos3w,
         termos_fornecedor: resolverTermosFornecedor(
           fornecedorSelecionado?.termos_fabricante,
@@ -1429,6 +1439,18 @@ export default function AcoesComerciais() {
 
             {/* ITENS DO ORÇAMENTO */}
             <div>
+              {fornecedorSelecionado?.tipo_layout === "castor" && (
+                <div className="mb-4">
+                  <InscricaoEstadualSelect
+                    value={inscricaoEstadual}
+                    onChange={(v) => {
+                      setInscricaoEstadual(v);
+                      const texto = textoDifalPorInscricao(v);
+                      if (texto) setDadosOrcamento((prev) => ({ ...prev, difal_texto: texto }));
+                    }}
+                  />
+                </div>
+              )}
               <Label className="mb-3 block">Itens do Orçamento</Label>
 
               <div className="space-y-3">
@@ -1441,6 +1463,7 @@ export default function AcoesComerciais() {
                     tipoLayout={fornecedorSelecionado?.tipo_layout}
                     clienteUF={clienteCompleto?.estado}
                     clienteCidade={clienteCompleto?.cidade}
+                    inscricaoEstadual={inscricaoEstadual}
                     onUpdate={(id, campo, valor) => atualizarItem(Number(id), campo, valor)}
                     onRemove={(id) => removerItem(Number(id))}
                   />
