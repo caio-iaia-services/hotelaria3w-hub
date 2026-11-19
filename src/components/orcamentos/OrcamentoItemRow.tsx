@@ -75,7 +75,7 @@ function CampoMoeda({ label, value, onChange, interno = false }: {
   const num = parsePrice(value)
   return (
     <div>
-      <Label>{label}{interno && <span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span>}</Label>
+      <Label>{label}{interno && <span className="block text-[10px] font-normal leading-tight text-muted-foreground">(interno)</span>}</Label>
       <Input
         placeholder="R$ 0,00"
         className={interno ? 'bg-muted/50' : undefined}
@@ -387,26 +387,26 @@ export function OrcamentoItemRow({ item, index, canRemove, tipoLayout, clienteUF
         {/* PREÇO UNITÁRIO */}
         {isCastor ? (
           <>
-            <div className="col-span-2">
+            <div className="col-span-2 flex flex-col justify-end">
               <CampoMoeda label="Preço unitário referência" interno value={item.preco_referencia} onChange={mudouReferencia} />
             </div>
-            <div className="col-span-2">
-              <Label>Percentual DIFAL (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+            <div className="col-span-2 flex flex-col justify-end">
+              <Label>Percentual DIFAL (%)<span className="block text-[10px] font-normal leading-tight text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" placeholder="0" value={difalTexto} onChange={(e) => mudouDifal(e.target.value)} />
             </div>
-            <div className="col-span-2">
-              <Label>Preço unitário DIFAL<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+            <div className="col-span-2 flex flex-col justify-end">
+              <Label>Preço unitário DIFAL<span className="block text-[10px] font-normal leading-tight text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" readOnly tabIndex={-1} placeholder="R$ 0,00" value={precoDifalNum > 0 ? formatCurrency(precoDifalNum) : ''} />
             </div>
-            <div className="col-span-2">
-              <Label>Descontos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+            <div className="col-span-2 flex flex-col justify-end">
+              <Label>Descontos (%)<span className="block text-[10px] font-normal leading-tight text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" placeholder="0" value={descontoTexto} onChange={(e) => mudouDesconto(e.target.value)} />
             </div>
-            <div className="col-span-2">
-              <Label>Acréscimos (%)<span className="ml-1 text-[10px] font-normal text-muted-foreground">(interno)</span></Label>
+            <div className="col-span-2 flex flex-col justify-end">
+              <Label>Acréscimos (%)<span className="block text-[10px] font-normal leading-tight text-muted-foreground">(interno)</span></Label>
               <Input className="bg-muted/50" placeholder="0" value={acrescimoTexto} onChange={(e) => mudouAcrescimo(e.target.value)} />
             </div>
-            <div className="col-span-2">
+            <div className="col-span-2 flex flex-col justify-end">
               <CampoMoeda label="Preço unitário real *" value={item.preco_unitario} onChange={(t) => onUpdate(item.id, 'preco_unitario', t)} />
             </div>
             <p className="col-span-12 text-xs text-muted-foreground -mt-1">
